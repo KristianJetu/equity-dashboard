@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12,400;12,600;12,700;12,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #ece6d8;
+  font-family: 'Hanken Grotesk', sans-serif;
+}

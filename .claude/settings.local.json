@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:claude.ai)",
+      "Read(//c/Users/Krisl/Downloads/**)",
+      "Bash(unzip -o \"Equity dashboard design brief-handoff.zip\" -d \"equity_dashboard_design\")",
+      "mcp__Claude_in_Chrome__get_page_text",
+      "mcp__Claude_in_Chrome__javascript_tool",
+      "mcp__Claude_in_Chrome__read_page",
+      "mcp__Claude_in_Chrome__navigate"
+    ]
+  }
+}
