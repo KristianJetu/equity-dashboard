@@ -1,6 +1,6 @@
-@import "tailwindcss";
-
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12,400;12,600;12,700;12,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap');
+
+@import "tailwindcss";
 
 * {
   box-sizing: border-box;
