@@ -61,7 +61,6 @@ async function matchPropertyByAmount(amount: number): Promise<string | null> {
   if (!res.ok) return null;
   const properties = await res.json();
 
-  // Match property where rent_amount is within 5% of received amount
   const match = properties.find(
     (p: { id: string; name: string; rent_amount: number }) =>
       Math.abs(p.rent_amount - amount) / p.rent_amount < 0.05
@@ -87,7 +86,6 @@ async function savePayment(
   const month = parsed.date.slice(0, 7) + "-01";
   const netCashflow = parsed.amount - mortgagePayment;
 
-  // Check if payment for this month already exists
   const checkRes = await fetch(
     `${SUPABASE_URL}/rest/v1/payments?property_id=eq.${propertyId}&month=eq.${month}`,
     { headers: supabaseHeaders }
@@ -95,7 +93,6 @@ async function savePayment(
   const existing = await checkRes.json();
 
   if (existing.length > 0) {
-    // Update existing
     const updateRes = await fetch(
       `${SUPABASE_URL}/rest/v1/payments?property_id=eq.${propertyId}&month=eq.${month}`,
       {
@@ -111,7 +108,6 @@ async function savePayment(
     );
     return updateRes.ok;
   } else {
-    // Insert new
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/payments`, {
       method: "POST",
       headers: supabaseHeaders,
@@ -130,39 +126,49 @@ async function savePayment(
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    // Read raw body as text first to debug Resend payload structure
+    const rawText = await req.text();
+    console.log("RAW_BODY:", rawText.substring(0, 3000));
 
-    // Log full raw payload to understand structure
-    console.log("RAW_BODY:", JSON.stringify(body).substring(0, 3000));
+    let body: Record<string, unknown> = {};
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      console.log("PARSE_ERROR: body is not JSON");
+      return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
+    }
 
-    const emailFrom: string = payload.from ?? "";
-    const emailText: string = payload.text ?? payload.html ?? "";
+    // Resend inbound: try body.data first, then root body
+    const payload = (body.data && typeof body.data === "object" ? body.data : body) as Record<string, unknown>;
+
+    const emailFrom: string = (payload.from as string) ?? "";
+    const emailText: string = ((payload.text ?? payload.html) as string) ?? "";
+
+    console.log("FROM:", emailFrom);
+    console.log("SUBJECT:", (payload.subject as string) ?? "");
+    console.log("TEXT_PREVIEW:", emailText.substring(0, 500));
 
     // Only process mBank notifications
     if (!emailFrom.includes("mbank.cz")) {
-      return NextResponse.json({ ok: true, skipped: "not mbank" });
+      return NextResponse.json({ ok: true, skipped: "not mbank", from: emailFrom });
     }
 
     if (!emailText) {
       return NextResponse.json({ ok: false, error: "no email body" }, { status: 400 });
     }
 
-    // Parse email with Claude
     const parsed = await parseEmailWithClaude(emailText);
     if (!parsed || !parsed.amount) {
       return NextResponse.json({ ok: false, error: "parse failed" }, { status: 422 });
     }
 
-    // Match to property
     const propertyId = await matchPropertyByAmount(parsed.amount);
     if (!propertyId) {
       return NextResponse.json({ ok: false, error: `no property match for amount ${parsed.amount}` }, { status: 422 });
     }
 
-    // Get mortgage payment for net cashflow calculation
     const mortgagePayment = await getMortgagePayment(propertyId);
 
-    // Save to Supabase
     const saved = await savePayment(propertyId, parsed, mortgagePayment);
     if (!saved) {
       return NextResponse.json({ ok: false, error: "save failed" }, { status: 500 });
