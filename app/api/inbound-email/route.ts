@@ -136,6 +136,12 @@ export async function POST(req: NextRequest) {
     const emailFrom: string = body.from ?? "";
     const emailText: string = body.text ?? body.html ?? "";
 
+    // Log Gmail forwarding verification emails so we can confirm the address
+    if (emailFrom.includes("forwarding-noreply@google.com") || emailFrom.includes("gmail.com")) {
+      console.log("GMAIL_VERIFY_EMAIL:", emailText);
+      return NextResponse.json({ ok: true, skipped: "gmail verification logged" });
+    }
+
     // Only process mBank notifications
     if (!emailFrom.includes("mbank.cz")) {
       return NextResponse.json({ ok: true, skipped: "not mbank" });
