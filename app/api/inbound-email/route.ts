@@ -132,15 +132,15 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Log everything for debugging
-    console.log("INBOUND_FROM:", body.from ?? "");
-    console.log("INBOUND_TO:", body.to ?? "");
-    console.log("INBOUND_SUBJECT:", body.subject ?? "");
-    console.log("INBOUND_TEXT:", (body.text ?? body.html ?? "").substring(0, 2000));
+    // Resend inbound webhook: fields are nested under body.data
+    const payload = body.data ?? body;
+    console.log("INBOUND_FROM:", payload.from ?? "");
+    console.log("INBOUND_TO:", payload.to ?? "");
+    console.log("INBOUND_SUBJECT:", payload.subject ?? "");
+    console.log("INBOUND_TEXT:", (payload.text ?? payload.html ?? "").substring(0, 2000));
 
-    // Resend inbound webhook payload
-    const emailFrom: string = body.from ?? "";
-    const emailText: string = body.text ?? body.html ?? "";
+    const emailFrom: string = payload.from ?? "";
+    const emailText: string = payload.text ?? payload.html ?? "";
 
     // Only process mBank notifications
     if (!emailFrom.includes("mbank.cz")) {
