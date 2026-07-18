@@ -146,7 +146,9 @@ export async function POST(req: NextRequest) {
 
     console.log("FROM:", emailFrom);
     console.log("SUBJECT:", (payload.subject as string) ?? "");
+    console.log("PAYLOAD_KEYS:", Object.keys(payload).join(", "));
     console.log("TEXT_PREVIEW:", emailText.substring(0, 500));
+    console.log("PAYLOAD_FULL:", JSON.stringify(payload).substring(0, 3000));
 
     // Only process mBank notifications
     if (!emailFrom.includes("mbank.cz")) {
