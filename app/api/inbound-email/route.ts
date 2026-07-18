@@ -126,33 +126,21 @@ async function savePayment(
 
 export async function POST(req: NextRequest) {
   try {
-    // Read raw body as text first to debug Resend payload structure
     const rawText = await req.text();
-    console.log("RAW_BODY:", rawText.substring(0, 3000));
-
     let body: Record<string, unknown> = {};
     try {
       body = JSON.parse(rawText);
     } catch {
-      console.log("PARSE_ERROR: body is not JSON");
       return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
     }
 
-    // Resend inbound: try body.data first, then root body
     const payload = (body.data && typeof body.data === "object" ? body.data : body) as Record<string, unknown>;
 
     const emailFrom: string = (payload.from as string) ?? "";
     const emailText: string = ((payload.text ?? payload.html) as string) ?? "";
 
-    console.log("FROM:", emailFrom);
-    console.log("SUBJECT:", (payload.subject as string) ?? "");
-    console.log("PAYLOAD_KEYS:", Object.keys(payload).join(", "));
-    console.log("TEXT_PREVIEW:", emailText.substring(0, 500));
-    console.log("PAYLOAD_FULL:", JSON.stringify(payload).substring(0, 3000));
-
-    // Only process mBank notifications
     if (!emailFrom.includes("mbank.cz")) {
-      return NextResponse.json({ ok: true, skipped: "not mbank", from: emailFrom });
+      return NextResponse.json({ ok: true, skipped: "not mbank" });
     }
 
     if (!emailText) {
