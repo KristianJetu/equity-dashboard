@@ -132,12 +132,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Resend inbound webhook: fields are nested under body.data
-    const payload = body.data ?? body;
-    console.log("INBOUND_FROM:", payload.from ?? "");
-    console.log("INBOUND_TO:", payload.to ?? "");
-    console.log("INBOUND_SUBJECT:", payload.subject ?? "");
-    console.log("INBOUND_TEXT:", (payload.text ?? payload.html ?? "").substring(0, 2000));
+    // Log full raw payload to understand structure
+    console.log("RAW_BODY:", JSON.stringify(body).substring(0, 3000));
 
     const emailFrom: string = payload.from ?? "";
     const emailText: string = payload.text ?? payload.html ?? "";
