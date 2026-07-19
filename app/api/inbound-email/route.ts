@@ -18,6 +18,7 @@ type ParsedPayment = {
   sender_name: string;
   sender_account: string;
   note: string;
+  payment_type: "rent" | "deposit" | "partial" | "other";
 };
 
 async function parseEmailWithClaude(emailText: string): Promise<ParsedPayment | null> {
@@ -27,15 +28,16 @@ async function parseEmailWithClaude(emailText: string): Promise<ParsedPayment | 
     messages: [
       {
         role: "user",
-        content: `Jsi asistent pro parsování bankovních notifikačních emailů. Z níže uvedeného emailu od mBanky extrahuj tyto informace a vrať je jako JSON objekt:
-- amount: číslo (částka v CZK, pouze číslo bez mezer nebo symbolů)
+        content: `Jsi asistent pro parsování bankovních notifikačních emailů od mBanky. Z emailu extrahuj tyto informace a vrať je jako JSON:
+- amount: číslo (přijatá částka v CZK, pouze číslo)
 - date: datum ve formátu YYYY-MM-DD
 - sender_name: jméno odesílatele platby
-- sender_account: číslo účtu odesílatele
-- note: poznámka nebo zpráva pro příjemce (pokud existuje)
+- sender_account: číslo účtu odesílatele (přesně jak je v emailu, např. "25057/0300")
+- note: poznámka/zpráva pro příjemce (pokud existuje)
+- payment_type: jeden z: "rent" (běžný nájem), "deposit" (kauce - pokud je zmínka o kauci nebo částka je násobek nájmu), "partial" (částečná platba), "other" (ostatní)
 
-Pokud nějaký údaj neexistuje, použij prázdný string nebo 0 pro amount.
-Vrať POUZE validní JSON objekt, žádný jiný text.
+Pokud údaj neexistuje, použij prázdný string nebo 0 pro amount.
+Vrať POUZE validní JSON, žádný jiný text.
 
 Email:
 ${emailText}`,
@@ -53,19 +55,17 @@ ${emailText}`,
   }
 }
 
-async function matchPropertyByAmount(amount: number): Promise<string | null> {
+async function findTenantByAccount(accountNumber: string): Promise<{ property_id: string; name: string } | null> {
+  if (!accountNumber) return null;
+  // Match by suffix of account number (emails often show partial account like ...25057/0300)
+  const suffix = accountNumber.replace(/^\.+/, "");
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/properties?select=id,name,rent_amount&status=neq.planned`,
+    `${SUPABASE_URL}/rest/v1/tenants?account_number=ilike.*${encodeURIComponent(suffix)}&select=property_id,name`,
     { headers: supabaseHeaders }
   );
   if (!res.ok) return null;
-  const properties = await res.json();
-
-  const match = properties.find(
-    (p: { id: string; name: string; rent_amount: number }) =>
-      Math.abs(p.rent_amount - amount) / p.rent_amount < 0.05
-  );
-  return match?.id ?? null;
+  const tenants = await res.json();
+  return tenants[0] ?? null;
 }
 
 async function getMortgagePayment(propertyId: string): Promise<number> {
@@ -79,49 +79,69 @@ async function getMortgagePayment(propertyId: string): Promise<number> {
 }
 
 async function savePayment(
-  propertyId: string,
+  propertyId: string | null,
   parsed: ParsedPayment,
-  mortgagePayment: number
-): Promise<boolean> {
-  const month = parsed.date.slice(0, 7) + "-01";
-  const netCashflow = parsed.amount - mortgagePayment;
+  mortgagePayment: number,
+  matchType: "auto" | "unmatched",
+  rawEmailText: string
+): Promise<string | null> {
+  const month = parsed.date ? parsed.date.slice(0, 7) + "-01" : new Date().toISOString().slice(0, 7) + "-01";
+  const netCashflow = propertyId ? parsed.amount - mortgagePayment : 0;
 
-  const checkRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/payments?property_id=eq.${propertyId}&month=eq.${month}`,
-    { headers: supabaseHeaders }
-  );
-  const existing = await checkRes.json();
+  const paymentData: Record<string, unknown> = {
+    month,
+    rent_received: parsed.amount,
+    mortgage_payment: mortgagePayment,
+    net_cashflow: netCashflow,
+    status: matchType === "unmatched" ? "unmatched" : "paid",
+    raw_email_text: rawEmailText,
+    sender_name: parsed.sender_name,
+    sender_account: parsed.sender_account,
+    match_type: matchType,
+    payment_type: parsed.payment_type ?? "rent",
+  };
 
-  if (existing.length > 0) {
-    const updateRes = await fetch(
+  if (propertyId) {
+    paymentData.property_id = propertyId;
+
+    // Check if payment for this month already exists
+    const checkRes = await fetch(
       `${SUPABASE_URL}/rest/v1/payments?property_id=eq.${propertyId}&month=eq.${month}`,
-      {
-        method: "PATCH",
-        headers: supabaseHeaders,
-        body: JSON.stringify({
-          rent_received: parsed.amount,
-          mortgage_payment: mortgagePayment,
-          net_cashflow: netCashflow,
-          status: "paid",
-        }),
-      }
+      { headers: supabaseHeaders }
     );
-    return updateRes.ok;
-  } else {
-    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/payments`, {
-      method: "POST",
-      headers: supabaseHeaders,
-      body: JSON.stringify({
-        property_id: propertyId,
-        month,
-        rent_received: parsed.amount,
-        mortgage_payment: mortgagePayment,
-        net_cashflow: netCashflow,
-        status: "paid",
-      }),
-    });
-    return insertRes.ok;
+    const existing = await checkRes.json();
+
+    if (existing.length > 0) {
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/payments?property_id=eq.${propertyId}&month=eq.${month}`,
+        {
+          method: "PATCH",
+          headers: supabaseHeaders,
+          body: JSON.stringify(paymentData),
+        }
+      );
+      return existing[0].id;
+    }
   }
+
+  const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/payments`, {
+    method: "POST",
+    headers: { ...supabaseHeaders, Prefer: "return=representation" },
+    body: JSON.stringify(paymentData),
+  });
+  if (!insertRes.ok) return null;
+  const inserted = await insertRes.json();
+  return inserted[0]?.id ?? null;
+}
+
+async function ensureTenant(accountNumber: string, name: string, propertyId: string): Promise<void> {
+  if (!accountNumber) return;
+  // Upsert tenant — pokud uz existuje, nic se nestane
+  await fetch(`${SUPABASE_URL}/rest/v1/tenants`, {
+    method: "POST",
+    headers: { ...supabaseHeaders, Prefer: "resolution=ignore-duplicates" },
+    body: JSON.stringify({ account_number: accountNumber, name, property_id: propertyId }),
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -135,7 +155,6 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = (body.data && typeof body.data === "object" ? body.data : body) as Record<string, unknown>;
-
     const emailFrom: string = (payload.from as string) ?? "";
     const emailText: string = ((payload.text ?? payload.html) as string) ?? "";
 
@@ -152,19 +171,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "parse failed" }, { status: 422 });
     }
 
-    const propertyId = await matchPropertyByAmount(parsed.amount);
-    if (!propertyId) {
-      return NextResponse.json({ ok: false, error: `no property match for amount ${parsed.amount}` }, { status: 422 });
+    // Pokus o sparovani podle cisla uctu
+    const tenant = await findTenantByAccount(parsed.sender_account);
+
+    if (tenant) {
+      // Zname najemnika — automaticke sparovani
+      const mortgagePayment = await getMortgagePayment(tenant.property_id);
+      await savePayment(tenant.property_id, parsed, mortgagePayment, "auto", emailText);
+      return NextResponse.json({ ok: true, match: "auto", amount: parsed.amount, propertyId: tenant.property_id });
+    } else {
+      // Nezname najemnika — ulozime jako nesparovane
+      await savePayment(null, parsed, 0, "unmatched", emailText);
+      return NextResponse.json({ ok: true, match: "unmatched", amount: parsed.amount, sender: parsed.sender_name });
     }
-
-    const mortgagePayment = await getMortgagePayment(propertyId);
-
-    const saved = await savePayment(propertyId, parsed, mortgagePayment);
-    if (!saved) {
-      return NextResponse.json({ ok: false, error: "save failed" }, { status: 500 });
-    }
-
-    return NextResponse.json({ ok: true, amount: parsed.amount, propertyId });
   } catch (err) {
     console.error("inbound-email error:", err);
     return NextResponse.json({ ok: false, error: "internal error" }, { status: 500 });

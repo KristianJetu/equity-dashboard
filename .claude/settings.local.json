@@ -7,7 +7,15 @@
       "mcp__Claude_in_Chrome__get_page_text",
       "mcp__Claude_in_Chrome__javascript_tool",
       "mcp__Claude_in_Chrome__read_page",
-      "mcp__Claude_in_Chrome__navigate"
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__claude-in-chrome__navigate",
+      "mcp__claude-in-chrome__computer",
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(curl -s -H \"Authorization: Bearer re_NYnMTvSt_LqLVPy285FKxQ5dtpq5Xw3Cj\" \"https://api.resend.com/emails/312008a1-19b2-45f3-acaa-197015781fe1\")",
+      "mcp__2a826f49-9c8b-450c-93dc-61fc14400808__search_threads"
     ]
   }
 }
