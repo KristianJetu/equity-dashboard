@@ -28,13 +28,17 @@ async function parseEmailWithClaude(emailText: string): Promise<ParsedPayment | 
     messages: [
       {
         role: "user",
-        content: `Jsi asistent pro parsování bankovních notifikačních emailů od mBanky. Z emailu extrahuj tyto informace a vrať je jako JSON:
+        content: `Jsi asistent pro parsování bankovních notifikačních emailů od mBanky. Email může obsahovat více transakcí — zajímají tě POUZE příchozí platby (řádky s "Prichozi platba" nebo "Prich. okamzita platba"). Ignoruj odchozí platby (řádky s "Odch.").
+
+Pokud je více příchozích plateb, vezmi tu největší (je to pravděpodobně nájem).
+
+Z příchozí platby extrahuj:
 - amount: číslo (přijatá částka v CZK, pouze číslo)
-- date: datum ve formátu YYYY-MM-DD
-- sender_name: jméno odesílatele platby
-- sender_account: číslo účtu odesílatele (přesně jak je v emailu, např. "25057/0300")
-- note: poznámka/zpráva pro příjemce (pokud existuje)
-- payment_type: jeden z: "rent" (běžný nájem), "deposit" (kauce - pokud je zmínka o kauci nebo částka je násobek nájmu), "partial" (částečná platba), "other" (ostatní)
+- date: datum ve formátu YYYY-MM-DD (z hlavičky emailu)
+- sender_name: jméno odesílatele. Pokud "AV:" obsahuje "pošta" nebo "posta", nastav "Česká pošta (složenka)"
+- sender_account: číslo účtu odesílatele z "z uc. ..." (přesně jak je v emailu, např. "87123/0300")
+- note: obsah "AV:" pole (variabilní symbol / zpráva), pokud existuje
+- payment_type: "rent" (běžný nájem), "deposit" (kauce nebo první platba s kaucí — pokud je AV nebo poznámka zmiňuje kauci), "partial" (nižší než obvyklý nájem), "other"
 
 Pokud údaj neexistuje, použij prázdný string nebo 0 pro amount.
 Vrať POUZE validní JSON, žádný jiný text.
