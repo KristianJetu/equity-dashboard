@@ -16,7 +16,8 @@
       "Bash(git push *)",
       "Bash(curl -s -H \"Authorization: Bearer re_NYnMTvSt_LqLVPy285FKxQ5dtpq5Xw3Cj\" \"https://api.resend.com/emails/312008a1-19b2-45f3-acaa-197015781fe1\")",
       "mcp__2a826f49-9c8b-450c-93dc-61fc14400808__search_threads",
-      "mcp__claude-in-chrome__javascript_tool"
+      "mcp__claude-in-chrome__javascript_tool",
+      "Bash(powershell -Command \"Get-Content 'C:\\\\Users\\\\Krisl\\\\.claude\\\\projects\\\\C--Users-Krisl-Desktop-Claude-Projects-Realestate-app\\\\6a32827f-41da-47c4-ad8d-26804b98ea8c.jsonl' | Select-Object -First 100\")"
     ]
   }
 }

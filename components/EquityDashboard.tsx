@@ -259,6 +259,13 @@ export default function EquityDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
+  type ChatMessage = { role: "user" | "assistant"; content: string };
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
+
   async function loadPayments() {
     const pays = await fetchTable<Payment>("payments", "month.desc");
     setPayments(pays.filter(p => p.property_id !== null));
@@ -303,6 +310,43 @@ export default function EquityDashboard() {
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  async function handleSendChat() {
+    const text = chatInput.trim();
+    if (!text || chatLoading) return;
+    const newMessages: ChatMessage[] = [...chatMessages, { role: "user", content: text }];
+    setChatMessages(newMessages);
+    setChatInput("");
+    setChatLoading(true);
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+
+    const portfolio = { properties, mortgages, payments: [...payments, ...unmatchedPayments] };
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: newMessages, portfolio }),
+    });
+
+    if (!res.ok || !res.body) { setChatLoading(false); return; }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let assistantText = "";
+    setChatMessages(prev => [...prev, { role: "assistant", content: "" }]);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      assistantText += decoder.decode(value, { stream: true });
+      setChatMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: "assistant", content: assistantText };
+        return updated;
+      });
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    setChatLoading(false);
+  }
 
   async function handleToggleStatus(propertyId: string, currentStatus: string) {
     const newStatus = currentStatus === "rented" ? "vacant" : "rented";
@@ -651,11 +695,29 @@ export default function EquityDashboard() {
         </section>
 
         {/* ASISTENT */}
-        <section id="asistent" style={{ marginTop: 38, scrollMarginTop: 28 }}>
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 6 }}>Asistent</div>
-          <div style={{ fontSize: 14, color: "#7c8378", maxWidth: 560, lineHeight: 1.6 }}>
-            Zeptej se na cokoli o svém portfoliu v poli níže — výnosy, cash-flow, vývoj equity nebo srovnání nemovitostí.
-          </div>
+        <section id="asistent" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 100 }}>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Asistent</div>
+          {chatMessages.length === 0 ? (
+            <div style={{ fontSize: 14, color: "#7c8378", lineHeight: 1.6 }}>
+              Zeptej se na cokoli o svém portfoliu — výnosy, cash-flow, vývoj equity nebo srovnání nemovitostí.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {chatMessages.map((m, i) => (
+                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div style={{
+                    maxWidth: "80%", padding: "12px 16px", borderRadius: m.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                    background: m.role === "user" ? "#1f3d2e" : "#f5f1e6",
+                    color: m.role === "user" ? "#f5f1e6" : "#1c2b22",
+                    fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap",
+                  }}>
+                    {m.content || <span style={{ opacity: 0.5 }}>…</span>}
+                  </div>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+          )}
         </section>
 
         {/* NASTAVENÍ */}
@@ -681,21 +743,31 @@ export default function EquityDashboard() {
           <div className="flex items-center gap-3"
             style={{ border: "1px solid #d2cab4", background: "#f7f3e9", borderRadius: 28, padding: "10px 12px 10px 14px", boxShadow: "0 6px 24px rgba(31,61,46,.12)" }}>
             <button className="flex items-center justify-center flex-none"
+              onClick={() => setChatMessages([])}
+              title="Nový rozhovor"
               style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #cfc6af", background: "transparent", cursor: "pointer" }}>
               <svg width="16" height="16" viewBox="0 0 16 16">
                 <line x1="8" y1="3" x2="8" y2="13" stroke="#5c6359" strokeWidth="1.7" />
                 <line x1="3" y1="8" x2="13" y2="8" stroke="#5c6359" strokeWidth="1.7" />
               </svg>
             </button>
-            <div className="flex-1" style={{ fontSize: 15, color: "#9a9483" }}>
-              {activeProperty ? `Ptej se na ${activeProperty.name} nebo celé portfolio…` : "Zeptej se na své portfolio…"}
-            </div>
-            <button className="flex items-center justify-center flex-none"
-              style={{ width: 38, height: 38, borderRadius: "50%", background: "#1f3d2e", border: "none", cursor: "pointer" }}>
-              <svg width="16" height="16" viewBox="0 0 16 16">
-                <line x1="8" y1="13" x2="8" y2="3" stroke="#f5f1e6" strokeWidth="1.9" />
-                <polyline points="4,7 8,3 12,7" fill="none" stroke="#f5f1e6" strokeWidth="1.9" />
-              </svg>
+            <input
+              ref={chatInputRef}
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendChat(); } }}
+              placeholder={activeProperty ? `Ptej se na ${activeProperty.name} nebo celé portfolio…` : "Zeptej se na své portfolio…"}
+              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 15, color: "#1c2b22" }}
+            />
+            <button
+              onClick={handleSendChat}
+              disabled={chatLoading || !chatInput.trim()}
+              className="flex items-center justify-center flex-none"
+              style={{ width: 38, height: 38, borderRadius: "50%", background: chatLoading || !chatInput.trim() ? "#9db8a6" : "#1f3d2e", border: "none", cursor: chatLoading || !chatInput.trim() ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
+              {chatLoading
+                ? <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="#f5f1e6" strokeWidth="1.8" strokeDasharray="20 10"><animateTransform attributeName="transform" type="rotate" from="0 8 8" to="360 8 8" dur="0.8s" repeatCount="indefinite"/></circle></svg>
+                : <svg width="16" height="16" viewBox="0 0 16 16"><line x1="8" y1="13" x2="8" y2="3" stroke="#f5f1e6" strokeWidth="1.9"/><polyline points="4,7 8,3 12,7" fill="none" stroke="#f5f1e6" strokeWidth="1.9"/></svg>
+              }
             </button>
           </div>
         </div>
