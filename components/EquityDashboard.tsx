@@ -268,7 +268,7 @@ export default function EquityDashboard() {
   useEffect(() => {
     async function load() {
       const [props, morts] = await Promise.all([
-        fetchTable<Property>("properties", "created_at.asc"),
+        fetchTable<Property>("properties", "sort_order.asc"),
         fetchTable<Mortgage>("mortgages"),
       ]);
       setProperties(props);
@@ -279,11 +279,7 @@ export default function EquityDashboard() {
     load();
   }, []);
 
-  useEffect(() => {
-    if (properties.length > 0 && activeFilter === null) {
-      setActiveFilter(properties[0].id);
-    }
-  }, [properties]);
+  // No auto-select — default shows all payments
 
   useEffect(() => {
     const setActive = (id: string) => {
@@ -575,6 +571,11 @@ export default function EquityDashboard() {
 
           {/* Filtry nemovitostí */}
           <div className="flex gap-[7px] flex-wrap mb-4">
+            <button onClick={() => setActiveFilter(null)}
+              className="cursor-pointer rounded-[20px] border-none"
+              style={{ fontWeight: 600, fontSize: 12, padding: "7px 13px", color: activeFilter === null ? "#f5f1e6" : "#5c6359", background: activeFilter === null ? "#1f3d2e" : "#e6e0d0" }}>
+              Vše
+            </button>
             {properties.filter((p) => p.status !== "planned").map((p) => (
               <button key={p.id} onClick={() => setActiveFilter(p.id)}
                 className="cursor-pointer rounded-[20px] border-none"
