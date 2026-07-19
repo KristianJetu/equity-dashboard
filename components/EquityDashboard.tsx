@@ -562,7 +562,7 @@ export default function EquityDashboard() {
                   <span>
                     <strong>{fmt(p.rent_received)} Kč</strong>
                     {p.sender_name ? ` od ${p.sender_name}` : ""}
-                    {" · "}{monthLabel(p.month)}
+                    {" · "}{p.payment_date ? fmtDate(p.payment_date) : monthLabel(p.month)}
                   </span>
                   <button onClick={() => setSelectedPayment(p)}
                     style={{ fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 20, border: "none", background: "#c0392b", color: "#fff", cursor: "pointer" }}>
