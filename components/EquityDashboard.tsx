@@ -202,6 +202,50 @@ function PaymentModal({
   );
 }
 
+// ── Rent Due Day Row ─────────────────────────────────────────────────────────
+function RentDueDayRow({ property, onSaved }: { property: Property; onSaved: (id: string, day: number) => void }) {
+  const [day, setDay] = useState(property.rent_due_day ?? 15);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${property.id}`, {
+      method: "PATCH",
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify({ rent_due_day: day }),
+    });
+    onSaved(property.id, day);
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div className="flex items-center gap-4" style={{ padding: "14px 0", borderBottom: "1px solid #e3ddcb" }}>
+      <span style={{ flex: 1, fontSize: 14, color: "#1c2b22", fontWeight: 500 }}>{property.name}</span>
+      <div className="flex items-center gap-2">
+        <span style={{ fontSize: 13, color: "#7c8378" }}>každého</span>
+        <input
+          type="number" min={1} max={28} value={day}
+          onChange={e => { setSaved(false); setDay(Number(e.target.value)); }}
+          style={{ width: 56, padding: "6px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", textAlign: "center" }}
+        />
+        <span style={{ fontSize: 13, color: "#7c8378" }}>v měsíci</span>
+      </div>
+      <button onClick={handleSave} disabled={saving}
+        style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: saved ? "#1f3d2e" : "#1f3d2e", color: "#f5f1e6", fontSize: 13, fontWeight: 600, cursor: "pointer", minWidth: 72, opacity: saving ? 0.6 : 1 }}>
+        {saved ? "✓ Uloženo" : saving ? "Ukládám…" : "Uložit"}
+      </button>
+    </div>
+  );
+}
+
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function EquityDashboard() {
   const navLinksRef = useRef<Record<string, HTMLAnchorElement | null>>({});
@@ -598,6 +642,21 @@ export default function EquityDashboard() {
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 6 }}>Asistent</div>
           <div style={{ fontSize: 14, color: "#7c8378", maxWidth: 560, lineHeight: 1.6 }}>
             Zeptej se na cokoli o svém portfoliu v poli níže — výnosy, cash-flow, vývoj equity nebo srovnání nemovitostí.
+          </div>
+        </section>
+
+        {/* NASTAVENÍ */}
+        <section id="nastaveni" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 80 }}>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Nastavení</div>
+          <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "6px 24px 20px" }}>
+            <div style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9a9483", padding: "13px 0 12px", borderBottom: "1px solid #e3ddcb" }}>
+              Den splatnosti nájmu
+            </div>
+            {properties.filter(p => p.status !== "planned").map(p => (
+              <RentDueDayRow key={p.id} property={p} onSaved={(id, day) => {
+                setProperties(prev => prev.map(pr => pr.id === id ? { ...pr, rent_due_day: day } : pr));
+              }} />
+            ))}
           </div>
         </section>
       </main>
