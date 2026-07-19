@@ -119,6 +119,8 @@ function PropertyModal({ property, mortgage, onClose, onSaved }: {
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const [name, setName] = useState(property.name);
+  const [status, setStatus] = useState(property.status);
   const [estimatedValue, setEstimatedValue] = useState(String(property.estimated_value));
   const [rentAmount, setRentAmount] = useState(String(property.rent_amount));
   const [monthlyPayment, setMonthlyPayment] = useState(String(mortgage?.monthly_payment ?? ""));
@@ -133,6 +135,8 @@ function PropertyModal({ property, mortgage, onClose, onSaved }: {
       method: "PATCH",
       headers: sbHeadersModal,
       body: JSON.stringify({
+        name,
+        status,
         estimated_value: Number(estimatedValue),
         rent_amount: Number(rentAmount),
         rent_due_day: Number(rentDueDay),
@@ -169,8 +173,22 @@ function PropertyModal({ property, mortgage, onClose, onSaved }: {
       <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "32px 32px 28px", width: 480, boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
         onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-start mb-6">
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 20, color: "#1c2b22" }}>{property.name}</div>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 20, color: "#1c2b22" }}>Detail nemovitosti</div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9a9483", fontSize: 22 }}>×</button>
+        </div>
+
+        {field("Název nemovitosti", name, setName, "text")}
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Stav</div>
+          <div className="flex gap-2">
+            {(["rented", "vacant", "planned"] as const).map(s => (
+              <button key={s} onClick={() => { setStatus(s); setSaved(false); }}
+                style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `2px solid ${status === s ? "#1f3d2e" : "#d2cab4"}`, background: status === s ? "#1f3d2e" : "transparent", color: status === s ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                {s === "rented" ? "Pronajato" : s === "vacant" ? "Volné" : "Plánováno"}
+              </button>
+            ))}
+          </div>
         </div>
 
         {field("Hodnota nemovitosti", estimatedValue, setEstimatedValue, "number", "Kč")}
