@@ -380,7 +380,7 @@ export default function EquityDashboard() {
                   <span className="flex-1">{monthLabel(p.month)}</span>
                   <span style={{ width: 120, textAlign: "right", color: "#1f3d2e", fontWeight: 600 }}>+{fmt(p.rent_received)}</span>
                   <span style={{ width: 120, textAlign: "right", color: "#a07b2f" }}>−{fmt(p.mortgage_payment)}</span>
-                  <span style={{ width: 120, textAlign: "right", fontWeight: 700 }}>+{fmt(p.net_cashflow)}</span>
+                  <span style={{ width: 120, textAlign: "right", fontWeight: 700, color: p.net_cashflow >= 0 ? undefined : "#c0392b" }}>{p.net_cashflow >= 0 ? "+" : ""}{fmt(p.net_cashflow)}</span>
                 </div>
               ))}
             </div>
