@@ -304,6 +304,18 @@ export default function EquityDashboard() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  async function handleToggleStatus(propertyId: string, currentStatus: string) {
+    const newStatus = currentStatus === "rented" ? "vacant" : "rented";
+    const label = newStatus === "rented" ? "Pronajato" : "Volné";
+    if (!confirm(`Změnit stav na "${label}"?`)) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${propertyId}`, {
+      method: "PATCH",
+      headers: sbHeaders,
+      body: JSON.stringify({ status: newStatus }),
+    });
+    setProperties(prev => prev.map(p => p.id === propertyId ? { ...p, status: newStatus as Property["status"] } : p));
+  }
+
   async function handleAssignPayment(paymentId: string, propertyId: string) {
     const property = properties.find(p => p.id === propertyId);
     const payment = [...payments, ...unmatchedPayments].find(p => p.id === paymentId);
@@ -517,7 +529,7 @@ export default function EquityDashboard() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{fmtMil(p.estimated_value)} mil</span>
-                        <span className={`inline-flex items-center rounded-[20px] ${cls}`} style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 11px" }}>{label}</span>
+                        <button onClick={() => handleToggleStatus(p.id, p.status)} className={`inline-flex items-center rounded-[20px] ${cls}`} style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 11px", border: "none", cursor: "pointer" }}>{label}</button>
                       </div>
                     </div>
                     {mortgage && (() => {
