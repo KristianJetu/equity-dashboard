@@ -94,6 +94,7 @@ async function savePayment(
 
   const paymentData: Record<string, unknown> = {
     month,
+    payment_date: parsed.date || null,
     rent_received: parsed.amount,
     mortgage_payment: mortgagePayment,
     net_cashflow: netCashflow,

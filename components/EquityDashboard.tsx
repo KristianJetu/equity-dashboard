@@ -20,6 +20,7 @@ type Property = {
   status: "rented" | "vacant" | "planned";
   rent_amount: number;
   estimated_value: number;
+  rent_due_day?: number;
 };
 
 type Mortgage = {
@@ -35,6 +36,7 @@ type Payment = {
   id: string;
   property_id: string | null;
   month: string;
+  payment_date?: string | null;
   rent_received: number;
   mortgage_payment: number;
   net_cashflow: number;
@@ -75,6 +77,15 @@ function fmt(n: number) { return new Intl.NumberFormat("cs-CZ").format(Math.roun
 function fmtMil(n: number) { return (n / 1_000_000).toFixed(1).replace(".", ","); }
 function monthLabel(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("cs-CZ", { month: "long", year: "numeric" });
+}
+function fmtDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" });
+}
+function daysLate(paymentDate: string, month: string, dueDay: number): number {
+  const paid = new Date(paymentDate);
+  const [year, mon] = month.split("-").map(Number);
+  const due = new Date(year, mon - 1, dueDay);
+  return Math.round((paid.getTime() - due.getTime()) / 86400000);
 }
 function matchTypeLabel(t?: string) {
   if (t === "auto") return { label: "Automaticky", color: "#1f3d2e", bg: "#d6e4d6" };
@@ -542,24 +553,42 @@ export default function EquityDashboard() {
                   <span style={{ width: 120, textAlign: "right" }}>Výdaje</span>
                   <span style={{ width: 120, textAlign: "right" }}>Čistý zisk</span>
                 </div>
-                {filteredPayments.map((p) => (
-                  <div key={p.id}
-                    className="flex cursor-pointer"
-                    onClick={() => setSelectedPayment(p)}
-                    style={{ fontVariantNumeric: "tabular-nums", fontSize: 14, padding: "13px 0", borderTop: "1px solid #e3ddcb", color: "#1c2b22", borderRadius: 6, transition: "background 0.1s" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "#ece6d8")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                    <span className="flex-1 flex items-center gap-2">
-                      {monthLabel(p.month)}
-                      {p.match_type === "auto" && <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: "#d6e4d6", color: "#1f3d2e", fontWeight: 600 }}>auto</span>}
-                    </span>
-                    <span style={{ width: 120, textAlign: "right", color: "#1f3d2e", fontWeight: 600 }}>+{fmt(p.rent_received)}</span>
-                    <span style={{ width: 120, textAlign: "right", color: "#a07b2f" }}>−{fmt(p.mortgage_payment)}</span>
-                    <span style={{ width: 120, textAlign: "right", fontWeight: 700, color: p.net_cashflow >= 0 ? undefined : "#c0392b" }}>
-                      {p.net_cashflow >= 0 ? "+" : ""}{fmt(p.net_cashflow)}
-                    </span>
-                  </div>
-                ))}
+                {filteredPayments.map((p) => {
+                  const prop = properties.find(pr => pr.id === p.property_id);
+                  const dueDay = prop?.rent_due_day ?? 15;
+                  const late = p.payment_date ? daysLate(p.payment_date, p.month, dueDay) : null;
+                  return (
+                    <div key={p.id}
+                      className="flex cursor-pointer items-center"
+                      onClick={() => setSelectedPayment(p)}
+                      style={{ fontVariantNumeric: "tabular-nums", fontSize: 14, padding: "11px 0", borderTop: "1px solid #e3ddcb", color: "#1c2b22", borderRadius: 6, transition: "background 0.1s" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#ece6d8")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                      <span className="flex-1">
+                        <span className="flex items-center gap-2">
+                          <span>{monthLabel(p.month)}</span>
+                          {p.match_type === "auto" && <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: "#d6e4d6", color: "#1f3d2e", fontWeight: 600 }}>auto</span>}
+                        </span>
+                        <span className="flex items-center gap-2 flex-wrap" style={{ marginTop: 3 }}>
+                          {p.sender_name && <span style={{ fontSize: 12, color: "#5c6359" }}>{p.sender_name}</span>}
+                          {p.payment_date && <span style={{ fontSize: 12, color: "#9a9483" }}>{fmtDate(p.payment_date)}</span>}
+                          {late !== null && (
+                            late > 0
+                              ? <span style={{ fontSize: 11, fontWeight: 700, color: "#c0392b" }}>{late} {late === 1 ? "den" : late < 5 ? "dny" : "dní"} po splatnosti</span>
+                              : late < 0
+                                ? <span style={{ fontSize: 11, fontWeight: 700, color: "#1f3d2e" }}>{Math.abs(late)} {Math.abs(late) === 1 ? "den" : Math.abs(late) < 5 ? "dny" : "dní"} před splatností</span>
+                                : <span style={{ fontSize: 11, fontWeight: 700, color: "#1f3d2e" }}>V den splatnosti</span>
+                          )}
+                        </span>
+                      </span>
+                      <span style={{ width: 120, textAlign: "right", color: "#1f3d2e", fontWeight: 600 }}>+{fmt(p.rent_received)}</span>
+                      <span style={{ width: 120, textAlign: "right", color: "#a07b2f" }}>−{fmt(p.mortgage_payment)}</span>
+                      <span style={{ width: 120, textAlign: "right", fontWeight: 700, color: p.net_cashflow >= 0 ? undefined : "#c0392b" }}>
+                        {p.net_cashflow >= 0 ? "+" : ""}{fmt(p.net_cashflow)}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
         </section>
