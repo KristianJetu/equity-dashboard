@@ -73,6 +73,10 @@ function statusBadge(status: string) {
   return { label: "Plánováno", cls: "text-[#7c8378] bg-[#e6e0d0]" };
 }
 
+function daysUntil(dateStr: string): number {
+  return Math.round((new Date(dateStr).getTime() - Date.now()) / 86400000);
+}
+
 function fmt(n: number) { return new Intl.NumberFormat("cs-CZ").format(Math.round(n)); }
 function fmtMil(n: number) { return (n / 1_000_000).toFixed(1).replace(".", ","); }
 function monthLabel(dateStr: string) {
@@ -570,6 +574,16 @@ export default function EquityDashboard() {
                           {mortgage ? ` · Splátka ${fmt(mortgage.monthly_payment)} Kč` : ""}
                           {mortgage?.refix_date ? ` · Refix ${mortgage.refix_date}` : ""}
                         </div>
+                        {mortgage?.refix_date && (() => {
+                          const days = daysUntil(mortgage.refix_date);
+                          if (days > 90) return null;
+                          const urgent = days <= 30;
+                          return (
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6, padding: "4px 10px", borderRadius: 20, background: urgent ? "#fde8e8" : "#efe3c6", color: urgent ? "#c0392b" : "#a07b2f", fontSize: 12, fontWeight: 700 }}>
+                              ⚠ Refix za {days} dní ({mortgage.refix_date})
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div className="flex items-center gap-3">
                         <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{fmtMil(p.estimated_value)} mil</span>
