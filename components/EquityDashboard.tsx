@@ -103,6 +103,94 @@ function paymentTypeLabel(t?: string) {
   return "Nájem";
 }
 
+// ── Property Detail Modal ─────────────────────────────────────────────────────
+const SUPABASE_URL_MODAL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_KEY_MODAL = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const sbHeadersModal = {
+  apikey: SUPABASE_KEY_MODAL,
+  Authorization: `Bearer ${SUPABASE_KEY_MODAL}`,
+  "Content-Type": "application/json",
+  Prefer: "return=representation",
+};
+
+function PropertyModal({ property, mortgage, onClose, onSaved }: {
+  property: Property;
+  mortgage: { id: string; monthly_payment: number; refix_date: string | null; outstanding_balance: number } | undefined;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [estimatedValue, setEstimatedValue] = useState(String(property.estimated_value));
+  const [rentAmount, setRentAmount] = useState(String(property.rent_amount));
+  const [monthlyPayment, setMonthlyPayment] = useState(String(mortgage?.monthly_payment ?? ""));
+  const [refixDate, setRefixDate] = useState(mortgage?.refix_date ?? "");
+  const [rentDueDay, setRentDueDay] = useState(String(property.rent_due_day ?? 15));
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    await fetch(`${SUPABASE_URL_MODAL}/rest/v1/properties?id=eq.${property.id}`, {
+      method: "PATCH",
+      headers: sbHeadersModal,
+      body: JSON.stringify({
+        estimated_value: Number(estimatedValue),
+        rent_amount: Number(rentAmount),
+        rent_due_day: Number(rentDueDay),
+      }),
+    });
+    if (mortgage) {
+      await fetch(`${SUPABASE_URL_MODAL}/rest/v1/mortgages?id=eq.${mortgage.id}`, {
+        method: "PATCH",
+        headers: sbHeadersModal,
+        body: JSON.stringify({
+          monthly_payment: Number(monthlyPayment),
+          refix_date: refixDate || null,
+        }),
+      });
+    }
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => { onSaved(); onClose(); }, 800);
+  }
+
+  const field = (label: string, value: string, onChange: (v: string) => void, type = "number", suffix = "") => (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{label}</div>
+      <div className="flex items-center gap-2">
+        <input type={type} value={value} onChange={e => { onChange(e.target.value); setSaved(false); }}
+          style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22" }} />
+        {suffix && <span style={{ fontSize: 13, color: "#9a9483" }}>{suffix}</span>}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)" }} onClick={onClose}>
+      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "32px 32px 28px", width: 480, boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
+        onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-start mb-6">
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 20, color: "#1c2b22" }}>{property.name}</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9a9483", fontSize: 22 }}>×</button>
+        </div>
+
+        {field("Hodnota nemovitosti", estimatedValue, setEstimatedValue, "number", "Kč")}
+        {field("Výše nájmu", rentAmount, setRentAmount, "number", "Kč / měs")}
+        {field("Den splatnosti nájmu", rentDueDay, setRentDueDay, "number", "v měsíci")}
+        {mortgage && field("Splátka hypotéky", monthlyPayment, setMonthlyPayment, "number", "Kč / měs")}
+        {mortgage && field("Datum refixu", refixDate, setRefixDate, "date")}
+
+        <div className="flex gap-3 justify-end mt-4">
+          <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>Zavřít</button>
+          <button onClick={handleSave} disabled={saving}
+            style={{ padding: "9px 18px", borderRadius: 8, border: "none", background: saved ? "#2d6a4f" : "#1f3d2e", fontSize: 14, fontWeight: 600, color: "#f5f1e6", cursor: "pointer", opacity: saving ? 0.7 : 1 }}>
+            {saved ? "✓ Uloženo" : saving ? "Ukládám…" : "Uložit"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Payment Detail Modal ──────────────────────────────────────────────────────
 function PaymentModal({
   payment, properties, onClose, onSave,
@@ -262,6 +350,7 @@ export default function EquityDashboard() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
 
   type ChatMessage = { role: "user" | "assistant"; content: string };
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -412,7 +501,24 @@ export default function EquityDashboard() {
   return (
     <div className="min-h-screen" style={{ background: "#ece6d8", fontFamily: "'Hanken Grotesk', sans-serif" }}>
 
-      {/* Modal */}
+      {/* Property Modal */}
+      {selectedProperty && (
+        <PropertyModal
+          property={selectedProperty}
+          mortgage={mortgages.find(m => m.property_id === selectedProperty.id)}
+          onClose={() => setSelectedProperty(null)}
+          onSaved={async () => {
+            const [props, morts] = await Promise.all([
+              fetchTable<Property>("properties", "sort_order.asc"),
+              fetchTable<Mortgage>("mortgages"),
+            ]);
+            setProperties(props);
+            setMortgages(morts);
+          }}
+        />
+      )}
+
+      {/* Payment Modal */}
       {selectedPayment && (
         <PaymentModal
           payment={selectedPayment}
@@ -565,7 +671,9 @@ export default function EquityDashboard() {
                 const { label, cls } = statusBadge(p.status);
                 const mortgage = mortgages.find((m) => m.property_id === p.id);
                 return (
-                  <div key={p.id} style={{ background: "#f5f1e6", borderRadius: 10, padding: "15px 18px", border: p.status === "planned" ? "1px dashed #c9c0aa" : "1px solid transparent" }}>
+                  <div key={p.id} onClick={() => setSelectedProperty(p)} style={{ background: "#f5f1e6", borderRadius: 10, padding: "15px 18px", border: p.status === "planned" ? "1px dashed #c9c0aa" : "1px solid transparent", cursor: "pointer", transition: "box-shadow 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 2px 12px rgba(31,61,46,0.10)")}
+                    onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
                     <div className="flex items-center justify-between">
                       <div>
                         <div style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{p.name}</div>
@@ -587,7 +695,7 @@ export default function EquityDashboard() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{fmtMil(p.estimated_value)} mil</span>
-                        <button onClick={() => handleToggleStatus(p.id, p.status)} className={`inline-flex items-center rounded-[20px] ${cls}`} style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 11px", border: "none", cursor: "pointer" }}>{label}</button>
+                        <button onClick={e => { e.stopPropagation(); handleToggleStatus(p.id, p.status); }} className={`inline-flex items-center rounded-[20px] ${cls}`} style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 11px", border: "none", cursor: "pointer" }}>{label}</button>
                       </div>
                     </div>
                     {mortgage && (() => {
@@ -734,20 +842,6 @@ export default function EquityDashboard() {
           )}
         </section>
 
-        {/* NASTAVENÍ */}
-        <section id="nastaveni" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 80 }}>
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Nastavení</div>
-          <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "6px 24px 20px" }}>
-            <div style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9a9483", padding: "13px 0 12px", borderBottom: "1px solid #e3ddcb" }}>
-              Den splatnosti nájmu
-            </div>
-            {properties.filter(p => p.status !== "planned").map(p => (
-              <RentDueDayRow key={p.id} property={p} onSaved={(id, day) => {
-                setProperties(prev => prev.map(pr => pr.id === id ? { ...pr, rent_due_day: day } : pr));
-              }} />
-            ))}
-          </div>
-        </section>
       </main>
 
       {/* FLOATING CHAT */}
