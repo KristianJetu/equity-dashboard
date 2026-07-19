@@ -359,7 +359,7 @@ export default function EquityDashboard() {
             <span style={{ fontSize: 13, color: "#7c8378" }}>
               {new Date().toLocaleDateString("cs-CZ", { month: "long", year: "numeric" })}
             </span>
-            <div className="flex items-center justify-center" style={{ width: 34, height: 34, borderRadius: "50%", background: "#1f3d2e", color: "#ece6d8", fontWeight: 600, fontSize: 12 }}>JN</div>
+            <div className="flex items-center justify-center" style={{ width: 34, height: 34, borderRadius: "50%", background: "#1f3d2e", color: "#ece6d8", fontWeight: 600, fontSize: 12 }}>KL</div>
           </div>
         </div>
 
