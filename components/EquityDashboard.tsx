@@ -21,6 +21,9 @@ type Property = {
   rent_amount: number;
   estimated_value: number;
   rent_due_day?: number;
+  purchase_date?: string | null;
+  purchase_price?: number | null;
+  annual_growth_pct?: number | null;
 };
 
 type Mortgage = {
@@ -30,6 +33,10 @@ type Mortgage = {
   outstanding_balance: number;
   monthly_payment: number;
   refix_date: string | null;
+  loan_amount?: number | null;
+  loan_start_date?: string | null;
+  interest_rate?: number | null;
+  loan_term_years?: number | null;
 };
 
 type Payment = {
@@ -107,7 +114,7 @@ function paymentTypeLabel(t?: string) {
 
 function PropertyModal({ property, mortgage, onClose, onSaved }: {
   property: Property;
-  mortgage: { id: string; monthly_payment: number; refix_date: string | null; outstanding_balance: number } | undefined;
+  mortgage: Mortgage | undefined;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -115,15 +122,22 @@ function PropertyModal({ property, mortgage, onClose, onSaved }: {
   const [status, setStatus] = useState(property.status);
   const [estimatedValue, setEstimatedValue] = useState(String(property.estimated_value));
   const [rentAmount, setRentAmount] = useState(String(property.rent_amount));
+  const [rentDueDay, setRentDueDay] = useState(String(property.rent_due_day ?? 15));
+  const [purchaseDate, setPurchaseDate] = useState(property.purchase_date ?? "");
+  const [purchasePrice, setPurchasePrice] = useState(String(property.purchase_price ?? ""));
+  const [annualGrowthPct, setAnnualGrowthPct] = useState(String(property.annual_growth_pct ?? 3));
   const [monthlyPayment, setMonthlyPayment] = useState(String(mortgage?.monthly_payment ?? ""));
   const [refixDate, setRefixDate] = useState(mortgage?.refix_date ?? "");
-  const [rentDueDay, setRentDueDay] = useState(String(property.rent_due_day ?? 15));
+  const [loanAmount, setLoanAmount] = useState(String(mortgage?.loan_amount ?? ""));
+  const [loanStartDate, setLoanStartDate] = useState(mortgage?.loan_start_date ?? "");
+  const [interestRate, setInterestRate] = useState(String(mortgage?.interest_rate ?? ""));
+  const [loanTermYears, setLoanTermYears] = useState(String(mortgage?.loan_term_years ?? ""));
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   async function handleSave() {
     setSaving(true);
-    await fetch(`${SUPABASE_URL_MODAL}/rest/v1/properties?id=eq.${property.id}`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${property.id}`, {
       method: "PATCH",
       headers: sbHeaders,
       body: JSON.stringify({
@@ -132,15 +146,22 @@ function PropertyModal({ property, mortgage, onClose, onSaved }: {
         estimated_value: Number(estimatedValue),
         rent_amount: Number(rentAmount),
         rent_due_day: Number(rentDueDay),
+        purchase_date: purchaseDate || null,
+        purchase_price: purchasePrice ? Number(purchasePrice) : null,
+        annual_growth_pct: annualGrowthPct ? Number(annualGrowthPct) : 3,
       }),
     });
     if (mortgage) {
-      await fetch(`${SUPABASE_URL_MODAL}/rest/v1/mortgages?id=eq.${mortgage.id}`, {
+      await fetch(`${SUPABASE_URL}/rest/v1/mortgages?id=eq.${mortgage.id}`, {
         method: "PATCH",
         headers: sbHeaders,
         body: JSON.stringify({
           monthly_payment: Number(monthlyPayment),
           refix_date: refixDate || null,
+          loan_amount: loanAmount ? Number(loanAmount) : null,
+          loan_start_date: loanStartDate || null,
+          interest_rate: interestRate ? Number(interestRate) : null,
+          loan_term_years: loanTermYears ? Number(loanTermYears) : null,
         }),
       });
     }
@@ -162,7 +183,7 @@ function PropertyModal({ property, mortgage, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)" }} onClick={onClose}>
-      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "32px 32px 28px", width: 480, boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
+      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "32px 32px 28px", width: 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
         onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-start mb-6">
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 20, color: "#1c2b22" }}>Detail nemovitosti</div>
@@ -183,11 +204,23 @@ function PropertyModal({ property, mortgage, onClose, onSaved }: {
           </div>
         </div>
 
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Nemovitost</div>
         {field("Hodnota nemovitosti", estimatedValue, setEstimatedValue, "number", "Kč")}
         {field("Výše nájmu", rentAmount, setRentAmount, "number", "Kč / měs")}
         {field("Den splatnosti nájmu", rentDueDay, setRentDueDay, "number", "v měsíci")}
-        {mortgage && field("Splátka hypotéky", monthlyPayment, setMonthlyPayment, "number", "Kč / měs")}
-        {mortgage && field("Datum refixu", refixDate, setRefixDate, "date")}
+        {field("Datum koupě", purchaseDate, setPurchaseDate, "date")}
+        {field("Kupní cena", purchasePrice, setPurchasePrice, "number", "Kč")}
+        {field("Odhadovaný roční růst hodnoty", annualGrowthPct, setAnnualGrowthPct, "number", "% / rok")}
+
+        {mortgage && <>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Hypotéka</div>
+          {field("Výše úvěru", loanAmount, setLoanAmount, "number", "Kč")}
+          {field("Datum čerpání", loanStartDate, setLoanStartDate, "date")}
+          {field("Úroková sazba", interestRate, setInterestRate, "number", "%")}
+          {field("Splatnost", loanTermYears, setLoanTermYears, "number", "let")}
+          {field("Měsíční splátka", monthlyPayment, setMonthlyPayment, "number", "Kč / měs")}
+          {field("Datum refixu", refixDate, setRefixDate, "date")}
+        </>}
 
         <div className="flex gap-3 justify-end mt-4">
           <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>Zavřít</button>
