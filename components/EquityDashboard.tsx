@@ -104,14 +104,6 @@ function paymentTypeLabel(t?: string) {
 }
 
 // ── Property Detail Modal ─────────────────────────────────────────────────────
-const SUPABASE_URL_MODAL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_KEY_MODAL = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const sbHeadersModal = {
-  apikey: SUPABASE_KEY_MODAL,
-  Authorization: `Bearer ${SUPABASE_KEY_MODAL}`,
-  "Content-Type": "application/json",
-  Prefer: "return=representation",
-};
 
 function PropertyModal({ property, mortgage, onClose, onSaved }: {
   property: Property;
@@ -133,7 +125,7 @@ function PropertyModal({ property, mortgage, onClose, onSaved }: {
     setSaving(true);
     await fetch(`${SUPABASE_URL_MODAL}/rest/v1/properties?id=eq.${property.id}`, {
       method: "PATCH",
-      headers: sbHeadersModal,
+      headers: sbHeaders,
       body: JSON.stringify({
         name,
         status,
@@ -145,7 +137,7 @@ function PropertyModal({ property, mortgage, onClose, onSaved }: {
     if (mortgage) {
       await fetch(`${SUPABASE_URL_MODAL}/rest/v1/mortgages?id=eq.${mortgage.id}`, {
         method: "PATCH",
-        headers: sbHeadersModal,
+        headers: sbHeaders,
         body: JSON.stringify({
           monthly_payment: Number(monthlyPayment),
           refix_date: refixDate || null,
@@ -312,49 +304,7 @@ function PaymentModal({
   );
 }
 
-// ── Rent Due Day Row ─────────────────────────────────────────────────────────
-function RentDueDayRow({ property, onSaved }: { property: Property; onSaved: (id: string, day: number) => void }) {
-  const [day, setDay] = useState(property.rent_due_day ?? 15);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
-  async function handleSave() {
-    setSaving(true);
-    await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${property.id}`, {
-      method: "PATCH",
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify({ rent_due_day: day }),
-    });
-    onSaved(property.id, day);
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
-
-  return (
-    <div className="flex items-center gap-4" style={{ padding: "14px 0", borderBottom: "1px solid #e3ddcb" }}>
-      <span style={{ flex: 1, fontSize: 14, color: "#1c2b22", fontWeight: 500 }}>{property.name}</span>
-      <div className="flex items-center gap-2">
-        <span style={{ fontSize: 13, color: "#7c8378" }}>každého</span>
-        <input
-          type="number" min={1} max={28} value={day}
-          onChange={e => { setSaved(false); setDay(Number(e.target.value)); }}
-          style={{ width: 56, padding: "6px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", textAlign: "center" }}
-        />
-        <span style={{ fontSize: 13, color: "#7c8378" }}>v měsíci</span>
-      </div>
-      <button onClick={handleSave} disabled={saving}
-        style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: saved ? "#1f3d2e" : "#1f3d2e", color: "#f5f1e6", fontSize: 13, fontWeight: 600, cursor: "pointer", minWidth: 72, opacity: saving ? 0.6 : 1 }}>
-        {saved ? "✓ Uloženo" : saving ? "Ukládám…" : "Uložit"}
-      </button>
-    </div>
-  );
-}
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function EquityDashboard() {
@@ -746,7 +696,7 @@ export default function EquityDashboard() {
           {unmatchedPayments.length > 0 && (
             <div style={{ background: "#fde8e8", border: "1px solid #f5c0c0", borderRadius: 10, padding: "14px 18px", marginBottom: 18 }}>
               <div className="flex items-center gap-2 mb-2">
-                <span style={{ color: "#c0392b", fontSize: 13, fontWeight: 700 }}>⚠ {unmatchedPayments.length} nespárovaná platba</span>
+                <span style={{ color: "#c0392b", fontSize: 13, fontWeight: 700 }}>⚠ {unmatchedPayments.length} {unmatchedPayments.length === 1 ? "nespárovaná platba" : unmatchedPayments.length < 5 ? "nespárované platby" : "nespárovaných plateb"}</span>
               </div>
               {unmatchedPayments.map(p => (
                 <div key={p.id} className="flex items-center justify-between"
