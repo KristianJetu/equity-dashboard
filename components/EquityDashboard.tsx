@@ -341,7 +341,6 @@ function PaymentModal({
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function EquityDashboard() {
-  const navLinksRef = useRef<Record<string, HTMLAnchorElement | null>>({});
   const SECTION_IDS = ["dashboard", "nemovitosti", "platby", "asistent"];
 
   const [properties, setProperties] = useState<Property[]>([]);
@@ -352,6 +351,7 @@ export default function EquityDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [activeSection, setActiveSection] = useState("dashboard");
 
   type ChatMessage = { role: "user" | "assistant"; content: string };
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -383,22 +383,13 @@ export default function EquityDashboard() {
   // No auto-select — default shows all payments
 
   useEffect(() => {
-    const setActive = (id: string) => {
-      Object.entries(navLinksRef.current).forEach(([k, a]) => {
-        if (!a) return;
-        const on = k === id;
-        a.style.background = on ? "rgba(255,255,255,.12)" : "transparent";
-        const ic = a.querySelector<HTMLElement>(".nav-icon");
-        if (ic) ic.style.color = on ? "#f5f1e6" : "#86a191";
-      });
-    };
     const onScroll = () => {
       let cur = SECTION_IDS[0];
       for (const id of SECTION_IDS) {
         const el = document.getElementById(id);
         if (el && el.getBoundingClientRect().top <= 160) cur = id;
       }
-      setActive(cur);
+      setActiveSection(cur);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
@@ -535,14 +526,16 @@ export default function EquityDashboard() {
           <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#1f3d2e" }} />
         </div>
         <div className="flex flex-col gap-2 items-center">
-          {NAV_ITEMS.map((item) => (
-            <a key={item.id} href={`#${item.id}`} title={item.title}
-              ref={(el) => { navLinksRef.current[item.id] = el; }}
-              className="flex items-center justify-center transition-colors duration-150 rounded-[12px]"
-              style={{ width: 46, height: 46, background: item.id === "dashboard" ? "rgba(255,255,255,.12)" : "transparent", textDecoration: "none" }}>
-              <span className="nav-icon" style={{ color: item.id === "dashboard" ? "#f5f1e6" : "#86a191", display: "flex" }}>{item.icon}</span>
-            </a>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const on = activeSection === item.id;
+            return (
+              <a key={item.id} href={`#${item.id}`} title={item.title}
+                className="flex items-center justify-center transition-colors duration-150 rounded-[12px]"
+                style={{ width: 46, height: 46, background: on ? "rgba(255,255,255,.12)" : "transparent", textDecoration: "none" }}>
+                <span style={{ color: on ? "#f5f1e6" : "#86a191", display: "flex" }}>{item.icon}</span>
+              </a>
+            );
+          })}
         </div>
         {/* Badge na nespárované */}
         {unmatchedPayments.length > 0 && (
@@ -552,7 +545,7 @@ export default function EquityDashboard() {
             </span>
           </a>
         )}
-        <a href="#nastaveni" title="Nastavení" ref={(el) => { navLinksRef.current["nastaveni"] = el; }}
+        <a href="#nastaveni" title="Nastavení"
           className="mt-auto flex items-center justify-center rounded-[12px]"
           style={{ width: 46, height: 46, background: "transparent", textDecoration: "none" }}>
           <span className="nav-icon" style={{ color: "#86a191", display: "flex" }}>
