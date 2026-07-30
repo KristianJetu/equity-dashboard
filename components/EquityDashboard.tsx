@@ -24,6 +24,14 @@ type Property = {
   purchase_date?: string | null;
   purchase_price?: number | null;
   annual_growth_pct?: number | null;
+  lease_start?: string | null;
+  lease_end?: string | null;
+  insurance_company?: string | null;
+  insurance_from?: string | null;
+  insurance_to?: string | null;
+  insurance_amount?: number | null;
+  insurance_url?: string | null;
+  document_url?: string | null;
 };
 
 type Mortgage = {
@@ -132,6 +140,14 @@ function PropertyModal({ property, mortgage, onClose, onSaved }: {
   const [loanStartDate, setLoanStartDate] = useState(mortgage?.loan_start_date ?? "");
   const [interestRate, setInterestRate] = useState(String(mortgage?.interest_rate ?? ""));
   const [loanTermYears, setLoanTermYears] = useState(String(mortgage?.loan_term_years ?? ""));
+  const [leaseStart, setLeaseStart] = useState(property.lease_start ?? "");
+  const [leaseEnd, setLeaseEnd] = useState(property.lease_end ?? "");
+  const [insuranceCompany, setInsuranceCompany] = useState(property.insurance_company ?? "");
+  const [insuranceFrom, setInsuranceFrom] = useState(property.insurance_from ?? "");
+  const [insuranceTo, setInsuranceTo] = useState(property.insurance_to ?? "");
+  const [insuranceAmount, setInsuranceAmount] = useState(String(property.insurance_amount ?? ""));
+  const [insuranceUrl, setInsuranceUrl] = useState(property.insurance_url ?? "");
+  const [documentUrl, setDocumentUrl] = useState(property.document_url ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -149,6 +165,14 @@ function PropertyModal({ property, mortgage, onClose, onSaved }: {
         purchase_date: purchaseDate || null,
         purchase_price: purchasePrice ? Number(purchasePrice) : null,
         annual_growth_pct: annualGrowthPct ? Number(annualGrowthPct) : 3,
+        lease_start: leaseStart || null,
+        lease_end: leaseEnd || null,
+        insurance_company: insuranceCompany || null,
+        insurance_from: insuranceFrom || null,
+        insurance_to: insuranceTo || null,
+        insurance_amount: insuranceAmount ? Number(insuranceAmount) : null,
+        insurance_url: insuranceUrl || null,
+        document_url: documentUrl || null,
       }),
     });
     if (mortgage) {
@@ -221,6 +245,20 @@ function PropertyModal({ property, mortgage, onClose, onSaved }: {
           {field("Měsíční splátka", monthlyPayment, setMonthlyPayment, "number", "Kč / měs")}
           {field("Datum refixu", refixDate, setRefixDate, "date")}
         </>}
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Nájemní smlouva</div>
+        {field("Začátek nájmu", leaseStart, setLeaseStart, "date")}
+        {field("Konec nájmu", leaseEnd, setLeaseEnd, "date")}
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Pojištění</div>
+        {field("Pojišťovna", insuranceCompany, setInsuranceCompany, "text")}
+        {field("Platnost od", insuranceFrom, setInsuranceFrom, "date")}
+        {field("Platnost do", insuranceTo, setInsuranceTo, "date")}
+        {field("Roční pojistné", insuranceAmount, setInsuranceAmount, "number", "Kč / rok")}
+        {field("Odkaz na smlouvu", insuranceUrl, setInsuranceUrl, "url")}
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Dokumenty</div>
+        {field("Odkaz na dokument", documentUrl, setDocumentUrl, "url")}
 
         <div className="flex gap-3 justify-end mt-4">
           <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>Zavřít</button>
@@ -384,10 +422,11 @@ export default function EquityDashboard() {
 
   useEffect(() => {
     const onScroll = () => {
+      const scrollY = window.scrollY + 200;
       let cur = SECTION_IDS[0];
       for (const id of SECTION_IDS) {
         const el = document.getElementById(id);
-        if (el && el.getBoundingClientRect().top <= 160) cur = id;
+        if (el && el.offsetTop <= scrollY) cur = id;
       }
       setActiveSection(cur);
     };
