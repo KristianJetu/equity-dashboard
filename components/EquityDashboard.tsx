@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { fetchTable } from "@/lib/supabase";
+import { createClient } from "@/lib/auth";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -381,6 +382,7 @@ function PaymentModal({
 export default function EquityDashboard() {
   const SECTION_IDS = ["dashboard", "nemovitosti", "platby", "asistent"];
 
+  const supabase = createClient();
   const [properties, setProperties] = useState<Property[]>([]);
   const [mortgages, setMortgages] = useState<Mortgage[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -390,6 +392,11 @@ export default function EquityDashboard() {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [activeSection, setActiveSection] = useState("dashboard");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null));
+  }, []);
 
   type ChatMessage = { role: "user" | "assistant"; content: string };
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -584,16 +591,17 @@ export default function EquityDashboard() {
             </span>
           </a>
         )}
-        <a href="#nastaveni" title="Nastavení"
+        <button title={userEmail ?? "Odhlásit"} onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
           className="mt-auto flex items-center justify-center rounded-[12px]"
-          style={{ width: 46, height: 46, background: "transparent", textDecoration: "none" }}>
-          <span className="nav-icon" style={{ color: "#86a191", display: "flex" }}>
+          style={{ width: 46, height: 46, background: "transparent", border: "none", cursor: "pointer" }}>
+          <span style={{ color: "#86a191", display: "flex" }}>
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
           </span>
-        </a>
+        </button>
       </aside>
 
       {/* MAIN */}
