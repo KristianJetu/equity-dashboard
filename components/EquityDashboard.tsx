@@ -23,6 +23,7 @@ type Property = {
   insurance_amount?: number | null;
   insurance_url?: string | null;
   document_url?: string | null;
+  monthly_costs?: number | null;
 };
 
 type Mortgage = {
@@ -140,6 +141,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   const [insuranceAmount, setInsuranceAmount] = useState(String(property.insurance_amount ?? ""));
   const [insuranceUrl, setInsuranceUrl] = useState(property.insurance_url ?? "");
   const [documentUrl, setDocumentUrl] = useState(property.document_url ?? "");
+  const [monthlyCosts, setMonthlyCosts] = useState(String(property.monthly_costs ?? ""));
   const [addMortgage, setAddMortgage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -162,6 +164,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
       insurance_amount: insuranceAmount ? Number(insuranceAmount) : null,
       insurance_url: insuranceUrl || null,
       document_url: documentUrl || null,
+      monthly_costs: monthlyCosts ? Number(monthlyCosts) : null,
     }).eq("id", property.id);
     if (mortgage) {
       const { error: mortErr } = await supabase.from("mortgages").update({
@@ -268,6 +271,9 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
 
         <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Dokumenty</div>
         {field("Odkaz na dokument", documentUrl, setDocumentUrl, "url")}
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Náklady</div>
+        {field("Měsíční náklady (paušál)", monthlyCosts, setMonthlyCosts, "number", "Kč / měs")}
 
         <div className="flex gap-3 justify-end mt-4">
           <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>Zavřít</button>
@@ -925,7 +931,8 @@ export default function EquityDashboard() {
             const totalRent = rentedProps.reduce((s, p) => s + p.rent_amount, 0);
             const totalMortgage = mortgages.reduce((s, m) => s + m.monthly_payment, 0);
             const totalInsurance = properties.reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0), 0);
-            const totalOut = totalMortgage + totalInsurance;
+            const totalCosts = properties.reduce((s, p) => s + (p.monthly_costs ?? 0), 0);
+            const totalOut = totalMortgage + totalInsurance + totalCosts;
             const net = totalRent - totalOut;
 
             return (
@@ -963,6 +970,12 @@ export default function EquityDashboard() {
                       <div key={p.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                         <span style={{ fontSize: 13, color: "#5c6359" }}>Pojistné · {p.name}</span>
                         <span style={{ fontSize: 13, fontWeight: 600, color: "#c0392b" }}>−{fmt(p.insurance_amount! / 12)} Kč</span>
+                      </div>
+                    ))}
+                    {properties.filter(p => p.monthly_costs).map(p => (
+                      <div key={p.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                        <span style={{ fontSize: 13, color: "#5c6359" }}>Náklady · {p.name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#c0392b" }}>−{fmt(p.monthly_costs!)} Kč</span>
                       </div>
                     ))}
                     <div style={{ borderTop: "1px solid #d2cab4", paddingTop: 8, marginTop: 4, display: "flex", justifyContent: "space-between" }}>
