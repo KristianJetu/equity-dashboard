@@ -163,14 +163,16 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
       document_url: documentUrl || null,
     }).eq("id", property.id);
     if (mortgage) {
-      await supabase.from("mortgages").update({
+      const { error: mortErr } = await supabase.from("mortgages").update({
         monthly_payment: Number(monthlyPayment),
+        outstanding_balance: loanAmount ? Number(loanAmount) : mortgage.outstanding_balance,
         refix_date: refixDate || null,
         loan_amount: loanAmount ? Number(loanAmount) : null,
         loan_start_date: loanStartDate || null,
         interest_rate: interestRate ? Number(interestRate) : null,
         loan_term_years: loanTermYears ? Number(loanTermYears) : null,
       }).eq("id", mortgage.id);
+      if (mortErr) { console.error("mortgage save error:", mortErr); alert("Chyba při ukládání hypotéky: " + mortErr.message); setSaving(false); return; }
     }
     setSaving(false);
     setSaved(true);
