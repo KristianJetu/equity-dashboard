@@ -2,15 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function middleware(req: NextRequest) {
-  // Inbound email webhook — no auth needed
-  if (req.nextUrl.pathname.startsWith("/api/inbound-email")) {
-    return NextResponse.next();
-  }
+  const { pathname } = req.nextUrl;
 
-  // Login page — always accessible
-  if (req.nextUrl.pathname.startsWith("/login")) {
-    return NextResponse.next();
-  }
+  // Vždy přístupné bez autentizace
+  if (pathname.startsWith("/api/inbound-email")) return NextResponse.next();
+  if (pathname.startsWith("/login")) return NextResponse.next();
+  if (pathname.startsWith("/onboarding")) return NextResponse.next();
 
   let response = NextResponse.next({ request: req });
 
@@ -33,6 +30,12 @@ export async function middleware(req: NextRequest) {
 
   if (!user) {
     return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  // Zkontroluj zda má hotový onboarding
+  const { data: profile } = await supabase.from("profiles").select("onboarding_done").eq("id", user.id).single();
+  if (!profile?.onboarding_done && pathname !== "/onboarding") {
+    return NextResponse.redirect(new URL("/onboarding", req.url));
   }
 
   return response;
