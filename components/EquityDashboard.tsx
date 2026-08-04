@@ -917,6 +917,73 @@ export default function EquityDashboard() {
 
         {/* PLATBY */}
         <section id="platby" style={{ marginTop: 38, scrollMarginTop: 28 }}>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Měsíční cashflow</div>
+
+          {/* Cashflow přehled */}
+          {(() => {
+            const rentedProps = properties.filter(p => p.status === "rented");
+            const totalRent = rentedProps.reduce((s, p) => s + p.rent_amount, 0);
+            const totalMortgage = mortgages.reduce((s, m) => s + m.monthly_payment, 0);
+            const totalInsurance = properties.reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0), 0);
+            const totalOut = totalMortgage + totalInsurance;
+            const net = totalRent - totalOut;
+
+            return (
+              <div style={{ background: "#f5f1e6", borderRadius: 12, padding: "22px 24px", marginBottom: 24 }}>
+                <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+                  {/* Příjmy */}
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Příjmy</div>
+                    {rentedProps.map(p => (
+                      <div key={p.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                        <span style={{ fontSize: 13, color: "#5c6359" }}>{p.name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(p.rent_amount)} Kč</span>
+                      </div>
+                    ))}
+                    <div style={{ borderTop: "1px solid #d2cab4", paddingTop: 8, marginTop: 4, display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1c2b22" }}>Celkem příjmy</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1f3d2e" }}>+{fmt(totalRent)} Kč</span>
+                    </div>
+                  </div>
+
+                  {/* Výdaje */}
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Výdaje</div>
+                    {mortgages.map(m => {
+                      const prop = properties.find(p => p.id === m.property_id);
+                      if (!prop || m.monthly_payment === 0) return null;
+                      return (
+                        <div key={m.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                          <span style={{ fontSize: 13, color: "#5c6359" }}>Splátka · {prop.name}</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "#c0392b" }}>−{fmt(m.monthly_payment)} Kč</span>
+                        </div>
+                      );
+                    })}
+                    {properties.filter(p => p.insurance_amount).map(p => (
+                      <div key={p.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                        <span style={{ fontSize: 13, color: "#5c6359" }}>Pojistné · {p.name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#c0392b" }}>−{fmt(p.insurance_amount! / 12)} Kč</span>
+                      </div>
+                    ))}
+                    <div style={{ borderTop: "1px solid #d2cab4", paddingTop: 8, marginTop: 4, display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1c2b22" }}>Celkem výdaje</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#c0392b" }}>−{fmt(totalOut)} Kč</span>
+                    </div>
+                  </div>
+
+                  {/* Net */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "flex-end", minWidth: 160 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Čistý cashflow</div>
+                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 32, fontWeight: 800, color: net >= 0 ? "#1f3d2e" : "#c0392b" }}>
+                      {net >= 0 ? "+" : ""}{fmt(net)} Kč
+                    </div>
+                    <div style={{ fontSize: 12, color: "#7c8378", marginTop: 4 }}>měsíčně</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Historie plateb</div>
 
           {/* Nespárované platby */}
