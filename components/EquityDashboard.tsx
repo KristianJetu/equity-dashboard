@@ -375,9 +375,24 @@ export default function EquityDashboard() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [activeSection, setActiveSection] = useState("dashboard");
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userInitials, setUserInitials] = useState("··");
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null));
+    supabase.auth.getUser().then(({ data }) => {
+      const user = data.user;
+      if (!user) return;
+      setUserEmail(user.email ?? null);
+      const fullName = user.user_metadata?.full_name as string | undefined;
+      if (fullName) {
+        const parts = fullName.trim().split(/\s+/);
+        const initials = parts.length >= 2
+          ? parts[0][0] + parts[parts.length - 1][0]
+          : fullName.slice(0, 2);
+        setUserInitials(initials.toUpperCase());
+      } else if (user.email) {
+        setUserInitials(user.email.slice(0, 2).toUpperCase());
+      }
+    });
   }, []);
 
   type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -587,7 +602,7 @@ export default function EquityDashboard() {
             <span style={{ fontSize: 13, color: "#7c8378" }}>
               {new Date().toLocaleDateString("cs-CZ", { month: "long", year: "numeric" })}
             </span>
-            <div className="flex items-center justify-center" style={{ width: 34, height: 34, borderRadius: "50%", background: "#1f3d2e", color: "#ece6d8", fontWeight: 600, fontSize: 12 }}>KL</div>
+            <div className="flex items-center justify-center" style={{ width: 34, height: 34, borderRadius: "50%", background: "#1f3d2e", color: "#ece6d8", fontWeight: 600, fontSize: 12 }}>{userInitials}</div>
           </div>
         </div>
 
