@@ -727,35 +727,134 @@ export default function EquityDashboard() {
           )}
 
           {/* Chart */}
-          <div style={{ padding: "34px 4px 8px" }}>
-            <div className="flex justify-between items-center mb-4">
-              <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Jak rosteš v čase</div>
-              <div className="flex gap-5" style={{ fontSize: 12, fontWeight: 600, color: "#5c6359" }}>
-                {[{ color: "#1f3d2e", label: "Equity" }, { color: "#c39a3f", label: "Hodnota" }, { color: "#b08c7a", label: "Dluh" }].map(({ color, label }) => (
-                  <span key={label} className="inline-flex items-center gap-[7px]">
-                    <span style={{ width: 18, height: 3, borderRadius: 2, background: color, display: "inline-block" }} />{label}
-                  </span>
-                ))}
+          {(() => {
+            const W = 600, H = 240, PAD_L = 40, PAD_R = 20, PAD_T = 20, PAD_B = 30;
+            const now = new Date();
+            const nowMs = now.getTime();
+            const FUTURE_YEARS = 5;
+
+            // Collect data points per property per month
+            type Point = { ms: number; value: number; debt: number };
+            const allPoints: Point[] = [];
+
+            // Earliest purchase date across all properties
+            let minMs = nowMs;
+            for (const p of properties) {
+              if (p.purchase_date) {
+                const ms = new Date(p.purchase_date).getTime();
+                if (ms < minMs) minMs = ms;
+              }
+            }
+            // If no purchase dates, start 2 years ago
+            if (minMs === nowMs) minMs = nowMs - 2 * 365 * 86400000;
+            const maxMs = nowMs + FUTURE_YEARS * 365 * 86400000;
+            const totalMs = maxMs - minMs;
+
+            // Generate monthly points
+            const MONTHS = Math.round(totalMs / (30 * 86400000));
+            for (let i = 0; i <= MONTHS; i++) {
+              const ms = minMs + (i / MONTHS) * totalMs;
+              let value = 0, debt = 0;
+              for (const p of properties) {
+                const growth = (p.annual_growth_pct ?? 3) / 100;
+                const purchaseMs = p.purchase_date ? new Date(p.purchase_date).getTime() : nowMs;
+                const purchasePrice = p.purchase_price ?? p.estimated_value;
+                // Value: interpolate from purchase price to now, then project with growth
+                if (ms <= nowMs) {
+                  const t = Math.max(0, (ms - purchaseMs) / (nowMs - purchaseMs + 1));
+                  value += purchasePrice + t * (p.estimated_value - purchasePrice);
+                } else {
+                  const yearsAhead = (ms - nowMs) / (365 * 86400000);
+                  value += p.estimated_value * Math.pow(1 + growth, yearsAhead);
+                }
+                // Debt: linear paydown
+                const mort = mortgages.find(m => m.property_id === p.id);
+                if (mort) {
+                  const loanMs = mort.loan_start_date ? new Date(mort.loan_start_date).getTime() : purchaseMs;
+                  const termMs = (mort.loan_term_years ?? 30) * 365 * 86400000;
+                  const loanAmt = mort.loan_amount ?? mort.outstanding_balance;
+                  const elapsed = Math.max(0, Math.min(1, (ms - loanMs) / termMs));
+                  debt += Math.max(0, loanAmt * (1 - elapsed));
+                }
+              }
+              allPoints.push({ ms, value, debt });
+            }
+
+            if (allPoints.length === 0) return null;
+
+            const maxVal = Math.max(...allPoints.map(p => p.value));
+            const minVal = Math.min(...allPoints.map(p => Math.min(p.value - p.debt, 0)));
+            const range = maxVal - minVal || 1;
+
+            const toX = (ms: number) => PAD_L + ((ms - minMs) / totalMs) * (W - PAD_L - PAD_R);
+            const toY = (v: number) => PAD_T + (1 - (v - minVal) / range) * (H - PAD_T - PAD_B);
+
+            const valuePts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value).toFixed(1)}`).join(" ");
+            const debtPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.debt).toFixed(1)}`).join(" ");
+            const equityPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value - p.debt).toFixed(1)}`).join(" ");
+            const equityFill = equityPts + ` ${toX(maxMs).toFixed(1)},${toY(minVal).toFixed(1)} ${toX(minMs).toFixed(1)},${toY(minVal).toFixed(1)}`;
+
+            // Today line x
+            const todayX = toX(nowMs);
+
+            // Label months on x axis
+            const labelMs: number[] = [];
+            const step = totalMs / 5;
+            for (let i = 0; i <= 5; i++) labelMs.push(minMs + i * step);
+
+            // Grid lines
+            const gridVals = [maxVal * 0.25, maxVal * 0.5, maxVal * 0.75, maxVal].map(v => ({ v, y: toY(v) }));
+
+            return (
+              <div style={{ padding: "34px 4px 8px" }}>
+                <div className="flex justify-between items-center mb-4">
+                  <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Jak rosteš v čase</div>
+                  <div className="flex gap-5" style={{ fontSize: 12, fontWeight: 600, color: "#5c6359" }}>
+                    {[{ color: "#1f3d2e", label: "Equity" }, { color: "#c39a3f", label: "Hodnota" }, { color: "#b08c7a", label: "Dluh" }].map(({ color, label }) => (
+                      <span key={label} className="inline-flex items-center gap-[7px]">
+                        <span style={{ width: 18, height: 3, borderRadius: 2, background: color, display: "inline-block" }} />{label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="250" style={{ display: "block", overflow: "visible" }}>
+                  <defs>
+                    <linearGradient id="eqfill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#1f3d2e" stopOpacity="0.15" />
+                      <stop offset="100%" stopColor="#1f3d2e" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  {/* Grid */}
+                  {gridVals.map(({ y }, i) => <line key={i} x1={PAD_L} y1={y.toFixed(1)} x2={W - PAD_R} y2={y.toFixed(1)} stroke="#d8d0bd" strokeWidth="1" />)}
+                  {/* Y axis labels */}
+                  {gridVals.map(({ v, y }, i) => (
+                    <text key={i} x={PAD_L - 4} y={y + 4} textAnchor="end" fontSize="9" fill="#9a9483">{fmtMil(v)}M</text>
+                  ))}
+                  {/* Today line */}
+                  <line x1={todayX.toFixed(1)} y1={PAD_T} x2={todayX.toFixed(1)} y2={H - PAD_B} stroke="#c9a24b" strokeWidth="1.5" strokeDasharray="4 3" />
+                  <text x={todayX + 4} y={PAD_T + 10} fontSize="9" fill="#c9a24b" fontWeight="600">dnes</text>
+                  {/* Equity fill */}
+                  <polygon points={equityFill} fill="url(#eqfill)" />
+                  {/* Lines */}
+                  <polyline points={debtPts} fill="none" stroke="#b08c7a" strokeWidth="2" />
+                  <polyline points={valuePts} fill="none" stroke="#c39a3f" strokeWidth="2" />
+                  <polyline points={equityPts} fill="none" stroke="#1f3d2e" strokeWidth="3" />
+                  {/* Dot at today */}
+                  {(() => {
+                    const todayPoint = allPoints.find(p => p.ms >= nowMs);
+                    if (!todayPoint) return null;
+                    return <circle cx={todayX.toFixed(1)} cy={toY(todayPoint.value - todayPoint.debt).toFixed(1)} r="4.5" fill="#1f3d2e" />;
+                  })()}
+                  {/* X axis labels */}
+                  {labelMs.map((ms, i) => {
+                    const d = new Date(ms);
+                    const lbl = d.toLocaleDateString("cs-CZ", { month: "short", year: "2-digit" });
+                    return <text key={i} x={toX(ms).toFixed(1)} y={H - 6} textAnchor="middle" fontSize="9" fill="#9a9483">{lbl}</text>;
+                  })}
+                </svg>
               </div>
-            </div>
-            <svg viewBox="0 0 600 240" width="100%" height="250" preserveAspectRatio="none" style={{ display: "block" }}>
-              <defs>
-                <linearGradient id="eqfill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#1f3d2e" stopOpacity="0.18" />
-                  <stop offset="100%" stopColor="#1f3d2e" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              {[60, 110, 160, 210].map((y) => <line key={y} x1="40" y1={y} x2="579" y2={y} stroke="#d8d0bd" strokeWidth="1" />)}
-              <polygon points="40,149.8 89,148.8 138,147.8 187,146.9 236,145.9 285,144.9 334,144 383,143 432,142 481,141.1 530,140.1 579,139.1 579,220 40,220" fill="url(#eqfill)" />
-              <polyline points="40,105.3 89,105.8 138,106.7 187,107.6 236,108.4 285,109.3 334,109.8 383,110.2 432,110.7 481,111.1 530,111.6 579,112" fill="none" stroke="#b08c7a" strokeWidth="2" />
-              <polyline points="40,46.7 89,45.3 138,44 187,42.7 236,41.8 285,40.4 334,38.7 383,36.9 432,35.6 481,34.2 530,32.4 579,31.1" fill="none" stroke="#c39a3f" strokeWidth="2" />
-              <polyline points="40,149.8 89,148.8 138,147.8 187,146.9 236,145.9 285,144.9 334,144 383,143 432,142 481,141.1 530,140.1 579,139.1" fill="none" stroke="#1f3d2e" strokeWidth="3" />
-              <circle cx="579" cy="139.1" r="4.5" fill="#1f3d2e" />
-            </svg>
-            <div className="flex justify-between pt-[6px]" style={{ fontSize: 11, fontWeight: 500, color: "#9a9483", paddingLeft: 36 }}>
-              {["čvc", "říj", "led", "dub", "čvn"].map((m) => <span key={m}>{m}</span>)}
-            </div>
-          </div>
+            );
+          })()}
         </section>
 
         {/* NEMOVITOSTI */}
