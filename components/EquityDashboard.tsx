@@ -252,7 +252,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
           {field("Úroková sazba", interestRate, setInterestRate, "number", "%")}
           {field("Splatnost", loanTermYears, setLoanTermYears, "number", "let")}
           {field("Měsíční splátka", monthlyPayment, setMonthlyPayment, "number", "Kč / měs")}
-          {field("Datum refixu", refixDate, setRefixDate, "date")}
+          {field("Konec fixace", refixDate, setRefixDate, "date")}
         </>}
 
         <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Nájemní smlouva</div>
@@ -553,7 +553,7 @@ export default function EquityDashboard() {
     const mort = mortgages.find(m => m.property_id === p.id);
     if (mort?.refix_date) {
       const d = Math.round((new Date(mort.refix_date).getTime() - today) / 86400000);
-      if (d <= 90) alerts.push({ type: d <= 30 ? "danger" : "warning", label: "Refix hypotéky", property: p.name, daysLeft: d });
+      if (d <= 90) alerts.push({ type: d <= 30 ? "danger" : "warning", label: "Konec fixace hypotéky", property: p.name, daysLeft: d });
     }
     if (p.insurance_to) {
       const d = Math.round((new Date(p.insurance_to).getTime() - today) / 86400000);
@@ -776,7 +776,7 @@ export default function EquityDashboard() {
                         <div style={{ fontSize: 12, color: "#7c8378", marginTop: 2 }}>
                           {p.status === "rented" ? `Nájem ${fmt(p.rent_amount)} Kč / měs` : p.address ?? ""}
                           {mortgage ? ` · Splátka ${fmt(mortgage.monthly_payment)} Kč` : ""}
-                          {mortgage?.refix_date ? ` · Refix ${mortgage.refix_date}` : ""}
+                          {mortgage?.refix_date ? ` · Konec fixace ${mortgage.refix_date}` : ""}
                         </div>
                         {mortgage?.refix_date && (() => {
                           const days = daysUntil(mortgage.refix_date);
@@ -784,7 +784,7 @@ export default function EquityDashboard() {
                           const urgent = days <= 30;
                           return (
                             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6, padding: "4px 10px", borderRadius: 20, background: urgent ? "#fde8e8" : "#efe3c6", color: urgent ? "#c0392b" : "#a07b2f", fontSize: 12, fontWeight: 700 }}>
-                              ⚠ Refix za {days} dní ({mortgage.refix_date})
+                              ⚠ Konec fixace za {days} dní ({mortgage.refix_date})
                             </div>
                           );
                         })()}
