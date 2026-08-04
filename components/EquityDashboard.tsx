@@ -546,6 +546,26 @@ export default function EquityDashboard() {
   const filteredPayments = activeFilter ? payments.filter((p) => p.property_id === activeFilter) : payments;
   const activeProperty = properties.find((p) => p.id === activeFilter);
 
+  type Alert = { type: "danger" | "warning" | "info"; label: string; property: string; daysLeft: number };
+  const alerts: Alert[] = [];
+  const today = Date.now();
+  for (const p of properties) {
+    const mort = mortgages.find(m => m.property_id === p.id);
+    if (mort?.refix_date) {
+      const d = Math.round((new Date(mort.refix_date).getTime() - today) / 86400000);
+      if (d <= 90) alerts.push({ type: d <= 30 ? "danger" : "warning", label: "Refix hypotéky", property: p.name, daysLeft: d });
+    }
+    if (p.insurance_to) {
+      const d = Math.round((new Date(p.insurance_to).getTime() - today) / 86400000);
+      if (d <= 60) alerts.push({ type: d <= 14 ? "danger" : "warning", label: "Konec pojistky", property: p.name, daysLeft: d });
+    }
+    if (p.lease_end) {
+      const d = Math.round((new Date(p.lease_end).getTime() - today) / 86400000);
+      if (d <= 60) alerts.push({ type: d <= 14 ? "danger" : "warning", label: "Konec nájemní smlouvy", property: p.name, daysLeft: d });
+    }
+  }
+  alerts.sort((a, b) => a.daysLeft - b.daysLeft);
+
   return (
     <div className="min-h-screen" style={{ background: "#ece6d8", fontFamily: "'Hanken Grotesk', sans-serif" }}>
 
@@ -681,6 +701,30 @@ export default function EquityDashboard() {
               </div>
             )}
           </div>
+
+          {/* Alerts */}
+          {alerts.length > 0 && (
+            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+              {alerts.map((a, i) => {
+                const bg = a.type === "danger" ? "#fde8e8" : "#fef6e4";
+                const color = a.type === "danger" ? "#c0392b" : "#a07b2f";
+                const icon = a.type === "danger" ? "⚠️" : "🔔";
+                const daysText = a.daysLeft <= 0 ? "dnes!" : a.daysLeft === 1 ? "zítra" : `za ${a.daysLeft} dní`;
+                return (
+                  <div key={i} style={{ background: bg, borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 16 }}>{icon}</span>
+                      <div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color }}>{a.label}</span>
+                        <span style={{ fontSize: 13, color: "#5c6359" }}> · {a.property}</span>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color, whiteSpace: "nowrap" }}>{daysText}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Chart */}
           <div style={{ padding: "34px 4px 8px" }}>
