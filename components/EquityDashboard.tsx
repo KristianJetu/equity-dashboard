@@ -1,17 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { fetchTable } from "@/lib/supabase";
 import { createClient } from "@/lib/auth";
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const sbHeaders = {
-  apikey: SUPABASE_KEY,
-  Authorization: `Bearer ${SUPABASE_KEY}`,
-  "Content-Type": "application/json",
-  Prefer: "return=representation",
-};
 
 type Property = {
   id: string;
@@ -121,9 +111,10 @@ function paymentTypeLabel(t?: string) {
 
 // ── Property Detail Modal ─────────────────────────────────────────────────────
 
-function PropertyModal({ property, mortgage, onClose, onSaved }: {
+function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   property: Property;
   mortgage: Mortgage | undefined;
+  supabase: ReturnType<typeof createClient>;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -154,41 +145,32 @@ function PropertyModal({ property, mortgage, onClose, onSaved }: {
 
   async function handleSave() {
     setSaving(true);
-    await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${property.id}`, {
-      method: "PATCH",
-      headers: sbHeaders,
-      body: JSON.stringify({
-        name,
-        status,
-        estimated_value: Number(estimatedValue),
-        rent_amount: Number(rentAmount),
-        rent_due_day: Number(rentDueDay),
-        purchase_date: purchaseDate || null,
-        purchase_price: purchasePrice ? Number(purchasePrice) : null,
-        annual_growth_pct: annualGrowthPct ? Number(annualGrowthPct) : 3,
-        lease_start: leaseStart || null,
-        lease_end: leaseEnd || null,
-        insurance_company: insuranceCompany || null,
-        insurance_from: insuranceFrom || null,
-        insurance_to: insuranceTo || null,
-        insurance_amount: insuranceAmount ? Number(insuranceAmount) : null,
-        insurance_url: insuranceUrl || null,
-        document_url: documentUrl || null,
-      }),
-    });
+    await supabase.from("properties").update({
+      name, status,
+      estimated_value: Number(estimatedValue),
+      rent_amount: Number(rentAmount),
+      rent_due_day: Number(rentDueDay),
+      purchase_date: purchaseDate || null,
+      purchase_price: purchasePrice ? Number(purchasePrice) : null,
+      annual_growth_pct: annualGrowthPct ? Number(annualGrowthPct) : 3,
+      lease_start: leaseStart || null,
+      lease_end: leaseEnd || null,
+      insurance_company: insuranceCompany || null,
+      insurance_from: insuranceFrom || null,
+      insurance_to: insuranceTo || null,
+      insurance_amount: insuranceAmount ? Number(insuranceAmount) : null,
+      insurance_url: insuranceUrl || null,
+      document_url: documentUrl || null,
+    }).eq("id", property.id);
     if (mortgage) {
-      await fetch(`${SUPABASE_URL}/rest/v1/mortgages?id=eq.${mortgage.id}`, {
-        method: "PATCH",
-        headers: sbHeaders,
-        body: JSON.stringify({
-          monthly_payment: Number(monthlyPayment),
-          refix_date: refixDate || null,
-          loan_amount: loanAmount ? Number(loanAmount) : null,
-          loan_start_date: loanStartDate || null,
-          interest_rate: interestRate ? Number(interestRate) : null,
-          loan_term_years: loanTermYears ? Number(loanTermYears) : null,
-        }),
-      });
+      await supabase.from("mortgages").update({
+        monthly_payment: Number(monthlyPayment),
+        refix_date: refixDate || null,
+        loan_amount: loanAmount ? Number(loanAmount) : null,
+        loan_start_date: loanStartDate || null,
+        interest_rate: interestRate ? Number(interestRate) : null,
+        loan_term_years: loanTermYears ? Number(loanTermYears) : null,
+      }).eq("id", mortgage.id);
     }
     setSaving(false);
     setSaved(true);
@@ -406,19 +388,20 @@ export default function EquityDashboard() {
   const chatInputRef = useRef<HTMLInputElement>(null);
 
   async function loadPayments() {
-    const pays = await fetchTable<Payment>("payments", "month.desc");
+    const { data } = await supabase.from("payments").select("*").order("month", { ascending: false });
+    const pays = data ?? [];
     setPayments(pays.filter(p => p.property_id !== null));
     setUnmatchedPayments(pays.filter(p => p.property_id === null));
   }
 
   useEffect(() => {
     async function load() {
-      const [props, morts] = await Promise.all([
-        fetchTable<Property>("properties", "sort_order.asc"),
-        fetchTable<Mortgage>("mortgages"),
+      const [{ data: props }, { data: morts }] = await Promise.all([
+        supabase.from("properties").select("*").order("sort_order", { ascending: true }),
+        supabase.from("mortgages").select("*"),
       ]);
-      setProperties(props);
-      setMortgages(morts);
+      setProperties(props ?? []);
+      setMortgages(morts ?? []);
       await loadPayments();
       setLoading(false);
     }
@@ -483,11 +466,7 @@ export default function EquityDashboard() {
     const newStatus = currentStatus === "rented" ? "vacant" : "rented";
     const label = newStatus === "rented" ? "Pronajato" : "Volné";
     if (!confirm(`Změnit stav na "${label}"?`)) return;
-    await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${propertyId}`, {
-      method: "PATCH",
-      headers: sbHeaders,
-      body: JSON.stringify({ status: newStatus }),
-    });
+    await supabase.from("properties").update({ status: newStatus }).eq("id", propertyId);
     setProperties(prev => prev.map(p => p.id === propertyId ? { ...p, status: newStatus as Property["status"] } : p));
   }
 
@@ -500,30 +479,20 @@ export default function EquityDashboard() {
     const mortgagePayment = mortgage?.monthly_payment ?? 0;
     const netCashflow = payment.rent_received - mortgagePayment;
 
-    // Aktualizuj platbu
-    await fetch(`${SUPABASE_URL}/rest/v1/payments?id=eq.${paymentId}`, {
-      method: "PATCH",
-      headers: sbHeaders,
-      body: JSON.stringify({
-        property_id: propertyId,
-        mortgage_payment: mortgagePayment,
-        net_cashflow: netCashflow,
-        status: "paid",
-        match_type: "manual",
-      }),
-    });
+    await supabase.from("payments").update({
+      property_id: propertyId,
+      mortgage_payment: mortgagePayment,
+      net_cashflow: netCashflow,
+      status: "paid",
+      match_type: "manual",
+    }).eq("id", paymentId);
 
-    // Uloz najemnika pro automaticke parovani priste
     if (payment.sender_account) {
-      await fetch(`${SUPABASE_URL}/rest/v1/tenants`, {
-        method: "POST",
-        headers: { ...sbHeaders, Prefer: "resolution=ignore-duplicates" },
-        body: JSON.stringify({
-          account_number: payment.sender_account,
-          name: payment.sender_name ?? "",
-          property_id: propertyId,
-        }),
-      });
+      await supabase.from("tenants").upsert({
+        account_number: payment.sender_account,
+        name: payment.sender_name ?? "",
+        property_id: propertyId,
+      }, { onConflict: "account_number", ignoreDuplicates: true });
     }
 
     await loadPayments();
@@ -544,14 +513,15 @@ export default function EquityDashboard() {
         <PropertyModal
           property={selectedProperty}
           mortgage={mortgages.find(m => m.property_id === selectedProperty.id)}
+          supabase={supabase}
           onClose={() => setSelectedProperty(null)}
           onSaved={async () => {
-            const [props, morts] = await Promise.all([
-              fetchTable<Property>("properties", "sort_order.asc"),
-              fetchTable<Mortgage>("mortgages"),
+            const [{ data: props }, { data: morts }] = await Promise.all([
+              supabase.from("properties").select("*").order("sort_order", { ascending: true }),
+              supabase.from("mortgages").select("*"),
             ]);
-            setProperties(props);
-            setMortgages(morts);
+            setProperties(props ?? []);
+            setMortgages(morts ?? []);
           }}
         />
       )}
