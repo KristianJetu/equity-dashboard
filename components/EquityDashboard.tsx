@@ -140,6 +140,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   const [insuranceAmount, setInsuranceAmount] = useState(String(property.insurance_amount ?? ""));
   const [insuranceUrl, setInsuranceUrl] = useState(property.insurance_url ?? "");
   const [documentUrl, setDocumentUrl] = useState(property.document_url ?? "");
+  const [addMortgage, setAddMortgage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -173,6 +174,21 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
         loan_term_years: loanTermYears ? Number(loanTermYears) : null,
       }).eq("id", mortgage.id);
       if (mortErr) { console.error("mortgage save error:", mortErr); alert("Chyba při ukládání hypotéky: " + mortErr.message); setSaving(false); return; }
+    } else if (addMortgage && loanAmount) {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error: mortErr } = await supabase.from("mortgages").insert({
+        user_id: user!.id,
+        property_id: property.id,
+        bank: null,
+        outstanding_balance: Number(loanAmount),
+        monthly_payment: Number(monthlyPayment) || 0,
+        refix_date: refixDate || null,
+        loan_amount: Number(loanAmount),
+        loan_start_date: loanStartDate || null,
+        interest_rate: interestRate ? Number(interestRate) : null,
+        loan_term_years: loanTermYears ? Number(loanTermYears) : null,
+      });
+      if (mortErr) { console.error("mortgage insert error:", mortErr); alert("Chyba při přidávání hypotéky: " + mortErr.message); setSaving(false); return; }
     }
     setSaving(false);
     setSaved(true);
@@ -221,8 +237,16 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
         {field("Kupní cena", purchasePrice, setPurchasePrice, "number", "Kč")}
         {field("Odhadovaný roční růst hodnoty", annualGrowthPct, setAnnualGrowthPct, "number", "% / rok")}
 
-        {mortgage && <>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Hypotéka</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, marginTop: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em" }}>Hypotéka</div>
+          {!mortgage && !addMortgage && (
+            <button onClick={() => setAddMortgage(true)}
+              style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e", background: "none", border: "1px solid #1f3d2e", borderRadius: 6, padding: "3px 10px", cursor: "pointer" }}>
+              + Přidat
+            </button>
+          )}
+        </div>
+        {(mortgage || addMortgage) && <>
           {field("Výše úvěru", loanAmount, setLoanAmount, "number", "Kč")}
           {field("Datum čerpání", loanStartDate, setLoanStartDate, "date")}
           {field("Úroková sazba", interestRate, setInterestRate, "number", "%")}
