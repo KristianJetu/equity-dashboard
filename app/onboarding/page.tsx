@@ -124,14 +124,21 @@ export default function OnboardingPage() {
   async function handleFinish() {
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setSaving(false); return; }
 
-    // Update full_name in metadata + create profile
     await supabase.auth.updateUser({ data: { full_name: fullName } });
-    await supabase.from("profiles").upsert({ id: user.id, full_name: fullName, onboarding_done: true });
+
+    const { error: profileErr } = await supabase.from("profiles").upsert({
+      id: user.id, full_name: fullName, onboarding_done: true,
+    });
+    if (profileErr) {
+      alert("Chyba při ukládání profilu: " + profileErr.message);
+      setSaving(false);
+      return;
+    }
 
     for (const p of properties) {
-      const { data: propData } = await supabase.from("properties").insert({
+      const { data: propData, error: propErr } = await supabase.from("properties").insert({
         user_id: user.id,
         name: p.name || "Nemovitost",
         address: p.address || null,
@@ -151,8 +158,14 @@ export default function OnboardingPage() {
         insurance_url: p.insurance_url || null,
       }).select().single();
 
+      if (propErr) {
+        alert("Chyba při ukládání nemovitosti: " + propErr.message);
+        setSaving(false);
+        return;
+      }
+
       if (propData && p.has_mortgage) {
-        await supabase.from("mortgages").insert({
+        const { error: mortErr } = await supabase.from("mortgages").insert({
           user_id: user.id,
           property_id: propData.id,
           bank: p.mortgage_bank || null,
@@ -164,6 +177,11 @@ export default function OnboardingPage() {
           interest_rate: p.interest_rate ? Number(p.interest_rate) : null,
           loan_term_years: p.loan_term_years ? Number(p.loan_term_years) : null,
         });
+        if (mortErr) {
+          alert("Chyba při ukládání hypotéky: " + mortErr.message);
+          setSaving(false);
+          return;
+        }
       }
     }
 
