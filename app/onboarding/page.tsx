@@ -41,6 +41,7 @@ type PropertyData = {
   insurance_to: string;
   insurance_amount: string;
   insurance_url: string;
+  monthly_costs: string;
 };
 
 function emptyProperty(): PropertyData {
@@ -54,6 +55,7 @@ function emptyProperty(): PropertyData {
     lease_start: "", lease_end: "",
     insurance_company: "", insurance_from: "", insurance_to: "",
     insurance_amount: "", insurance_url: "",
+    monthly_costs: "",
   };
 }
 
@@ -156,6 +158,7 @@ export default function OnboardingPage() {
         insurance_to: p.insurance_to || null,
         insurance_amount: p.insurance_amount ? Number(p.insurance_amount) : null,
         insurance_url: p.insurance_url || null,
+        monthly_costs: p.monthly_costs ? Number(p.monthly_costs) : null,
       }).select().single();
 
       if (propErr) {
@@ -325,6 +328,7 @@ export default function OnboardingPage() {
               <Field label="Den splatnosti" value={prop.rent_due_day} onChange={v => updateProp("rent_due_day", v)} type="number" suffix="v měsíci" />
               <Field label="Začátek nájemní smlouvy" value={prop.lease_start} onChange={v => updateProp("lease_start", v)} type="date" />
               <Field label="Konec nájemní smlouvy" value={prop.lease_end} onChange={v => updateProp("lease_end", v)} type="date" />
+              <Field label="Měsíční náklady (paušál)" value={prop.monthly_costs} onChange={v => updateProp("monthly_costs", v)} type="number" suffix="Kč / měs" />
             </div>
           )}
 

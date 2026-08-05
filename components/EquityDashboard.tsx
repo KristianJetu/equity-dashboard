@@ -392,6 +392,100 @@ function PaymentModal({
 
 
 
+// ── Cashflow Extra (donut + nejlepší/nejhorší) ────────────────────────────────
+function CashflowExtra({ properties, mortgages }: { properties: Property[]; mortgages: Mortgage[] }) {
+  if (properties.length === 0) return null;
+
+  const rentedProps = properties.filter(p => p.status === "rented");
+  const totalRent = rentedProps.reduce((s, p) => s + p.rent_amount, 0);
+  const totalMortgage = mortgages.reduce((s, m) => s + m.monthly_payment, 0);
+  const totalInsurance = properties.reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0), 0);
+  const totalCosts = properties.reduce((s, p) => s + (p.monthly_costs ?? 0), 0);
+  const net = totalRent - totalMortgage - totalInsurance - totalCosts;
+
+  const propCashflow = properties.map(p => {
+    const mortgage = mortgages.find(m => m.property_id === p.id);
+    const income = p.status === "rented" ? p.rent_amount : 0;
+    const out = (mortgage?.monthly_payment ?? 0) + (p.insurance_amount ? p.insurance_amount / 12 : 0) + (p.monthly_costs ?? 0);
+    return { id: p.id, name: p.name, netCf: income - out };
+  });
+  const best = propCashflow.reduce((a, b) => b.netCf > a.netCf ? b : a);
+  const worst = propCashflow.reduce((a, b) => b.netCf < a.netCf ? b : a);
+
+  const cx = 80, cy = 80, R = 60, sw = 20;
+  const circ = 2 * Math.PI * R;
+  const slices = [
+    { label: "Splátky", value: totalMortgage, color: "#c0392b" },
+    { label: "Pojistky", value: Math.round(totalInsurance), color: "#e07b39" },
+    { label: "Náklady", value: totalCosts, color: "#b8860b" },
+    { label: "Čistý příjem", value: Math.max(net, 0), color: "#1f3d2e" },
+  ].filter(s => s.value > 0);
+  const total = slices.reduce((s, sl) => s + sl.value, 0) || 1;
+
+  let acc = 0;
+  const donutSlices = slices.map(sl => {
+    const dashLen = (sl.value / total) * circ;
+    const startAngle = (acc / total) * 360 - 90;
+    acc += sl.value;
+    return { ...sl, dashLen, gap: circ - dashLen, startAngle };
+  });
+
+  return (
+    <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
+      {/* Donut */}
+      <div style={{ background: "#f5f1e6", borderRadius: 12, padding: "22px 24px", flex: "1 1 300px", display: "flex", gap: 24, alignItems: "center" }}>
+        <div style={{ flexShrink: 0 }}>
+          <svg width={160} height={160} viewBox="0 0 160 160">
+            <circle cx={cx} cy={cy} r={R} fill="none" stroke="#e0d9c8" strokeWidth={sw} />
+            {donutSlices.map(sl => (
+              <circle key={sl.label} cx={cx} cy={cy} r={R}
+                fill="none" stroke={sl.color} strokeWidth={sw}
+                strokeDasharray={`${sl.dashLen} ${sl.gap}`}
+                transform={`rotate(${sl.startAngle} ${cx} ${cy})`}
+              />
+            ))}
+            <text x={cx} y={cy - 7} textAnchor="middle" fill="#7c8378" fontSize="9" fontWeight="700">PŘÍJMY</text>
+            <text x={cx} y={cy + 9} textAnchor="middle" fill="#1f3d2e" fontSize="13" fontWeight="800">{fmt(totalRent)}</text>
+            <text x={cx} y={cy + 23} textAnchor="middle" fill="#9a9483" fontSize="9">Kč / měs</text>
+          </svg>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Struktura výdajů</div>
+          {slices.map(sl => (
+            <div key={sl.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: sl.color, flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: "#5c6359", flex: 1 }}>{sl.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: sl.label === "Čistý příjem" ? "#1f3d2e" : "#c0392b" }}>
+                {sl.label === "Čistý příjem" ? "+" : "−"}{fmt(sl.value)} Kč
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Nejlepší / nejhorší */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: "1 1 200px" }}>
+        <div style={{ background: "#eaf4ed", border: "1.5px solid #a8d5b5", borderRadius: 12, padding: "18px 20px" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#2d7a4f", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>🏆 Nejlepší nemovitost</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#1c2b22", marginBottom: 4 }}>{best.name}</div>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 22, fontWeight: 800, color: "#1f3d2e" }}>
+            {best.netCf >= 0 ? "+" : ""}{fmt(best.netCf)} Kč
+          </div>
+          <div style={{ fontSize: 11, color: "#5a8a6a", marginTop: 2 }}>čistý cashflow / měs</div>
+        </div>
+        <div style={{ background: "#fdf0ee", border: "1.5px solid #f0b8b0", borderRadius: 12, padding: "18px 20px" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#a0392b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>💸 Nejhorší nemovitost</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#1c2b22", marginBottom: 4 }}>{worst.name}</div>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 22, fontWeight: 800, color: "#c0392b" }}>
+            {worst.netCf >= 0 ? "+" : ""}{fmt(worst.netCf)} Kč
+          </div>
+          <div style={{ fontSize: 11, color: "#a07070", marginTop: 2 }}>čistý cashflow / měs</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function EquityDashboard() {
   const SECTION_IDS = ["dashboard", "nemovitosti", "platby", "asistent"];
@@ -996,6 +1090,8 @@ export default function EquityDashboard() {
               </div>
             );
           })()}
+
+          <CashflowExtra properties={properties} mortgages={mortgages} />
 
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Historie plateb</div>
 
