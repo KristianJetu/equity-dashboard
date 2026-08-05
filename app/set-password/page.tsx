@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 
@@ -8,8 +8,33 @@ export default function SetPasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    // Zpracuj hash token z URL (#access_token=...)
+    const hash = window.location.hash;
+    if (hash && hash.includes("access_token")) {
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+      if (accessToken && refreshToken) {
+        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+          .then(({ error }) => {
+            if (error) setError("Neplatný nebo expirovaný odkaz.");
+            else setReady(true);
+          });
+      }
+    } else {
+      // Přišli přes /auth/callback (code flow) — session už je nastavena
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session) setReady(true);
+        else setError("Neplatný nebo expirovaný odkaz.");
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -34,7 +59,14 @@ export default function SetPasswordPage() {
         </div>
         <div style={{ color: "#7c8378", fontSize: 14, marginBottom: 28 }}>Nastavte si heslo pro přístup k účtu</div>
 
-        <form onSubmit={handleSubmit}>
+        {!ready && !error && (
+          <div style={{ color: "#7c8378", fontSize: 14, textAlign: "center", padding: "20px 0" }}>Ověřuji odkaz…</div>
+        )}
+        {error && !ready && (
+          <div style={{ color: "#c0392b", fontSize: 14, background: "#fde8e8", borderRadius: 8, padding: "12px 16px" }}>{error}</div>
+        )}
+
+        {ready && <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Heslo</div>
             <input
@@ -56,7 +88,7 @@ export default function SetPasswordPage() {
             style={{ width: "100%", padding: "11px 0", borderRadius: 8, border: "none", background: "#1f3d2e", color: "#f5f1e6", fontSize: 15, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1 }}>
             {loading ? "Ukládám…" : "Nastavit heslo →"}
           </button>
-        </form>
+        </form>}
       </div>
     </div>
   );
