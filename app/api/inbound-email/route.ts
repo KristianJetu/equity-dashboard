@@ -174,16 +174,27 @@ export async function POST(req: NextRequest) {
       const attachments = (payload.attachments as { id: string; content_type: string }[]) ?? [];
       const htmlAttachment = attachments.find(a => a.content_type === "text/html");
 
-      if (htmlAttachment && emailId) {
-        const attRes = await fetch(
-          `https://api.resend.com/emails/${emailId}/attachments/${htmlAttachment.id}`,
+      if (emailId) {
+        // Zkus fetchnout celý email přes Resend API
+        const emailRes = await fetch(
+          `https://api.resend.com/emails/${emailId}`,
           { headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` } }
         );
-        if (attRes.ok) {
-          const attData = await attRes.json() as { content?: string };
-          if (attData.content) {
-            // content je base64
-            emailText = Buffer.from(attData.content, "base64").toString("utf-8");
+        if (emailRes.ok) {
+          const emailData = await emailRes.json() as { html?: string; text?: string };
+          emailText = emailData.html ?? emailData.text ?? "";
+        }
+
+        // Pokud stále prázdné, zkus stáhnout HTML přílohu
+        if (!emailText && htmlAttachment) {
+          const attRes = await fetch(
+            `https://api.resend.com/emails/${emailId}/attachments/${htmlAttachment.id}`,
+            { headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` } }
+          );
+          if (attRes.ok) {
+            const attData = await attRes.json() as { content?: string; data?: string };
+            const raw = attData.content ?? attData.data ?? "";
+            emailText = raw ? Buffer.from(raw, "base64").toString("utf-8") : "";
           }
         }
       }
