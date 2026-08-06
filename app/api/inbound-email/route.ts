@@ -171,11 +171,16 @@ export async function POST(req: NextRequest) {
 
     if (!emailText) {
       const emailId = payload.email_id as string | undefined;
-      const attachments = (payload.attachments as { id: string; content_type: string }[]) ?? [];
+      const attachments = (payload.attachments as { id: string; content_type: string; content?: string }[]) ?? [];
       const htmlAttachment = attachments.find(a => a.content_type === "text/html");
 
-      if (emailId) {
-        // Zkus fetchnout celý email přes Resend API
+      // 1) Obsah přílohy přímo v payloadu (Resend někdy vkládá base64 content)
+      if (htmlAttachment?.content) {
+        emailText = Buffer.from(htmlAttachment.content, "base64").toString("utf-8");
+      }
+
+      if (!emailText && emailId) {
+        // 2) Fetchni celý email přes Resend API
         const emailRes = await fetch(
           `https://api.resend.com/emails/${emailId}`,
           { headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` } }
@@ -185,7 +190,7 @@ export async function POST(req: NextRequest) {
           emailText = emailData.html ?? emailData.text ?? "";
         }
 
-        // Pokud stále prázdné, zkus stáhnout HTML přílohu
+        // 3) Stáhni HTML přílohu přes Resend attachment API
         if (!emailText && htmlAttachment) {
           const attRes = await fetch(
             `https://api.resend.com/emails/${emailId}/attachments/${htmlAttachment.id}`,
