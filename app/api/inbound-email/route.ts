@@ -161,10 +161,32 @@ export async function POST(req: NextRequest) {
 
     const payload = (body.data && typeof body.data === "object" ? body.data : body) as Record<string, unknown>;
     const emailFrom: string = (payload.from as string) ?? "";
-    const emailText: string = ((payload.text ?? payload.html) as string) ?? "";
 
     if (!emailFrom.includes("mbank.cz")) {
       return NextResponse.json({ ok: true, skipped: "not mbank" });
+    }
+
+    // Tělo emailu — přímé nebo jako HTML příloha (mBanka posílá obsah jako attachment)
+    let emailText: string = ((payload.text ?? payload.html) as string) ?? "";
+
+    if (!emailText) {
+      const emailId = payload.email_id as string | undefined;
+      const attachments = (payload.attachments as { id: string; content_type: string }[]) ?? [];
+      const htmlAttachment = attachments.find(a => a.content_type === "text/html");
+
+      if (htmlAttachment && emailId) {
+        const attRes = await fetch(
+          `https://api.resend.com/emails/${emailId}/attachments/${htmlAttachment.id}`,
+          { headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` } }
+        );
+        if (attRes.ok) {
+          const attData = await attRes.json() as { content?: string };
+          if (attData.content) {
+            // content je base64
+            emailText = Buffer.from(attData.content, "base64").toString("utf-8");
+          }
+        }
+      }
     }
 
     if (!emailText) {
