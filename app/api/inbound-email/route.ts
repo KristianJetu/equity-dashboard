@@ -169,21 +169,20 @@ export async function POST(req: NextRequest) {
     // Tělo emailu — přímé nebo jako HTML příloha (mBanka posílá obsah jako attachment)
     let emailText: string = ((payload.text ?? payload.html) as string) ?? "";
 
-    if (!emailText) {
-      const emailId = payload.email_id as string | undefined;
-      const attachments = (payload.attachments as { id: string; content_type: string; content?: string }[]) ?? [];
-      const htmlAttachment = attachments.find(a => a.content_type === "text/html");
+    const emailId = payload.email_id as string | undefined;
+    const attachments = (payload.attachments as { id: string; content_type: string; content?: string }[]) ?? [];
+    const htmlAttachment = attachments.find(a => a.content_type === "text/html");
+    let apiEmailDebug: unknown = null;
+    let apiAttDebug: unknown = null;
 
-      // 1) Obsah přílohy přímo v payloadu (Resend někdy vkládá base64 content)
+    if (!emailText) {
+      // 1) Obsah přílohy přímo v payloadu
       if (htmlAttachment?.content) {
         emailText = Buffer.from(htmlAttachment.content, "base64").toString("utf-8");
       }
 
-      let apiEmailDebug: unknown = null;
-      let apiAttDebug: unknown = null;
-
+      // 2) Fetchni celý email přes Resend API
       if (!emailText && emailId) {
-        // 2) Fetchni celý email přes Resend API
         const emailRes = await fetch(
           `https://api.resend.com/emails/${emailId}`,
           { headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` } }
@@ -193,38 +192,38 @@ export async function POST(req: NextRequest) {
         if (emailRes.ok) {
           emailText = emailData.html ?? emailData.text ?? "";
         }
+      }
 
-        // 3) Stáhni HTML přílohu přes Resend attachment API
-        if (!emailText && htmlAttachment) {
-          const attRes = await fetch(
-            `https://api.resend.com/emails/${emailId}/attachments/${htmlAttachment.id}`,
-            { headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` } }
-          );
-          const attData = await attRes.json() as Record<string, unknown>;
-          apiAttDebug = { status: attRes.status, keys: Object.keys(attData) };
-          if (attRes.ok) {
-            const raw = (attData.content ?? attData.data ?? "") as string;
-            emailText = raw ? Buffer.from(raw, "base64").toString("utf-8") : "";
-          }
+      // 3) Stáhni HTML přílohu přes Resend attachment API
+      if (!emailText && emailId && htmlAttachment) {
+        const attRes = await fetch(
+          `https://api.resend.com/emails/${emailId}/attachments/${htmlAttachment.id}`,
+          { headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` } }
+        );
+        const attData = await attRes.json() as Record<string, unknown>;
+        apiAttDebug = { status: attRes.status, keys: Object.keys(attData) };
+        if (attRes.ok) {
+          const raw = (attData.content ?? attData.data ?? "") as string;
+          emailText = raw ? Buffer.from(raw, "base64").toString("utf-8") : "";
         }
       }
     }
 
     if (!emailText) {
-      // Debug info — zobrazí co webhook skutečně dostal
       const debugInfo = {
         hasText: !!(payload.text),
         hasHtml: !!(payload.html),
-        emailId: payload.email_id,
-        attachmentCount: (payload.attachments as unknown[])?.length ?? 0,
-        attachments: (payload.attachments as Record<string, unknown>[])?.map(a => ({
+        emailId,
+        attachmentCount: attachments.length,
+        attachments: attachments.map(a => ({
           id: a.id,
           content_type: a.content_type,
           hasContent: !!a.content,
-          contentLength: typeof a.content === "string" ? a.content.length : 0,
         })),
+        apiEmailDebug,
+        apiAttDebug,
       };
-      return NextResponse.json({ ok: false, error: "no email body", debug: debugInfo, apiEmailDebug, apiAttDebug }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "no email body", debug: debugInfo }, { status: 400 });
     }
 
     const parsed = await parseEmailWithClaude(emailText);
