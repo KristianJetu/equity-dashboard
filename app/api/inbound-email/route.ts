@@ -206,7 +206,20 @@ export async function POST(req: NextRequest) {
     }
 
     if (!emailText) {
-      return NextResponse.json({ ok: false, error: "no email body" }, { status: 400 });
+      // Debug info — zobrazí co webhook skutečně dostal
+      const debugInfo = {
+        hasText: !!(payload.text),
+        hasHtml: !!(payload.html),
+        emailId: payload.email_id,
+        attachmentCount: (payload.attachments as unknown[])?.length ?? 0,
+        attachments: (payload.attachments as Record<string, unknown>[])?.map(a => ({
+          id: a.id,
+          content_type: a.content_type,
+          hasContent: !!a.content,
+          contentLength: typeof a.content === "string" ? a.content.length : 0,
+        })),
+      };
+      return NextResponse.json({ ok: false, error: "no email body", debug: debugInfo }, { status: 400 });
     }
 
     const parsed = await parseEmailWithClaude(emailText);
