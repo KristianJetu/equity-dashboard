@@ -179,14 +179,18 @@ export async function POST(req: NextRequest) {
         emailText = Buffer.from(htmlAttachment.content, "base64").toString("utf-8");
       }
 
+      let apiEmailDebug: unknown = null;
+      let apiAttDebug: unknown = null;
+
       if (!emailText && emailId) {
         // 2) Fetchni celý email přes Resend API
         const emailRes = await fetch(
           `https://api.resend.com/emails/${emailId}`,
           { headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` } }
         );
+        const emailData = await emailRes.json() as { html?: string; text?: string };
+        apiEmailDebug = { status: emailRes.status, keys: Object.keys(emailData), hasHtml: !!emailData.html, hasText: !!emailData.text };
         if (emailRes.ok) {
-          const emailData = await emailRes.json() as { html?: string; text?: string };
           emailText = emailData.html ?? emailData.text ?? "";
         }
 
@@ -196,9 +200,10 @@ export async function POST(req: NextRequest) {
             `https://api.resend.com/emails/${emailId}/attachments/${htmlAttachment.id}`,
             { headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` } }
           );
+          const attData = await attRes.json() as Record<string, unknown>;
+          apiAttDebug = { status: attRes.status, keys: Object.keys(attData) };
           if (attRes.ok) {
-            const attData = await attRes.json() as { content?: string; data?: string };
-            const raw = attData.content ?? attData.data ?? "";
+            const raw = (attData.content ?? attData.data ?? "") as string;
             emailText = raw ? Buffer.from(raw, "base64").toString("utf-8") : "";
           }
         }
@@ -219,7 +224,7 @@ export async function POST(req: NextRequest) {
           contentLength: typeof a.content === "string" ? a.content.length : 0,
         })),
       };
-      return NextResponse.json({ ok: false, error: "no email body", debug: debugInfo }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "no email body", debug: debugInfo, apiEmailDebug, apiAttDebug }, { status: 400 });
     }
 
     const parsed = await parseEmailWithClaude(emailText);
