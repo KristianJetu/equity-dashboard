@@ -24,6 +24,7 @@ type Property = {
   insurance_url?: string | null;
   document_url?: string | null;
   monthly_costs?: number | null;
+  notes?: string | null;
 };
 
 type Mortgage = {
@@ -55,6 +56,15 @@ type Payment = {
   raw_email_text?: string;
 };
 
+type Message = {
+  id: string;
+  property_id: string;
+  channel: "whatsapp" | "email" | "sms" | "other";
+  direction: "inbound" | "outbound";
+  content: string;
+  created_at: string;
+};
+
 const NAV_ITEMS = [
   {
     id: "dashboard", title: "Dashboard",
@@ -67,6 +77,10 @@ const NAV_ITEMS = [
   {
     id: "platby", title: "Platby",
     icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="7" y1="15" x2="11" y2="15" /></svg>,
+  },
+  {
+    id: "komunikace", title: "Komunikace",
+    icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>,
   },
   {
     id: "asistent", title: "Asistent",
@@ -142,6 +156,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   const [insuranceUrl, setInsuranceUrl] = useState(property.insurance_url ?? "");
   const [documentUrl, setDocumentUrl] = useState(property.document_url ?? "");
   const [monthlyCosts, setMonthlyCosts] = useState(String(property.monthly_costs ?? ""));
+  const [notes, setNotes] = useState(property.notes ?? "");
   const [addMortgage, setAddMortgage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -165,6 +180,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
       insurance_url: insuranceUrl || null,
       document_url: documentUrl || null,
       monthly_costs: monthlyCosts ? Number(monthlyCosts) : null,
+      notes: notes || null,
     }).eq("id", property.id);
     if (mortgage) {
       const { error: mortErr } = await supabase.from("mortgages").update({
@@ -275,6 +291,10 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
         <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Náklady</div>
         {field("Měsíční náklady (paušál)", monthlyCosts, setMonthlyCosts, "number", "Kč / měs")}
 
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Poznámky k nemovitosti</div>
+        <textarea value={notes} onChange={e => { setNotes(e.target.value); setSaved(false); }} placeholder="Poznámky, technické info, kontakty…"
+          style={{ width: "100%", minHeight: 100, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
+
         <div className="flex gap-3 justify-end mt-4">
           <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>Zavřít</button>
           <button onClick={handleSave} disabled={saving}
@@ -289,16 +309,32 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
 
 // ── Payment Detail Modal ──────────────────────────────────────────────────────
 function PaymentModal({
-  payment, properties, onClose, onSave,
+  payment, properties, supabase, onClose, onSave,
 }: {
   payment: Payment;
   properties: Property[];
+  supabase: ReturnType<typeof createClient>;
   onClose: () => void;
   onSave: (paymentId: string, propertyId: string) => Promise<void>;
 }) {
   const [selectedProperty, setSelectedProperty] = useState(payment.property_id ?? "");
   const [saving, setSaving] = useState(false);
+  const [tenantNotes, setTenantNotes] = useState("");
+  const [notesSaved, setNotesSaved] = useState(false);
   const match = matchTypeLabel(payment.match_type);
+
+  useEffect(() => {
+    if (!payment.sender_account) return;
+    supabase.from("tenants").select("notes").eq("account_number", payment.sender_account).single()
+      .then(({ data }) => { if (data?.notes) setTenantNotes(data.notes); });
+  }, [payment.sender_account]);
+
+  async function saveTenantNotes() {
+    if (!payment.sender_account) return;
+    await supabase.from("tenants").update({ notes: tenantNotes || null }).eq("account_number", payment.sender_account);
+    setNotesSaved(true);
+    setTimeout(() => setNotesSaved(false), 2000);
+  }
 
   async function handleSave() {
     if (!selectedProperty) return;
@@ -337,12 +373,20 @@ function PaymentModal({
           ))}
         </div>
 
-        {/* Odesílatel */}
+        {/* Odesílatel + poznámky k nájemníkovi */}
         {(payment.sender_name || payment.sender_account) && (
           <div style={{ background: "#ece6d8", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
             <div style={{ fontSize: 11, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Odesílatel</div>
             {payment.sender_name && <div style={{ fontSize: 14, fontWeight: 600, color: "#1c2b22" }}>{payment.sender_name}</div>}
-            {payment.sender_account && <div style={{ fontSize: 13, color: "#7c8378", marginTop: 2 }}>Účet: {payment.sender_account}</div>}
+            {payment.sender_account && <div style={{ fontSize: 13, color: "#7c8378", marginTop: 2, marginBottom: 12 }}>Účet: {payment.sender_account}</div>}
+            <div style={{ fontSize: 11, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Poznámky k nájemníkovi</div>
+            <textarea value={tenantNotes} onChange={e => setTenantNotes(e.target.value)} placeholder="Poznámky, dohody, kontakt…"
+              style={{ width: "100%", minHeight: 80, padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 13, color: "#1c2b22", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+              <button onClick={saveTenantNotes} style={{ fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 7, border: "none", background: notesSaved ? "#2d6a4f" : "#1f3d2e", color: "#f5f1e6", cursor: "pointer" }}>
+                {notesSaved ? "✓ Uloženo" : "Uložit poznámky"}
+              </button>
+            </div>
           </div>
         )}
 
@@ -488,7 +532,7 @@ function CashflowExtra({ properties, mortgages }: { properties: Property[]; mort
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function EquityDashboard() {
-  const SECTION_IDS = ["dashboard", "nemovitosti", "platby", "asistent"];
+  const SECTION_IDS = ["dashboard", "nemovitosti", "platby", "komunikace", "asistent"];
 
   const supabase = createClient();
   const [properties, setProperties] = useState<Property[]>([]);
@@ -528,6 +572,76 @@ export default function EquityDashboard() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
 
+  // Komunikace
+  const [commPropertyId, setCommPropertyId] = useState<string | null>(null);
+  const [commMessages, setCommMessages] = useState<Message[]>([]);
+  const [commLoading, setCommLoading] = useState(false);
+  const [incomingText, setIncomingText] = useState("");
+  const [incomingChannel, setIncomingChannel] = useState<"whatsapp" | "email" | "sms">("whatsapp");
+  const [draftText, setDraftText] = useState("");
+  const [suggesting, setSuggesting] = useState(false);
+  const [savingMsg, setSavingMsg] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function loadMessages(propertyId: string) {
+    setCommLoading(true);
+    const { data } = await supabase.from("messages").select("*").eq("property_id", propertyId).order("created_at", { ascending: true });
+    setCommMessages(data ?? []);
+    setCommLoading(false);
+  }
+
+  useEffect(() => {
+    if (commPropertyId) loadMessages(commPropertyId);
+  }, [commPropertyId]);
+
+  async function handleLogIncoming() {
+    const text = incomingText.trim();
+    if (!text || !commPropertyId) return;
+    setSavingMsg(true);
+    await supabase.from("messages").insert({ property_id: commPropertyId, channel: incomingChannel, direction: "inbound", content: text });
+    setIncomingText("");
+    setDraftText("");
+    await loadMessages(commPropertyId);
+    setSavingMsg(false);
+  }
+
+  async function handleSuggestReply() {
+    const text = incomingText.trim();
+    if (!text || !commPropertyId || suggesting) return;
+    setSuggesting(true);
+    setDraftText("");
+    try {
+      const res = await fetch("/api/suggest-reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ propertyId: commPropertyId, incomingMessage: text, channel: incomingChannel }),
+      });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      setDraftText(data.draft ?? "");
+    } finally {
+      setSuggesting(false);
+    }
+  }
+
+  async function handleSaveOutgoing() {
+    const text = draftText.trim();
+    if (!text || !commPropertyId) return;
+    setSavingMsg(true);
+    await supabase.from("messages").insert({ property_id: commPropertyId, channel: incomingChannel, direction: "outbound", content: text });
+    setIncomingText("");
+    setDraftText("");
+    await loadMessages(commPropertyId);
+    setSavingMsg(false);
+  }
+
+  async function handleCopyDraft() {
+    if (!draftText) return;
+    await navigator.clipboard.writeText(draftText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
   async function loadPayments() {
     const { data } = await supabase.from("payments").select("*").order("month", { ascending: false });
     const pays = data ?? [];
@@ -547,6 +661,16 @@ export default function EquityDashboard() {
       setLoading(false);
     }
     load();
+
+    // Realtime — automatická aktualizace když přijde nová platba
+    const channel = supabase
+      .channel("payments-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => {
+        loadPayments();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   // No auto-select — default shows all payments
@@ -692,6 +816,7 @@ export default function EquityDashboard() {
         <PaymentModal
           payment={selectedPayment}
           properties={properties}
+          supabase={supabase}
           onClose={() => setSelectedPayment(null)}
           onSave={handleAssignPayment}
         />
@@ -1185,6 +1310,111 @@ export default function EquityDashboard() {
                 })}
               </div>
             )}
+        </section>
+
+        {/* KOMUNIKACE */}
+        <section id="komunikace" style={{ marginTop: 38, scrollMarginTop: 28 }}>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Komunikace s nájemníky</div>
+
+          {/* Výběr nemovitosti */}
+          <div className="flex gap-[7px] flex-wrap mb-4">
+            {activeProperties.map((p) => (
+              <button key={p.id} onClick={() => { setCommPropertyId(p.id); setIncomingText(""); setDraftText(""); }}
+                className="cursor-pointer rounded-[20px] border-none"
+                style={{ fontWeight: 600, fontSize: 12, padding: "7px 13px", color: commPropertyId === p.id ? "#f5f1e6" : "#5c6359", background: commPropertyId === p.id ? "#1f3d2e" : "#e6e0d0" }}>
+                {p.name.split(" ")[0]}
+              </button>
+            ))}
+          </div>
+
+          {!commPropertyId ? (
+            <div style={{ fontSize: 14, color: "#7c8378", lineHeight: 1.6 }}>
+              Vyber nemovitost a veď historii komunikace s nájemníkem — vlož zprávu, kterou ti poslal (přes WhatsApp, email nebo SMS), a AI ti navrhne odpověď podle stavu plateb a smlouvy.
+            </div>
+          ) : (
+            <>
+              {/* Historie zpráv */}
+              <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "16px 18px", marginBottom: 16, maxHeight: 340, overflowY: "auto" }}>
+                {commLoading ? (
+                  <div style={{ color: "#9a9483", fontSize: 13 }}>Načítám…</div>
+                ) : commMessages.length === 0 ? (
+                  <div style={{ color: "#9a9483", fontSize: 13 }}>Zatím žádná zaznamenaná komunikace.</div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {commMessages.map((m) => (
+                      <div key={m.id} className={`flex ${m.direction === "outbound" ? "justify-end" : "justify-start"}`}>
+                        <div style={{ maxWidth: "78%" }}>
+                          <div style={{
+                            padding: "9px 13px", borderRadius: m.direction === "outbound" ? "14px 14px 3px 14px" : "14px 14px 14px 3px",
+                            background: m.direction === "outbound" ? "#1f3d2e" : "#fff",
+                            color: m.direction === "outbound" ? "#f5f1e6" : "#1c2b22",
+                            fontSize: 13.5, lineHeight: 1.5, whiteSpace: "pre-wrap",
+                          }}>
+                            {m.content}
+                          </div>
+                          <div style={{ fontSize: 10.5, color: "#9a9483", marginTop: 3, textAlign: m.direction === "outbound" ? "right" : "left" }}>
+                            {m.channel} · {fmtDate(m.created_at)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Nová příchozí zpráva */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Vlož zprávu od nájemníka</div>
+              <div className="flex gap-2 mb-2">
+                {(["whatsapp", "email", "sms"] as const).map(c => (
+                  <button key={c} onClick={() => setIncomingChannel(c)}
+                    style={{ padding: "5px 12px", borderRadius: 20, border: `1px solid ${incomingChannel === c ? "#1f3d2e" : "#d2cab4"}`, background: incomingChannel === c ? "#1f3d2e" : "transparent", color: incomingChannel === c ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={incomingText}
+                onChange={e => setIncomingText(e.target.value)}
+                placeholder="Vlož text zprávy, kterou ti nájemník poslal…"
+                rows={3}
+                style={{ width: "100%", padding: "10px 13px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", resize: "vertical", marginBottom: 10 }}
+              />
+              <div className="flex gap-2 mb-4">
+                <button onClick={handleLogIncoming} disabled={!incomingText.trim() || savingMsg}
+                  style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 13, fontWeight: 600, color: "#5c6359", cursor: !incomingText.trim() ? "not-allowed" : "pointer" }}>
+                  Jen uložit do historie
+                </button>
+                <button onClick={handleSuggestReply} disabled={!incomingText.trim() || suggesting}
+                  style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: !incomingText.trim() ? "#9db8a6" : "#1f3d2e", fontSize: 13, fontWeight: 600, color: "#f5f1e6", cursor: !incomingText.trim() ? "not-allowed" : "pointer" }}>
+                  {suggesting ? "Přemýšlím…" : "Navrhni odpověď"}
+                </button>
+              </div>
+
+              {/* Návrh odpovědi */}
+              {(draftText || suggesting) && (
+                <div style={{ background: "#fff", border: "1px solid #d2cab4", borderRadius: 10, padding: "14px 16px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Návrh odpovědi</div>
+                  <textarea
+                    value={draftText}
+                    onChange={e => setDraftText(e.target.value)}
+                    placeholder={suggesting ? "Generuji návrh…" : ""}
+                    rows={4}
+                    style={{ width: "100%", padding: "10px 13px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fdfbf5", fontSize: 14, color: "#1c2b22", resize: "vertical", marginBottom: 10 }}
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={handleCopyDraft} disabled={!draftText}
+                      style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 13, fontWeight: 600, color: "#5c6359", cursor: "pointer" }}>
+                      {copied ? "✓ Zkopírováno" : "Kopírovat"}
+                    </button>
+                    <button onClick={handleSaveOutgoing} disabled={!draftText || savingMsg}
+                      style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#1f3d2e", fontSize: 13, fontWeight: 600, color: "#f5f1e6", cursor: "pointer" }}>
+                      Uložit jako odeslané
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </section>
 
         {/* ASISTENT */}
