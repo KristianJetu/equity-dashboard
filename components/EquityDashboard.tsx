@@ -239,7 +239,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)" }} onClick={onClose}>
-      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "32px 32px 28px", width: 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
+      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "32px 32px 28px", width: 640, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
         onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-start mb-6">
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 20, color: "#1c2b22" }}>Detail nemovitosti</div>
@@ -258,6 +258,12 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
               </button>
             ))}
           </div>
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Poznámky</div>
+          <textarea value={notes} onChange={e => { setNotes(e.target.value); setSaved(false); }} placeholder="Poznámky, technické info, kontakty…"
+            style={{ width: "100%", minHeight: 200, padding: "10px 13px", borderRadius: 9, border: "1.5px solid #d2cab4", background: "#fff", fontSize: 15, color: "#1c2b22", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit", lineHeight: 1.8, outline: "none" }} />
         </div>
 
         <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Nemovitost</div>
@@ -302,10 +308,6 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
 
         <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Náklady</div>
         {field("Měsíční náklady (paušál)", monthlyCosts, setMonthlyCosts, "number", "Kč / měs")}
-
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Poznámky k nemovitosti</div>
-        <textarea value={notes} onChange={e => { setNotes(e.target.value); setSaved(false); }} placeholder="Poznámky, technické info, kontakty…"
-          style={{ width: "100%", minHeight: 100, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
 
         <div className="flex gap-3 justify-end mt-4">
           <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>Zavřít</button>
