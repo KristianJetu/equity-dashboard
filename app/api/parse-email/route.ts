@@ -151,6 +151,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "parse failed" }, { status: 422 });
     }
 
+    parsed.sender_account = parsed.sender_account.replace(/^\.+/, "");
     const tenant = await findTenantByAccount(parsed.sender_account);
     if (tenant) {
       const mortgagePayment = await getMortgagePayment(tenant.property_id);

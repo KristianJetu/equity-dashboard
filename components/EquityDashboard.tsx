@@ -331,22 +331,8 @@ function PaymentModal({
 }) {
   const [selectedProperty, setSelectedProperty] = useState(payment.property_id ?? "");
   const [saving, setSaving] = useState(false);
-  const [tenantNotes, setTenantNotes] = useState("");
-  const [notesSaved, setNotesSaved] = useState(false);
   const match = matchTypeLabel(payment.match_type);
 
-  useEffect(() => {
-    if (!payment.sender_account) return;
-    supabase.from("tenants").select("notes").eq("account_number", payment.sender_account).single()
-      .then(({ data }) => { if (data?.notes) setTenantNotes(data.notes); });
-  }, [payment.sender_account]);
-
-  async function saveTenantNotes() {
-    if (!payment.sender_account) return;
-    await supabase.from("tenants").update({ notes: tenantNotes || null }).eq("account_number", payment.sender_account);
-    setNotesSaved(true);
-    setTimeout(() => setNotesSaved(false), 2000);
-  }
 
   async function handleSave() {
     if (!selectedProperty) return;
@@ -390,15 +376,7 @@ function PaymentModal({
           <div style={{ background: "#ece6d8", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
             <div style={{ fontSize: 11, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Odesílatel</div>
             {payment.sender_name && <div style={{ fontSize: 14, fontWeight: 600, color: "#1c2b22" }}>{payment.sender_name}</div>}
-            {payment.sender_account && <div style={{ fontSize: 13, color: "#7c8378", marginTop: 2, marginBottom: 12 }}>Účet: {payment.sender_account}</div>}
-            <div style={{ fontSize: 11, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Poznámky k nájemníkovi</div>
-            <textarea value={tenantNotes} onChange={e => setTenantNotes(e.target.value)} placeholder="Poznámky, dohody, kontakt…"
-              style={{ width: "100%", minHeight: 80, padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 13, color: "#1c2b22", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
-              <button onClick={saveTenantNotes} style={{ fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 7, border: "none", background: notesSaved ? "#2d6a4f" : "#1f3d2e", color: "#f5f1e6", cursor: "pointer" }}>
-                {notesSaved ? "✓ Uloženo" : "Uložit poznámky"}
-              </button>
-            </div>
+            {payment.sender_account && <div style={{ fontSize: 13, color: "#7c8378", marginTop: 2 }}>Účet: {payment.sender_account}</div>}
           </div>
         )}
 
@@ -542,42 +520,227 @@ function CashflowExtra({ properties, mortgages }: { properties: Property[]; mort
   );
 }
 
+// ── Tenant Edit Modal ─────────────────────────────────────────────────────────
+function TenantEditModal({ tenant, properties, supabase, onClose, onSaved, onDeleted }: {
+  tenant: Tenant;
+  properties: Property[];
+  supabase: ReturnType<typeof createClient>;
+  onClose: () => void;
+  onSaved: (t: Tenant) => void;
+  onDeleted: (id: string) => void;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [name, setName] = useState(tenant.name ?? "");
+  const [account, setAccount] = useState(tenant.account_number ?? "");
+  const [propertyId, setPropertyId] = useState(tenant.property_id ?? "");
+  const [notes, setNotes] = useState(tenant.notes ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    const updates = { name: name.trim(), account_number: account.trim(), property_id: propertyId || null, notes: notes.trim() || null };
+    await supabase.from("tenants").update(updates).eq("id", tenant.id);
+    onSaved({ ...tenant, ...updates });
+    setSaving(false);
+    onClose();
+  }
+
+  async function deleteTenant() {
+    await supabase.from("tenants").delete().eq("id", tenant.id);
+    onDeleted(tenant.id);
+    onClose();
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: "#fff", borderRadius: 18, width: 640, maxWidth: "92vw", maxHeight: "90vh", overflow: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.2)" }}>
+        {/* Modal header */}
+        <div style={{ padding: "22px 24px 0", display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#d6e4d6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1f3d2e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 17, fontWeight: 700, color: "#1c2b22" }}>{tenant.name || "Nájemník"}</div>
+            <div style={{ fontSize: 12, color: "#9a9483", marginTop: 1 }}>{tenant.account_number}</div>
+          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "#f0ebe1", color: "#5c6359", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>×</button>
+        </div>
+
+        {/* Fields */}
+        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>Jméno</label>
+              <input value={name} onChange={e => setName(e.target.value)}
+                style={{ width: "100%", padding: "10px 13px", borderRadius: 9, border: "1.5px solid #e0d8cc", background: "#faf8f3", fontSize: 14, color: "#1c2b22", boxSizing: "border-box", outline: "none" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>Číslo účtu</label>
+              <input value={account} onChange={e => setAccount(e.target.value)}
+                style={{ width: "100%", padding: "10px 13px", borderRadius: 9, border: "1.5px solid #e0d8cc", background: "#faf8f3", fontSize: 14, color: "#1c2b22", boxSizing: "border-box", outline: "none" }} />
+            </div>
+          </div>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>Nemovitost</label>
+            <select value={propertyId} onChange={e => setPropertyId(e.target.value)}
+              style={{ width: "100%", padding: "10px 13px", borderRadius: 9, border: "1.5px solid #e0d8cc", background: "#faf8f3", fontSize: 14, color: "#1c2b22", boxSizing: "border-box" }}>
+              <option value="">— nevybráno —</option>
+              {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>Poznámky</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Kontakt, dohody, smlouva, reference…"
+              style={{ width: "100%", minHeight: 260, padding: "14px 16px", borderRadius: 9, border: "1.5px solid #e0d8cc", background: "#faf8f3", fontSize: 15, color: "#1c2b22", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit", lineHeight: 1.8, outline: "none", letterSpacing: "0.01em" }} />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "0 24px 22px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          {confirmDelete ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 13, color: "#c0392b", fontWeight: 600 }}>Opravdu smazat?</span>
+              <button onClick={deleteTenant}
+                style={{ fontSize: 13, padding: "7px 14px", borderRadius: 8, border: "none", background: "#c0392b", color: "#fff", cursor: "pointer", fontWeight: 700 }}>
+                Ano, smazat
+              </button>
+              <button onClick={() => setConfirmDelete(false)}
+                style={{ fontSize: 13, padding: "7px 14px", borderRadius: 8, border: "1.5px solid #e0d8cc", background: "#faf8f3", color: "#5c6359", cursor: "pointer", fontWeight: 600 }}>
+                Zrušit
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmDelete(true)}
+              style={{ fontSize: 13, padding: "8px 16px", borderRadius: 8, border: "1.5px solid #f5c6c6", background: "#fff5f5", color: "#c0392b", cursor: "pointer", fontWeight: 600 }}>
+              Smazat nájemníka
+            </button>
+          )}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={onClose}
+              style={{ fontSize: 13, padding: "9px 18px", borderRadius: 9, border: "1.5px solid #e0d8cc", background: "#faf8f3", color: "#5c6359", cursor: "pointer", fontWeight: 600 }}>
+              Zrušit
+            </button>
+            <button onClick={save} disabled={saving}
+              style={{ fontSize: 13, padding: "9px 22px", borderRadius: 9, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 700, opacity: saving ? 0.7 : 1 }}>
+              {saving ? "Ukládám…" : "Uložit"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Tenant Card ───────────────────────────────────────────────────────────────
-function TenantCard({ tenant, properties, supabase, onSaved }: {
+function TenantCard({ tenant, properties, supabase, onSaved, onDeleted }: {
   tenant: Tenant;
   properties: Property[];
   supabase: ReturnType<typeof createClient>;
   onSaved: (t: Tenant) => void;
+  onDeleted: (id: string) => void;
 }) {
-  const [notes, setNotes] = useState(tenant.notes ?? "");
-  const [saved, setSaved] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const property = properties.find(p => p.id === tenant.property_id);
 
+  return (
+    <>
+      <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e8e2d6", overflow: "hidden" }}>
+        <div style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 13 }}>
+          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#d6e4d6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1f3d2e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: "#1c2b22", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tenant.name || "—"}</div>
+            <div style={{ fontSize: 12, color: "#9a9483", marginTop: 1 }}>{tenant.account_number}</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {property && (
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e", background: "#d6e4d6", borderRadius: 20, padding: "3px 10px" }}>{property.name}</div>
+            )}
+            <button onClick={() => setShowEdit(true)}
+              style={{ padding: "5px 13px", borderRadius: 7, border: "1px solid #d2cab4", background: "#faf8f3", color: "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              Upravit
+            </button>
+          </div>
+        </div>
+        {tenant.notes && (
+          <div style={{ borderTop: "1px solid #f0ebe1", padding: "9px 18px 12px", display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <svg style={{ flexShrink: 0, marginTop: 2 }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b0a898" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <div style={{ fontSize: 12.5, color: "#6b6257", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{tenant.notes}</div>
+          </div>
+        )}
+      </div>
+      {showEdit && (
+        <TenantEditModal tenant={tenant} properties={properties} supabase={supabase}
+          onClose={() => setShowEdit(false)}
+          onSaved={t => { onSaved(t); setShowEdit(false); }}
+          onDeleted={id => { onDeleted(id); setShowEdit(false); }} />
+      )}
+    </>
+  );
+}
+
+// ── Add Tenant Modal ──────────────────────────────────────────────────────────
+function AddTenantModal({ properties, supabase, onClose, onSaved }: {
+  properties: Property[];
+  supabase: ReturnType<typeof createClient>;
+  onClose: () => void;
+  onSaved: (t: Tenant) => void;
+}) {
+  const [name, setName] = useState("");
+  const [account, setAccount] = useState("");
+  const [propertyId, setPropertyId] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
   async function save() {
-    await supabase.from("tenants").update({ notes: notes || null }).eq("id", tenant.id);
-    setSaved(true);
-    onSaved({ ...tenant, notes: notes || null });
-    setTimeout(() => setSaved(false), 2000);
+    if (!name.trim() || !account.trim()) return;
+    setSaving(true);
+    const { data } = await supabase.from("tenants").insert({
+      name: name.trim(),
+      account_number: account.trim(),
+      property_id: propertyId || null,
+      notes: notes.trim() || null,
+    }).select().single();
+    if (data) onSaved(data as Tenant);
+    setSaving(false);
   }
 
   return (
-    <div style={{ background: "#fff", borderRadius: 12, padding: "18px 20px", border: "1px solid #e8e2d6" }}>
-      <div className="flex items-start justify-between gap-4">
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: "#1c2b22", marginBottom: 2 }}>{tenant.name || "—"}</div>
-          <div style={{ fontSize: 13, color: "#9a9483", marginBottom: 4 }}>Účet: {tenant.account_number}</div>
-          {property && (
-            <div style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e", background: "#d6e4d6", borderRadius: 6, padding: "2px 8px", display: "inline-block" }}>{property.name}</div>
-          )}
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ background: "#fff", borderRadius: 16, padding: "28px 28px 24px", width: 420, maxWidth: "92vw", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}>
+        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 17, fontWeight: 700, color: "#1c2b22", marginBottom: 20 }}>Přidat nájemníka</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Jméno *</div>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Jan Novák"
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", boxSizing: "border-box" }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Číslo účtu *</div>
+            <input value={account} onChange={e => setAccount(e.target.value)} placeholder="64183/0800"
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", boxSizing: "border-box" }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Nemovitost</div>
+            <select value={propertyId} onChange={e => setPropertyId(e.target.value)}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", boxSizing: "border-box" }}>
+              <option value="">— nevybráno —</option>
+              {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Poznámky</div>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Kontakt, reference, dohody…"
+              style={{ width: "100%", minHeight: 70, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
+          </div>
         </div>
-      </div>
-      <div style={{ marginTop: 14 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Poznámky</div>
-        <textarea value={notes} onChange={e => { setNotes(e.target.value); setSaved(false); }} placeholder="Poznámky, dohody, kontakt, reference…"
-          style={{ width: "100%", minHeight: 80, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
-          <button onClick={save} style={{ fontSize: 12, fontWeight: 600, padding: "6px 16px", borderRadius: 7, border: "none", background: saved ? "#2d6a4f" : "#1f3d2e", color: "#f5f1e6", cursor: "pointer" }}>
-            {saved ? "✓ Uloženo" : "Uložit"}
+        <div style={{ display: "flex", gap: 10, marginTop: 20, justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", color: "#5c6359", cursor: "pointer", fontWeight: 600 }}>Zrušit</button>
+          <button onClick={save} disabled={saving || !name.trim() || !account.trim()}
+            style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 600, opacity: saving || !name.trim() || !account.trim() ? 0.6 : 1 }}>
+            {saving ? "Ukládám…" : "Přidat"}
           </button>
         </div>
       </div>
@@ -595,6 +758,7 @@ export default function EquityDashboard() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [unmatchedPayments, setUnmatchedPayments] = useState<Payment[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [showAddTenant, setShowAddTenant] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
@@ -1376,16 +1540,28 @@ export default function EquityDashboard() {
 
         {/* NÁJEMNÍCI */}
         <section id="najemnici" style={{ marginTop: 38, scrollMarginTop: 28 }}>
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Nájemníci</div>
+          <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Nájemníci</div>
+            <button onClick={() => setShowAddTenant(true)}
+              style={{ fontSize: 13, fontWeight: 600, padding: "7px 16px", borderRadius: 8, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer" }}>
+              + Přidat nájemníka
+            </button>
+          </div>
           {tenants.length === 0 ? (
-            <div style={{ color: "#9a9483", fontSize: 14, padding: "24px 0" }}>Zatím žádní nájemníci. Přibudou automaticky po přijetí první platby.</div>
+            <div style={{ color: "#9a9483", fontSize: 14, padding: "24px 0" }}>Zatím žádní nájemníci. Přidej je ručně nebo přiřaď platbu k nemovitosti.</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {tenants.map(tenant => (
                 <TenantCard key={tenant.id} tenant={tenant} properties={properties} supabase={supabase}
-                  onSaved={t => setTenants(prev => prev.map(x => x.id === t.id ? t : x))} />
+                  onSaved={t => setTenants(prev => prev.map(x => x.id === t.id ? t : x))}
+                  onDeleted={id => setTenants(prev => prev.filter(x => x.id !== id))} />
               ))}
             </div>
+          )}
+          {showAddTenant && (
+            <AddTenantModal properties={properties} supabase={supabase}
+              onClose={() => setShowAddTenant(false)}
+              onSaved={t => { setTenants(prev => [...prev, t]); setShowAddTenant(false); }} />
           )}
         </section>
 
