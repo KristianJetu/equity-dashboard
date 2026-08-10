@@ -6,6 +6,7 @@ export async function middleware(req: NextRequest) {
 
   // Vždy přístupné bez autentizace
   if (pathname.startsWith("/api/inbound-email")) return NextResponse.next();
+  if (pathname.startsWith("/api/parse-email")) return NextResponse.next();
   if (pathname.startsWith("/login")) return NextResponse.next();
   if (pathname.startsWith("/onboarding")) return NextResponse.next();
   if (pathname.startsWith("/set-password")) return NextResponse.next();
