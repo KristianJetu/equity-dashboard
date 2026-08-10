@@ -1510,9 +1510,10 @@ export default function EquityDashboard() {
                       onMouseEnter={e => (e.currentTarget.style.background = "#ece6d8")}
                       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                       <span className="flex-1">
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-2 flex-wrap">
                           <span>{monthLabel(p.month)}</span>
-                          {p.match_type === "auto" && <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: "#d6e4d6", color: "#1f3d2e", fontWeight: 600 }}>auto</span>}
+                          {prop && !activeFilter && <span style={{ fontSize: 11, fontWeight: 600, color: "#1f3d2e", background: "#d6e4d6", borderRadius: 20, padding: "2px 9px" }}>{prop.name}</span>}
+                          {p.match_type === "auto" && <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: "#e8e2d6", color: "#7c8378", fontWeight: 600 }}>auto</span>}
                         </span>
                         <span className="flex items-center gap-2 flex-wrap" style={{ marginTop: 3 }}>
                           {p.sender_name && <span style={{ fontSize: 12, color: "#5c6359" }}>{p.sender_name}</span>}
