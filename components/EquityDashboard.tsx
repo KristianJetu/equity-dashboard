@@ -1595,7 +1595,17 @@ export default function EquityDashboard() {
                 ) : (
                   <div className="flex flex-col gap-2">
                     {commMessages.map((m) => (
-                      <div key={m.id} className={`flex ${m.direction === "outbound" ? "justify-end" : "justify-start"}`}>
+                      <div key={m.id} className={`flex ${m.direction === "outbound" ? "justify-end" : "justify-start"}`} style={{ gap: 6, alignItems: "flex-end" }}>
+                        {/* Delete button — inbound: right of bubble; outbound: left of bubble */}
+                        {m.direction === "outbound" && (
+                          <button onClick={async () => {
+                            await supabase.from("messages").delete().eq("id", m.id);
+                            setCommMessages(prev => prev.filter(x => x.id !== m.id));
+                          }} title="Smazat zprávu"
+                            style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", border: "none", background: "transparent", color: "#c0a898", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.6, fontSize: 14, lineHeight: 1 }}>
+                            ×
+                          </button>
+                        )}
                         <div style={{ maxWidth: "78%" }}>
                           <div style={{
                             padding: "9px 13px", borderRadius: m.direction === "outbound" ? "14px 14px 3px 14px" : "14px 14px 14px 3px",
@@ -1609,6 +1619,15 @@ export default function EquityDashboard() {
                             {m.channel} · {fmtDate(m.created_at)}
                           </div>
                         </div>
+                        {m.direction === "inbound" && (
+                          <button onClick={async () => {
+                            await supabase.from("messages").delete().eq("id", m.id);
+                            setCommMessages(prev => prev.filter(x => x.id !== m.id));
+                          }} title="Smazat zprávu"
+                            style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", border: "none", background: "transparent", color: "#c0a898", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.6, fontSize: 14, lineHeight: 1 }}>
+                            ×
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -20,7 +20,7 @@ Aplikace pro správu portfolia nemovitostí. Majitel vidí přehled nemovitostí
 - `properties` — nemovitosti (name, address, status, rent_amount, estimated_value, monthly_costs, pojištění, ...)
 - `mortgages` — hypotéky (property_id, bank, loan_amount, monthly_payment, refix_date, ...)
 - `payments` — platby nájmu (property_id, month, rent_received, status, sender_name, ...)
-- `tenants` — nájemníci a jejich čísla účtů (pro automatické párování plateb)
+- `tenants` — nájemníci a jejich čísla účtů (pro automatické párování plateb); sloupce: id, account_number (unique), name, property_id, notes, created_at
 - `messages` — historie komunikace s nájemníky (property_id, channel: whatsapp/email/sms/other, direction: inbound/outbound, content, created_at) — zprávy se vkládají ručně (copy-paste), appka je jen loguje a AI z nich + z dat o platbách/smlouvě navrhuje odpověď. Migrace: `supabase-migration-messages.sql`.
 
 ## Autentizace
@@ -37,6 +37,7 @@ Aplikace pro správu portfolia nemovitostí. Majitel vidí přehled nemovitostí
 - Endpoint rozparsuje email přes Claude API a uloží platbu do `payments`
 - Pokud je číslo účtu odesílatele v tabulce `tenants` → automatické spárování s nemovitostí
 - Pokud ne → platba uložena jako "unmatched" k ručnímu přiřazení
+- Endpoint také odstraňuje `...` prefix z čísla účtu (mBanka ho někdy posílá jako `...64183/0800`)
 - **Proč ne Resend webhook:** mBanka používá S/MIME podpis → HTML obsah je příloha, Resend ho neposkytne přes API. Gmail S/MIME dekóduje automaticky.
 - **Apps Script URL:** https://script.google.com/home/projects/1BaVpCJ5ToNCp0BJ8-WYvbpCw63RKN3ilhykBZAadss8EvW-xqJYt8KI/edit
 - **Trigger:** každou hodinu, time-driven
@@ -53,6 +54,25 @@ Aplikace pro správu portfolia nemovitostí. Majitel vidí přehled nemovitostí
    ```sql
    UPDATE auth.users SET confirmed_at = now() WHERE email = 'email@example.com';
    ```
+
+## Sekce Nájemníci
+- Přehled nájemníků s kartami — jméno, číslo účtu, přiřazená nemovitost, poznámky (zkrácené na 2 řádky)
+- Tlačítko **"+ Přidat nájemníka"** — ruční přidání (jméno, účet, nemovitost, poznámky)
+- Tlačítko **"Upravit"** na každé kartě otevře modal pro editaci a mazání
+- Mazání má vlastní inline potvrzení ("Opravdu smazat? / Ano, smazat / Zrušit")
+- **RLS na tabulce `tenants`:** nutné mít politiky pro roli `authenticated` i `anon`
+  ```sql
+  -- Pokud chybí authenticated politiky (přihlášený uživatel nevidí nájemníky):
+  CREATE POLICY "authenticated can read tenants" ON tenants FOR SELECT TO authenticated USING (true);
+  CREATE POLICY "authenticated can insert tenants" ON tenants FOR INSERT TO authenticated WITH CHECK (true);
+  CREATE POLICY "authenticated can update tenants" ON tenants FOR UPDATE TO authenticated USING (true);
+  ```
+- **Naplnění tabulky z existujících plateb** (pokud je tenants prázdná):
+  ```sql
+  INSERT INTO tenants (account_number, name, property_id)
+  SELECT DISTINCT ON (sender_account) sender_account, sender_name, property_id
+  FROM payments WHERE sender_account IS NOT NULL AND sender_account != '' AND property_id IS NOT NULL;
+  ```
 
 ## Supabase nastavení
 - **Site URL:** https://equity-dashboard-six.vercel.app
