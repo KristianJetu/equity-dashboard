@@ -693,17 +693,23 @@ function AddTenantModal({ properties, supabase, onClose, onSaved }: {
   const [propertyId, setPropertyId] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function save() {
-    if (!name.trim() || !account.trim()) return;
+    if (!name.trim()) return;
     setSaving(true);
-    const { data } = await supabase.from("tenants").insert({
+    setError("");
+    const { data, error: err } = await supabase.from("tenants").insert({
       name: name.trim(),
-      account_number: account.trim(),
+      account_number: account.trim() || null,
       property_id: propertyId || null,
       notes: notes.trim() || null,
     }).select().single();
-    if (data) onSaved(data as Tenant);
+    if (err) {
+      setError(err.code === "23505" ? "Nájemník s tímto číslem účtu už existuje." : "Chyba při ukládání, zkus to znovu.");
+    } else if (data) {
+      onSaved(data as Tenant);
+    }
     setSaving(false);
   }
 
@@ -718,7 +724,7 @@ function AddTenantModal({ properties, supabase, onClose, onSaved }: {
               style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", boxSizing: "border-box" }} />
           </div>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Číslo účtu *</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Číslo účtu</div>
             <input value={account} onChange={e => setAccount(e.target.value)} placeholder="64183/0800"
               style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", boxSizing: "border-box" }} />
           </div>
@@ -736,10 +742,13 @@ function AddTenantModal({ properties, supabase, onClose, onSaved }: {
               style={{ width: "100%", minHeight: 70, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 20, justifyContent: "flex-end" }}>
+        {error && (
+          <div style={{ marginTop: 12, padding: "9px 13px", borderRadius: 8, background: "#fff5f5", border: "1px solid #f5c6c6", color: "#c0392b", fontSize: 13 }}>{error}</div>
+        )}
+        <div style={{ display: "flex", gap: 10, marginTop: 16, justifyContent: "flex-end" }}>
           <button onClick={onClose} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", color: "#5c6359", cursor: "pointer", fontWeight: 600 }}>Zrušit</button>
-          <button onClick={save} disabled={saving || !name.trim() || !account.trim()}
-            style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 600, opacity: saving || !name.trim() || !account.trim() ? 0.6 : 1 }}>
+          <button onClick={save} disabled={saving || !name.trim()}
+            style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 600, opacity: saving || !name.trim() ? 0.6 : 1 }}>
             {saving ? "Ukládám…" : "Přidat"}
           </button>
         </div>
