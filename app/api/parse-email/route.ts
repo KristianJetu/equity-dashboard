@@ -134,7 +134,7 @@ async function savePayment(
 export async function POST(req: NextRequest) {
   // Ověř tajný klíč
   const auth = req.headers.get("x-parse-secret");
-  if (!auth || auth !== process.env.PARSE_EMAIL_SECRET) {
+  if (!auth || auth.trim() !== (process.env.PARSE_EMAIL_SECRET ?? "").trim()) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
