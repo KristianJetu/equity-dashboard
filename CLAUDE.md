@@ -21,6 +21,7 @@ Aplikace pro správu portfolia nemovitostí. Majitel vidí přehled nemovitostí
 - `mortgages` — hypotéky (property_id, bank, loan_amount, monthly_payment, refix_date, ...)
 - `payments` — platby nájmu (property_id, month, rent_received, status, sender_name, ...)
 - `tenants` — nájemníci a jejich čísla účtů (pro automatické párování plateb)
+- `messages` — historie komunikace s nájemníky (property_id, channel: whatsapp/email/sms/other, direction: inbound/outbound, content, created_at) — zprávy se vkládají ručně (copy-paste), appka je jen loguje a AI z nich + z dat o platbách/smlouvě navrhuje odpověď. Migrace: `supabase-migration-messages.sql`.
 
 ## Autentizace
 - Supabase Auth (email + heslo)
@@ -29,14 +30,18 @@ Aplikace pro správu portfolia nemovitostí. Majitel vidí přehled nemovitostí
 - Middleware (`middleware.ts`) kontroluje session a `onboarding_done` — nepřihlášený → `/login`, bez onboardingu → `/onboarding`
 - RLS politiky zajišťují že každý uživatel vidí jen svá data (`user_id = auth.uid()`)
 
-## Systém plateb (inbound email)
-- Nájemník pošle nájem na bankovní účet majitele
-- mBanka pošle notifikační email majiteli
-- Majitel má nastavené **automatické přeposílání** emailů z mBanky na Resend inbound adresu
-- Resend zavolá webhook: `POST /api/inbound-email`
-- Webhook rozparsuje email přes Claude API a uloží platbu do `payments`
+## Systém plateb — Google Apps Script (aktivní řešení)
+- Nájemník pošle nájem → mBanka pošle notifikační email na krislasek65@gmail.com
+- **Google Apps Script** (`Gmail Mbank to App`) běží každou hodinu a čte nepřečtené emaily od `kontakt@mbank.cz`
+- Script pošle HTML obsah emailu na `POST /api/parse-email` s hlavičkou `x-parse-secret`
+- Endpoint rozparsuje email přes Claude API a uloží platbu do `payments`
 - Pokud je číslo účtu odesílatele v tabulce `tenants` → automatické spárování s nemovitostí
-- Pokud ne → platba uložena jako "unmatched" a zobrazena v dashboardu k ručnímu přiřazení
+- Pokud ne → platba uložena jako "unmatched" k ručnímu přiřazení
+- **Proč ne Resend webhook:** mBanka používá S/MIME podpis → HTML obsah je příloha, Resend ho neposkytne přes API. Gmail S/MIME dekóduje automaticky.
+- **Apps Script URL:** https://script.google.com/home/projects/1BaVpCJ5ToNCp0BJ8-WYvbpCw63RKN3ilhykBZAadss8EvW-xqJYt8KI/edit
+- **Trigger:** každou hodinu, time-driven
+- **Env var:** `PARSE_EMAIL_SECRET=mbank-secret-2026` (Vercel Production)
+- **Klíčový soubor:** `app/api/parse-email/route.ts`
 
 ## Přidání nového uživatele
 1. Supabase Dashboard → Authentication → Users → Invite user
@@ -60,7 +65,9 @@ Aplikace pro správu portfolia nemovitostí. Majitel vidí přehled nemovitostí
 - `app/login/page.tsx` — přihlašovací stránka
 - `app/set-password/page.tsx` — nastavení hesla po pozvánce
 - `app/auth/callback/route.ts` — zpracování auth tokenu z emailu
-- `app/api/inbound-email/route.ts` — webhook pro příjem plateb
+- `app/api/inbound-email/route.ts` — starý Resend webhook (nepoužívá se, ponechán pro referenci)
+- `app/api/parse-email/route.ts` — aktivní endpoint pro Google Apps Script
+- `app/api/suggest-reply/route.ts` — AI návrh odpovědi nájemníkovi (kontext: nemovitost, platby, smlouva, historie zpráv)
 - `middleware.ts` — ochrana rout, kontrola session + onboardingu
 - `lib/auth.ts` — browser Supabase klient
 - `lib/auth-server.ts` — server Supabase klient

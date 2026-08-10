@@ -15,13 +15,18 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setError("Nesprávný email nebo heslo.");
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setError("Nesprávný email nebo heslo.");
+        setLoading(false);
+      } else {
+        router.push("/");
+        router.refresh();
+      }
+    } catch {
+      setError("Přihlášení selhalo — zkontroluj internetové připojení nebo blokování třetích stran (adblock/shields).");
       setLoading(false);
-    } else {
-      router.push("/");
-      router.refresh();
     }
   }
 

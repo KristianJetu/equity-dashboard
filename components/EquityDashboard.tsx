@@ -56,6 +56,14 @@ type Payment = {
   raw_email_text?: string;
 };
 
+type Tenant = {
+  id: string;
+  account_number: string;
+  name: string;
+  property_id: string | null;
+  notes?: string | null;
+};
+
 type Message = {
   id: string;
   property_id: string;
@@ -77,6 +85,10 @@ const NAV_ITEMS = [
   {
     id: "platby", title: "Platby",
     icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="7" y1="15" x2="11" y2="15" /></svg>,
+  },
+  {
+    id: "najemnici", title: "Nájemníci",
+    icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
   },
   {
     id: "komunikace", title: "Komunikace",
@@ -530,15 +542,59 @@ function CashflowExtra({ properties, mortgages }: { properties: Property[]; mort
   );
 }
 
+// ── Tenant Card ───────────────────────────────────────────────────────────────
+function TenantCard({ tenant, properties, supabase, onSaved }: {
+  tenant: Tenant;
+  properties: Property[];
+  supabase: ReturnType<typeof createClient>;
+  onSaved: (t: Tenant) => void;
+}) {
+  const [notes, setNotes] = useState(tenant.notes ?? "");
+  const [saved, setSaved] = useState(false);
+  const property = properties.find(p => p.id === tenant.property_id);
+
+  async function save() {
+    await supabase.from("tenants").update({ notes: notes || null }).eq("id", tenant.id);
+    setSaved(true);
+    onSaved({ ...tenant, notes: notes || null });
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 12, padding: "18px 20px", border: "1px solid #e8e2d6" }}>
+      <div className="flex items-start justify-between gap-4">
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#1c2b22", marginBottom: 2 }}>{tenant.name || "—"}</div>
+          <div style={{ fontSize: 13, color: "#9a9483", marginBottom: 4 }}>Účet: {tenant.account_number}</div>
+          {property && (
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e", background: "#d6e4d6", borderRadius: 6, padding: "2px 8px", display: "inline-block" }}>{property.name}</div>
+          )}
+        </div>
+      </div>
+      <div style={{ marginTop: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Poznámky</div>
+        <textarea value={notes} onChange={e => { setNotes(e.target.value); setSaved(false); }} placeholder="Poznámky, dohody, kontakt, reference…"
+          style={{ width: "100%", minHeight: 80, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+          <button onClick={save} style={{ fontSize: 12, fontWeight: 600, padding: "6px 16px", borderRadius: 7, border: "none", background: saved ? "#2d6a4f" : "#1f3d2e", color: "#f5f1e6", cursor: "pointer" }}>
+            {saved ? "✓ Uloženo" : "Uložit"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function EquityDashboard() {
-  const SECTION_IDS = ["dashboard", "nemovitosti", "platby", "komunikace", "asistent"];
+  const SECTION_IDS = ["dashboard", "nemovitosti", "platby", "najemnici", "komunikace", "asistent"];
 
   const supabase = createClient();
   const [properties, setProperties] = useState<Property[]>([]);
   const [mortgages, setMortgages] = useState<Mortgage[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [unmatchedPayments, setUnmatchedPayments] = useState<Payment[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
@@ -626,8 +682,12 @@ export default function EquityDashboard() {
 
   async function handleSaveOutgoing() {
     const text = draftText.trim();
+    const incoming = incomingText.trim();
     if (!text || !commPropertyId) return;
     setSavingMsg(true);
+    if (incoming) {
+      await supabase.from("messages").insert({ property_id: commPropertyId, channel: incomingChannel, direction: "inbound", content: incoming });
+    }
     await supabase.from("messages").insert({ property_id: commPropertyId, channel: incomingChannel, direction: "outbound", content: text });
     setIncomingText("");
     setDraftText("");
@@ -651,12 +711,14 @@ export default function EquityDashboard() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: props }, { data: morts }] = await Promise.all([
+      const [{ data: props }, { data: morts }, { data: tens }] = await Promise.all([
         supabase.from("properties").select("*").order("sort_order", { ascending: true }),
         supabase.from("mortgages").select("*"),
+        supabase.from("tenants").select("*"),
       ]);
       setProperties(props ?? []);
       setMortgages(morts ?? []);
+      setTenants(tens ?? []);
       await loadPayments();
       setLoading(false);
     }
@@ -1310,6 +1372,21 @@ export default function EquityDashboard() {
                 })}
               </div>
             )}
+        </section>
+
+        {/* NÁJEMNÍCI */}
+        <section id="najemnici" style={{ marginTop: 38, scrollMarginTop: 28 }}>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Nájemníci</div>
+          {tenants.length === 0 ? (
+            <div style={{ color: "#9a9483", fontSize: 14, padding: "24px 0" }}>Zatím žádní nájemníci. Přibudou automaticky po přijetí první platby.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {tenants.map(tenant => (
+                <TenantCard key={tenant.id} tenant={tenant} properties={properties} supabase={supabase}
+                  onSaved={t => setTenants(prev => prev.map(x => x.id === t.id ? t : x))} />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* KOMUNIKACE */}

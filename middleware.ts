@@ -29,9 +29,10 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
 
   if (!user) {
+    console.error("[middleware] no user — redirecting to /login. error:", error?.message, "| cookies present:", req.cookies.getAll().map(c => c.name).join(", "));
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
