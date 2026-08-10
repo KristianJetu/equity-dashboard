@@ -231,6 +231,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
       <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{label}</div>
       <div className="flex items-center gap-2">
         <input type={type} value={value} onChange={e => { onChange(e.target.value); setSaved(false); }}
+          lang={type === "date" ? "cs" : undefined}
           style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22" }} />
         {suffix && <span style={{ fontSize: 13, color: "#9a9483" }}>{suffix}</span>}
       </div>
@@ -808,6 +809,7 @@ export default function EquityDashboard() {
   const [commMessages, setCommMessages] = useState<Message[]>([]);
   const [commLoading, setCommLoading] = useState(false);
   const [incomingText, setIncomingText] = useState("");
+  const [incomingDirection, setIncomingDirection] = useState<"inbound" | "outbound">("inbound");
   const [incomingChannel, setIncomingChannel] = useState<"whatsapp" | "email" | "sms">("whatsapp");
   const [draftText, setDraftText] = useState("");
   const [suggesting, setSuggesting] = useState(false);
@@ -829,7 +831,7 @@ export default function EquityDashboard() {
     const text = incomingText.trim();
     if (!text || !commPropertyId) return;
     setSavingMsg(true);
-    await supabase.from("messages").insert({ property_id: commPropertyId, channel: incomingChannel, direction: "inbound", content: text });
+    await supabase.from("messages").insert({ property_id: commPropertyId, channel: incomingChannel, direction: incomingDirection, content: text });
     setIncomingText("");
     setDraftText("");
     await loadMessages(commPropertyId);
@@ -1646,8 +1648,18 @@ export default function EquityDashboard() {
                 )}
               </div>
 
-              {/* Nová příchozí zpráva */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Vlož zprávu od nájemníka</div>
+              {/* Nová zpráva */}
+              <div className="flex items-center gap-3 mb-3">
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em" }}>Vlož zprávu</div>
+                <div className="flex" style={{ background: "#ede9dd", borderRadius: 20, padding: 2 }}>
+                  {(["inbound", "outbound"] as const).map(d => (
+                    <button key={d} onClick={() => setIncomingDirection(d)}
+                      style={{ padding: "4px 12px", borderRadius: 18, border: "none", background: incomingDirection === d ? "#1f3d2e" : "transparent", color: incomingDirection === d ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                      {d === "inbound" ? "Přijatá" : "Odeslaná"}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="flex gap-2 mb-2">
                 {(["whatsapp", "email", "sms"] as const).map(c => (
                   <button key={c} onClick={() => setIncomingChannel(c)}
@@ -1659,19 +1671,21 @@ export default function EquityDashboard() {
               <textarea
                 value={incomingText}
                 onChange={e => setIncomingText(e.target.value)}
-                placeholder="Vlož text zprávy, kterou ti nájemník poslal…"
+                placeholder={incomingDirection === "inbound" ? "Vlož text zprávy, kterou ti nájemník poslal…" : "Vlož text zprávy, kterou jsi poslal nájemníkovi…"}
                 rows={3}
                 style={{ width: "100%", padding: "10px 13px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", resize: "vertical", marginBottom: 10 }}
               />
               <div className="flex gap-2 mb-4">
                 <button onClick={handleLogIncoming} disabled={!incomingText.trim() || savingMsg}
                   style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 13, fontWeight: 600, color: "#5c6359", cursor: !incomingText.trim() ? "not-allowed" : "pointer" }}>
-                  Jen uložit do historie
+                  Uložit do historie
                 </button>
-                <button onClick={handleSuggestReply} disabled={!incomingText.trim() || suggesting}
-                  style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: !incomingText.trim() ? "#9db8a6" : "#1f3d2e", fontSize: 13, fontWeight: 600, color: "#f5f1e6", cursor: !incomingText.trim() ? "not-allowed" : "pointer" }}>
-                  {suggesting ? "Přemýšlím…" : "Navrhni odpověď"}
-                </button>
+                {incomingDirection === "inbound" && (
+                  <button onClick={handleSuggestReply} disabled={!incomingText.trim() || suggesting}
+                    style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: !incomingText.trim() ? "#9db8a6" : "#1f3d2e", fontSize: 13, fontWeight: 600, color: "#f5f1e6", cursor: !incomingText.trim() ? "not-allowed" : "pointer" }}>
+                    {suggesting ? "Přemýšlím…" : "Navrhni odpověď"}
+                  </button>
+                )}
               </div>
 
               {/* Návrh odpovědi */}
