@@ -1393,65 +1393,54 @@ export default function EquityDashboard() {
             const totalOut = totalMortgage + totalInsurance + totalCosts;
             const net = totalRent - totalOut;
 
+            const propCf = properties.map(p => {
+              const mortgage = mortgages.find(m => m.property_id === p.id);
+              const income = p.status === "rented" ? p.rent_amount : 0;
+              const out = (mortgage?.monthly_payment ?? 0) + (p.insurance_amount ? p.insurance_amount / 12 : 0) + (p.monthly_costs ?? 0);
+              return { id: p.id, name: p.name, income, out, net: income - out, status: p.status };
+            });
+
             return (
-              <div style={{ background: "#f5f1e6", borderRadius: 12, padding: "22px 24px", marginBottom: 24 }}>
-                <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-                  {/* Příjmy */}
-                  <div style={{ flex: 1, minWidth: 200 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Příjmy</div>
-                    {rentedProps.map(p => (
-                      <div key={p.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                        <span style={{ fontSize: 13, color: "#5c6359" }}>{p.name}</span>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(p.rent_amount)} Kč</span>
-                      </div>
-                    ))}
-                    <div style={{ borderTop: "1px solid #d2cab4", paddingTop: 8, marginTop: 4, display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1c2b22" }}>Celkem příjmy</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1f3d2e" }}>+{fmt(totalRent)} Kč</span>
+              <>
+                {/* Souhrnný box */}
+                <div style={{ background: "#f5f1e6", borderRadius: 12, padding: "22px 24px", marginBottom: 16 }}>
+                  <div style={{ display: "flex", gap: 0, alignItems: "center" }}>
+                    <div style={{ flex: 1, borderRight: "1px solid #d2cab4", paddingRight: 24 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Příjmy</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#1f3d2e" }}>+{fmt(totalRent)} Kč</div>
+                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
                     </div>
-                  </div>
-
-                  {/* Výdaje */}
-                  <div style={{ flex: 1, minWidth: 200 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Výdaje</div>
-                    {mortgages.map(m => {
-                      const prop = properties.find(p => p.id === m.property_id);
-                      if (!prop || m.monthly_payment === 0) return null;
-                      return (
-                        <div key={m.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                          <span style={{ fontSize: 13, color: "#5c6359" }}>Splátka · {prop.name}</span>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: "#c0392b" }}>−{fmt(m.monthly_payment)} Kč</span>
-                        </div>
-                      );
-                    })}
-                    {properties.filter(p => p.insurance_amount).map(p => (
-                      <div key={p.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                        <span style={{ fontSize: 13, color: "#5c6359" }}>Pojistné · {p.name}</span>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "#c0392b" }}>−{fmt(p.insurance_amount! / 12)} Kč</span>
-                      </div>
-                    ))}
-                    {properties.filter(p => p.monthly_costs).map(p => (
-                      <div key={p.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                        <span style={{ fontSize: 13, color: "#5c6359" }}>Náklady · {p.name}</span>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "#c0392b" }}>−{fmt(p.monthly_costs!)} Kč</span>
-                      </div>
-                    ))}
-                    <div style={{ borderTop: "1px solid #d2cab4", paddingTop: 8, marginTop: 4, display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1c2b22" }}>Celkem výdaje</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#c0392b" }}>−{fmt(totalOut)} Kč</span>
+                    <div style={{ flex: 1, borderRight: "1px solid #d2cab4", paddingLeft: 24, paddingRight: 24 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Výdaje</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#c0392b" }}>−{fmt(totalOut)} Kč</div>
+                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
                     </div>
-                  </div>
-
-                  {/* Net */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "flex-end", minWidth: 160 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Čistý cashflow</div>
-                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 32, fontWeight: 800, color: net >= 0 ? "#1f3d2e" : "#c0392b" }}>
-                      {net >= 0 ? "+" : ""}{fmt(net)} Kč
+                    <div style={{ flex: 1, paddingLeft: 24 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Čistý cashflow</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: net >= 0 ? "#1f3d2e" : "#c0392b" }}>
+                        {net >= 0 ? "+" : ""}{fmt(net)} Kč
+                      </div>
+                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
                     </div>
-                    <div style={{ fontSize: 12, color: "#7c8378", marginTop: 4 }}>měsíčně</div>
                   </div>
                 </div>
-              </div>
+
+                {/* Per-nemovitost cashflow */}
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(propCf.length, 3)}, 1fr)`, gap: 12, marginBottom: 24 }}>
+                  {propCf.map(p => (
+                    <div key={p.id} style={{ background: "#f5f1e6", borderRadius: 10, padding: "16px 18px", borderLeft: `3px solid ${p.net >= 0 ? "#1f3d2e" : "#c0392b"}` }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#5c6359", marginBottom: 8 }}>{p.name}</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 20, fontWeight: 800, color: p.net >= 0 ? "#1f3d2e" : "#c0392b", marginBottom: 8 }}>
+                        {p.net >= 0 ? "+" : ""}{fmt(p.net)} Kč
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9a9483" }}>
+                        <span>+{fmt(p.income)} příjem</span>
+                        <span>−{fmt(p.out)} výdaje</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             );
           })()}
 
