@@ -1451,62 +1451,63 @@ export default function EquityDashboard() {
                     </div>
                   </div>
 
-                  {/* Rozbalený detail */}
+                  {/* Rozbalený detail — grid karet per nemovitost */}
                   {cfExpanded && (
-                    <div style={{ borderTop: "1px solid #d2cab4", marginTop: 14, paddingTop: 14 }}>
-                      {cfExpanded === "income" && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          {rentedProps.map(p => (
-                            <div key={p.id} style={{ display: "flex", justifyContent: "space-between" }}>
-                              <span style={{ fontSize: 13, color: "#5c6359" }}>{p.name}</span>
-                              <span style={{ fontSize: 13, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(p.rent_amount)} Kč</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {cfExpanded === "expenses" && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                          {properties.map(p => {
-                            const mortgage = mortgages.find(m => m.property_id === p.id);
-                            const items: { label: string; amount: number }[] = [];
-                            if (mortgage?.monthly_payment) items.push({ label: "Splátka hypotéky", amount: mortgage.monthly_payment });
-                            if (p.insurance_amount) items.push({ label: "Pojistné", amount: p.insurance_amount / 12 });
-                            if (p.monthly_costs) items.push({ label: "Náklady", amount: p.monthly_costs });
-                            if (items.length === 0) return null;
-                            const total = items.reduce((s, i) => s + i.amount, 0);
-                            return (
-                              <div key={p.id}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{p.name}</div>
-                                {items.map(item => (
-                                  <div key={item.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                                    <span style={{ fontSize: 13, color: "#5c6359" }}>{item.label}</span>
-                                    <span style={{ fontSize: 13, color: "#c0392b" }}>−{fmt(item.amount)} Kč</span>
+                    <div style={{ borderTop: "1px solid #d2cab4", marginTop: 14, paddingTop: 14, display: "grid", gridTemplateColumns: `repeat(${Math.min(properties.length, 3)}, 1fr)`, gap: 10 }}>
+                      {properties.map(p => {
+                        const mortgage = mortgages.find(m => m.property_id === p.id);
+                        const income = p.status === "rented" ? p.rent_amount : 0;
+                        const mortgage_payment = mortgage?.monthly_payment ?? 0;
+                        const insurance = p.insurance_amount ? p.insurance_amount / 12 : 0;
+                        const costs = p.monthly_costs ?? 0;
+                        const totalOut = mortgage_payment + insurance + costs;
+                        const net = income - totalOut;
+
+                        return (
+                          <div key={p.id} style={{ background: "#ede9dd", borderRadius: 8, padding: "12px 14px" }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#5c6359", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>{p.name}</div>
+
+                            {cfExpanded === "income" || cfExpanded === "net" ? (
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                                <span style={{ fontSize: 12, color: "#5c6359" }}>Nájem</span>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(income)} Kč</span>
+                              </div>
+                            ) : null}
+
+                            {cfExpanded === "expenses" || cfExpanded === "net" ? (
+                              <>
+                                {mortgage_payment > 0 && (
+                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                    <span style={{ fontSize: 12, color: "#5c6359" }}>Splátka</span>
+                                    <span style={{ fontSize: 12, color: "#c0392b" }}>−{fmt(mortgage_payment)} Kč</span>
                                   </div>
-                                ))}
-                                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #d2cab4", paddingTop: 3, marginTop: 2 }}>
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#1c2b22" }}>Celkem</span>
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#c0392b" }}>−{fmt(total)} Kč</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {cfExpanded === "net" && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                          {propCf.map(p => (
-                            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ fontSize: 13, color: "#5c6359" }}>{p.name}</span>
-                              <div style={{ textAlign: "right" }}>
-                                <span style={{ fontSize: 13, fontWeight: 700, color: p.net >= 0 ? "#1f3d2e" : "#c0392b" }}>
-                                  {p.net >= 0 ? "+" : ""}{fmt(p.net)} Kč
-                                </span>
-                                <span style={{ fontSize: 11, color: "#9a9483", marginLeft: 8 }}>({fmt(p.income)} − {fmt(p.out)})</span>
-                              </div>
+                                )}
+                                {insurance > 0 && (
+                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                    <span style={{ fontSize: 12, color: "#5c6359" }}>Pojistné</span>
+                                    <span style={{ fontSize: 12, color: "#c0392b" }}>−{fmt(insurance)} Kč</span>
+                                  </div>
+                                )}
+                                {costs > 0 && (
+                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                    <span style={{ fontSize: 12, color: "#5c6359" }}>Náklady</span>
+                                    <span style={{ fontSize: 12, color: "#c0392b" }}>−{fmt(costs)} Kč</span>
+                                  </div>
+                                )}
+                              </>
+                            ) : null}
+
+                            <div style={{ borderTop: "1px solid #d2cab4", paddingTop: 6, marginTop: 4, display: "flex", justifyContent: "space-between" }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#1c2b22" }}>
+                                {cfExpanded === "income" ? "Příjem" : cfExpanded === "expenses" ? "Výdaje" : "Cashflow"}
+                              </span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: cfExpanded === "income" ? "#1f3d2e" : cfExpanded === "expenses" ? "#c0392b" : net >= 0 ? "#1f3d2e" : "#c0392b" }}>
+                                {cfExpanded === "income" ? `+${fmt(income)}` : cfExpanded === "expenses" ? `−${fmt(totalOut)}` : `${net >= 0 ? "+" : ""}${fmt(net)}`} Kč
+                              </span>
                             </div>
-                          ))}
-                        </div>
-                      )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
