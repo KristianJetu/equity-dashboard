@@ -814,6 +814,7 @@ export default function EquityDashboard() {
   const [draftText, setDraftText] = useState("");
   const [suggesting, setSuggesting] = useState(false);
   const [savingMsg, setSavingMsg] = useState(false);
+  const [cfExpanded, setCfExpanded] = useState<"income" | "expenses" | "net" | null>(null);
   const [copied, setCopied] = useState(false);
 
   async function loadMessages(propertyId: string) {
@@ -1400,29 +1401,110 @@ export default function EquityDashboard() {
               return { id: p.id, name: p.name, income, out, net: income - out, status: p.status };
             });
 
+            const toggleCf = (key: "income" | "expenses" | "net") =>
+              setCfExpanded(prev => prev === key ? null : key);
+
+            const panelStyle = (key: "income" | "expenses" | "net") => ({
+              flex: 1, cursor: "pointer" as const,
+              borderRight: key !== "net" ? "1px solid #d2cab4" : undefined,
+              paddingRight: key !== "net" ? 24 : undefined,
+              paddingLeft: key !== "income" ? 24 : undefined,
+              background: cfExpanded === key ? "rgba(31,61,46,0.04)" : undefined,
+              borderRadius: 8,
+              padding: "8px 12px",
+            });
+
             return (
               <>
                 {/* Souhrnný box */}
-                <div style={{ background: "#f5f1e6", borderRadius: 12, padding: "22px 24px", marginBottom: 16 }}>
+                <div style={{ background: "#f5f1e6", borderRadius: 12, padding: "14px 12px", marginBottom: 4 }}>
                   <div style={{ display: "flex", gap: 0, alignItems: "center" }}>
-                    <div style={{ flex: 1, borderRight: "1px solid #d2cab4", paddingRight: 24 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Příjmy</div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#1f3d2e" }}>+{fmt(totalRent)} Kč</div>
+                    {/* Příjmy */}
+                    <div style={panelStyle("income")} onClick={() => toggleCf("income")}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>Příjmy</div>
+                        <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "income" ? "▴" : "▾"}</span>
+                      </div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#1f3d2e", marginTop: 4 }}>+{fmt(totalRent)} Kč</div>
                       <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
                     </div>
-                    <div style={{ flex: 1, borderRight: "1px solid #d2cab4", paddingLeft: 24, paddingRight: 24 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Výdaje</div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#c0392b" }}>−{fmt(totalOut)} Kč</div>
+                    {/* Výdaje */}
+                    <div style={panelStyle("expenses")} onClick={() => toggleCf("expenses")}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>Výdaje</div>
+                        <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "expenses" ? "▴" : "▾"}</span>
+                      </div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#c0392b", marginTop: 4 }}>−{fmt(totalOut)} Kč</div>
                       <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
                     </div>
-                    <div style={{ flex: 1, paddingLeft: 24 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Čistý cashflow</div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: net >= 0 ? "#1f3d2e" : "#c0392b" }}>
+                    {/* Čistý cashflow */}
+                    <div style={panelStyle("net")} onClick={() => toggleCf("net")}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>Čistý cashflow</div>
+                        <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "net" ? "▴" : "▾"}</span>
+                      </div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: net >= 0 ? "#1f3d2e" : "#c0392b", marginTop: 4 }}>
                         {net >= 0 ? "+" : ""}{fmt(net)} Kč
                       </div>
                       <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
                     </div>
                   </div>
+
+                  {/* Rozbalený detail */}
+                  {cfExpanded && (
+                    <div style={{ borderTop: "1px solid #d2cab4", marginTop: 14, paddingTop: 14 }}>
+                      {cfExpanded === "income" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {rentedProps.map(p => (
+                            <div key={p.id} style={{ display: "flex", justifyContent: "space-between" }}>
+                              <span style={{ fontSize: 13, color: "#5c6359" }}>{p.name}</span>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(p.rent_amount)} Kč</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {cfExpanded === "expenses" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {mortgages.filter(m => m.monthly_payment > 0).map(m => {
+                            const prop = properties.find(p => p.id === m.property_id);
+                            return prop ? (
+                              <div key={m.id} style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span style={{ fontSize: 13, color: "#5c6359" }}>Splátka · {prop.name}</span>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: "#c0392b" }}>−{fmt(m.monthly_payment)} Kč</span>
+                              </div>
+                            ) : null;
+                          })}
+                          {properties.filter(p => p.insurance_amount).map(p => (
+                            <div key={`ins-${p.id}`} style={{ display: "flex", justifyContent: "space-between" }}>
+                              <span style={{ fontSize: 13, color: "#5c6359" }}>Pojistné · {p.name}</span>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: "#c0392b" }}>−{fmt(p.insurance_amount! / 12)} Kč</span>
+                            </div>
+                          ))}
+                          {properties.filter(p => p.monthly_costs).map(p => (
+                            <div key={`cost-${p.id}`} style={{ display: "flex", justifyContent: "space-between" }}>
+                              <span style={{ fontSize: 13, color: "#5c6359" }}>Náklady · {p.name}</span>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: "#c0392b" }}>−{fmt(p.monthly_costs!)} Kč</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {cfExpanded === "net" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          {propCf.map(p => (
+                            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ fontSize: 13, color: "#5c6359" }}>{p.name}</span>
+                              <div style={{ textAlign: "right" }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: p.net >= 0 ? "#1f3d2e" : "#c0392b" }}>
+                                  {p.net >= 0 ? "+" : ""}{fmt(p.net)} Kč
+                                </span>
+                                <span style={{ fontSize: 11, color: "#9a9483", marginLeft: 8 }}>({fmt(p.income)} − {fmt(p.out)})</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Per-nemovitost cashflow */}
