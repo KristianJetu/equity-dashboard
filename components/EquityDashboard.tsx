@@ -1464,28 +1464,31 @@ export default function EquityDashboard() {
                         </div>
                       )}
                       {cfExpanded === "expenses" && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          {mortgages.filter(m => m.monthly_payment > 0).map(m => {
-                            const prop = properties.find(p => p.id === m.property_id);
-                            return prop ? (
-                              <div key={m.id} style={{ display: "flex", justifyContent: "space-between" }}>
-                                <span style={{ fontSize: 13, color: "#5c6359" }}>Splátka · {prop.name}</span>
-                                <span style={{ fontSize: 13, fontWeight: 600, color: "#c0392b" }}>−{fmt(m.monthly_payment)} Kč</span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                          {properties.map(p => {
+                            const mortgage = mortgages.find(m => m.property_id === p.id);
+                            const items: { label: string; amount: number }[] = [];
+                            if (mortgage?.monthly_payment) items.push({ label: "Splátka hypotéky", amount: mortgage.monthly_payment });
+                            if (p.insurance_amount) items.push({ label: "Pojistné", amount: p.insurance_amount / 12 });
+                            if (p.monthly_costs) items.push({ label: "Náklady", amount: p.monthly_costs });
+                            if (items.length === 0) return null;
+                            const total = items.reduce((s, i) => s + i.amount, 0);
+                            return (
+                              <div key={p.id}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{p.name}</div>
+                                {items.map(item => (
+                                  <div key={item.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                                    <span style={{ fontSize: 13, color: "#5c6359" }}>{item.label}</span>
+                                    <span style={{ fontSize: 13, color: "#c0392b" }}>−{fmt(item.amount)} Kč</span>
+                                  </div>
+                                ))}
+                                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #d2cab4", paddingTop: 3, marginTop: 2 }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#1c2b22" }}>Celkem</span>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#c0392b" }}>−{fmt(total)} Kč</span>
+                                </div>
                               </div>
-                            ) : null;
+                            );
                           })}
-                          {properties.filter(p => p.insurance_amount).map(p => (
-                            <div key={`ins-${p.id}`} style={{ display: "flex", justifyContent: "space-between" }}>
-                              <span style={{ fontSize: 13, color: "#5c6359" }}>Pojistné · {p.name}</span>
-                              <span style={{ fontSize: 13, fontWeight: 600, color: "#c0392b" }}>−{fmt(p.insurance_amount! / 12)} Kč</span>
-                            </div>
-                          ))}
-                          {properties.filter(p => p.monthly_costs).map(p => (
-                            <div key={`cost-${p.id}`} style={{ display: "flex", justifyContent: "space-between" }}>
-                              <span style={{ fontSize: 13, color: "#5c6359" }}>Náklady · {p.name}</span>
-                              <span style={{ fontSize: 13, fontWeight: 600, color: "#c0392b" }}>−{fmt(p.monthly_costs!)} Kč</span>
-                            </div>
-                          ))}
                         </div>
                       )}
                       {cfExpanded === "net" && (
