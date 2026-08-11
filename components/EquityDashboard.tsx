@@ -815,6 +815,7 @@ export default function EquityDashboard() {
   const [suggesting, setSuggesting] = useState(false);
   const [savingMsg, setSavingMsg] = useState(false);
   const [cfExpanded, setCfExpanded] = useState<"income" | "expenses" | "net" | null>(null);
+  const [cfPropExpanded, setCfPropExpanded] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   async function loadMessages(propertyId: string) {
@@ -1512,18 +1513,50 @@ export default function EquityDashboard() {
 
                 {/* Per-nemovitost cashflow */}
                 <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(propCf.length, 3)}, 1fr)`, gap: 12, marginBottom: 24 }}>
-                  {propCf.map(p => (
-                    <div key={p.id} style={{ background: "#f5f1e6", borderRadius: 10, padding: "16px 18px", borderLeft: `3px solid ${p.net >= 0 ? "#1f3d2e" : "#c0392b"}` }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#5c6359", marginBottom: 8 }}>{p.name}</div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 20, fontWeight: 800, color: p.net >= 0 ? "#1f3d2e" : "#c0392b", marginBottom: 8 }}>
-                        {p.net >= 0 ? "+" : ""}{fmt(p.net)} Kč
+                  {propCf.map(p => {
+                    const isOpen = cfPropExpanded === p.id;
+                    const mortgage = mortgages.find(m => m.property_id === p.id);
+                    const expItems: { label: string; amount: number }[] = [];
+                    if (mortgage?.monthly_payment) expItems.push({ label: "Splátka hypotéky", amount: mortgage.monthly_payment });
+                    const prop = properties.find(pr => pr.id === p.id);
+                    if (prop?.insurance_amount) expItems.push({ label: "Pojistné", amount: prop.insurance_amount / 12 });
+                    if (prop?.monthly_costs) expItems.push({ label: "Náklady", amount: prop.monthly_costs });
+                    return (
+                      <div key={p.id}
+                        onClick={() => setCfPropExpanded(prev => prev === p.id ? null : p.id)}
+                        style={{ background: "#f5f1e6", borderRadius: 10, padding: "16px 18px", borderLeft: `3px solid ${p.net >= 0 ? "#1f3d2e" : "#c0392b"}`, cursor: "pointer" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#5c6359" }}>{p.name}</div>
+                          <span style={{ fontSize: 11, color: "#9a9483" }}>{isOpen ? "▴" : "▾"}</span>
+                        </div>
+                        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 20, fontWeight: 800, color: p.net >= 0 ? "#1f3d2e" : "#c0392b", marginBottom: 6 }}>
+                          {p.net >= 0 ? "+" : ""}{fmt(p.net)} Kč
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9a9483" }}>
+                          <span>+{fmt(p.income)} příjem</span>
+                          <span>−{fmt(p.out)} výdaje</span>
+                        </div>
+                        {isOpen && (
+                          <div style={{ borderTop: "1px solid #d2cab4", marginTop: 12, paddingTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                              <span style={{ fontSize: 12, color: "#5c6359" }}>Nájem</span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(p.income)} Kč</span>
+                            </div>
+                            {expItems.map(item => (
+                              <div key={item.label} style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span style={{ fontSize: 12, color: "#5c6359" }}>{item.label}</span>
+                                <span style={{ fontSize: 12, color: "#c0392b" }}>−{fmt(item.amount)} Kč</span>
+                              </div>
+                            ))}
+                            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #d2cab4", paddingTop: 4, marginTop: 2 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#1c2b22" }}>Čistý cashflow</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: p.net >= 0 ? "#1f3d2e" : "#c0392b" }}>{p.net >= 0 ? "+" : ""}{fmt(p.net)} Kč</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9a9483" }}>
-                        <span>+{fmt(p.income)} příjem</span>
-                        <span>−{fmt(p.out)} výdaje</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             );
