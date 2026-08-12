@@ -702,11 +702,13 @@ function AddTenantModal({ properties, supabase, onClose, onSaved }: {
     if (!name.trim()) return;
     setSaving(true);
     setError("");
+    const { data: { user } } = await supabase.auth.getUser();
     const { data, error: err } = await supabase.from("tenants").insert({
       name: name.trim(),
       account_number: account.trim() || null,
       property_id: propertyId || null,
       notes: notes.trim() || null,
+      user_id: user!.id,
     }).select().single();
     if (err) {
       setError(err.code === "23505" ? "Nájemník s tímto číslem účtu už existuje." : "Chyba při ukládání, zkus to znovu.");
@@ -833,7 +835,8 @@ export default function EquityDashboard() {
     const text = incomingText.trim();
     if (!text || !commPropertyId) return;
     setSavingMsg(true);
-    await supabase.from("messages").insert({ property_id: commPropertyId, channel: incomingChannel, direction: incomingDirection, content: text });
+    const { data: { user: msgUser } } = await supabase.auth.getUser();
+    await supabase.from("messages").insert({ property_id: commPropertyId, channel: incomingChannel, direction: incomingDirection, content: text, user_id: msgUser!.id });
     setIncomingText("");
     setDraftText("");
     await loadMessages(commPropertyId);
@@ -864,10 +867,11 @@ export default function EquityDashboard() {
     const incoming = incomingText.trim();
     if (!text || !commPropertyId) return;
     setSavingMsg(true);
+    const { data: { user: outUser } } = await supabase.auth.getUser();
     if (incoming) {
-      await supabase.from("messages").insert({ property_id: commPropertyId, channel: incomingChannel, direction: "inbound", content: incoming });
+      await supabase.from("messages").insert({ property_id: commPropertyId, channel: incomingChannel, direction: "inbound", content: incoming, user_id: outUser!.id });
     }
-    await supabase.from("messages").insert({ property_id: commPropertyId, channel: incomingChannel, direction: "outbound", content: text });
+    await supabase.from("messages").insert({ property_id: commPropertyId, channel: incomingChannel, direction: "outbound", content: text, user_id: outUser!.id });
     setIncomingText("");
     setDraftText("");
     await loadMessages(commPropertyId);
@@ -994,10 +998,12 @@ export default function EquityDashboard() {
     }).eq("id", paymentId);
 
     if (payment.sender_account) {
+      const { data: { user: upsertUser } } = await supabase.auth.getUser();
       await supabase.from("tenants").upsert({
         account_number: payment.sender_account,
         name: payment.sender_name ?? "",
         property_id: propertyId,
+        user_id: upsertUser!.id,
       }, { onConflict: "account_number", ignoreDuplicates: true });
     }
 
