@@ -818,6 +818,7 @@ export default function EquityDashboard() {
   const [savingMsg, setSavingMsg] = useState(false);
   const [cfExpanded, setCfExpanded] = useState<"income" | "expenses" | "net" | null>(null);
   const [cfPropExpanded, setCfPropExpanded] = useState<string | null>(null);
+  const [showPlanned, setShowPlanned] = useState(false);
   const [copied, setCopied] = useState(false);
 
   async function loadMessages(propertyId: string) {
@@ -1389,24 +1390,43 @@ export default function EquityDashboard() {
 
         {/* PLATBY */}
         <section id="platby" style={{ marginTop: 38, scrollMarginTop: 28 }}>
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Měsíční cashflow</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Měsíční cashflow</div>
+            <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3 }}>
+              <button onClick={() => setShowPlanned(false)}
+                style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: !showPlanned ? "#1f3d2e" : "transparent", color: !showPlanned ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                Reálné
+              </button>
+              <button onClick={() => setShowPlanned(true)}
+                style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: showPlanned ? "#4a7c59" : "transparent", color: showPlanned ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                Vč. plánovaných
+              </button>
+            </div>
+          </div>
 
           {/* Cashflow přehled */}
           {(() => {
             const rentedProps = properties.filter(p => p.status === "rented");
-            const totalRent = rentedProps.reduce((s, p) => s + p.rent_amount, 0);
+            const plannedProps = properties.filter(p => p.status === "planned");
+
+            const realRent = rentedProps.reduce((s, p) => s + p.rent_amount, 0);
+            const plannedRent = showPlanned ? plannedProps.reduce((s, p) => s + p.rent_amount, 0) : 0;
+            const totalRent = realRent + plannedRent;
+
             const totalMortgage = mortgages.reduce((s, m) => s + m.monthly_payment, 0);
-            const totalInsurance = properties.reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0), 0);
-            const totalCosts = properties.reduce((s, p) => s + (p.monthly_costs ?? 0), 0);
+            const totalInsurance = properties.filter(p => showPlanned || p.status !== "planned").reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0), 0);
+            const totalCosts = properties.filter(p => showPlanned || p.status !== "planned").reduce((s, p) => s + (p.monthly_costs ?? 0), 0);
             const totalOut = totalMortgage + totalInsurance + totalCosts;
             const net = totalRent - totalOut;
 
-            const propCf = properties.map(p => {
-              const mortgage = mortgages.find(m => m.property_id === p.id);
-              const income = p.status === "rented" ? p.rent_amount : 0;
-              const out = (mortgage?.monthly_payment ?? 0) + (p.insurance_amount ? p.insurance_amount / 12 : 0) + (p.monthly_costs ?? 0);
-              return { id: p.id, name: p.name, income, out, net: income - out, status: p.status };
-            });
+            const propCf = properties
+              .filter(p => showPlanned || p.status !== "planned")
+              .map(p => {
+                const mortgage = mortgages.find(m => m.property_id === p.id);
+                const income = p.status === "rented" ? p.rent_amount : (p.status === "planned" ? p.rent_amount : 0);
+                const out = (mortgage?.monthly_payment ?? 0) + (p.insurance_amount ? p.insurance_amount / 12 : 0) + (p.monthly_costs ?? 0);
+                return { id: p.id, name: p.name, income, out, net: income - out, status: p.status, planned: p.status === "planned" };
+              });
 
             const toggleCf = (key: "income" | "expenses" | "net") =>
               setCfExpanded(prev => prev === key ? null : key);
@@ -1433,7 +1453,10 @@ export default function EquityDashboard() {
                         <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "income" ? "▴" : "▾"}</span>
                       </div>
                       <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#1f3d2e", marginTop: 4 }}>+{fmt(totalRent)} Kč</div>
-                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
+                      {showPlanned && plannedRent > 0
+                        ? <div style={{ fontSize: 11, color: "#4a7c59", marginTop: 2 }}>z toho +{fmt(plannedRent)} Kč plánované</div>
+                        : <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
+                      }
                     </div>
                     {/* Výdaje */}
                     <div style={panelStyle("expenses")} onClick={() => toggleCf("expenses")}>
@@ -1459,10 +1482,11 @@ export default function EquityDashboard() {
 
                   {/* Rozbalený detail — grid karet per nemovitost */}
                   {cfExpanded && (
-                    <div style={{ borderTop: "1px solid #d2cab4", marginTop: 14, paddingTop: 14, display: "grid", gridTemplateColumns: `repeat(${Math.min(properties.length, 3)}, 1fr)`, gap: 10 }}>
-                      {properties.map(p => {
+                    <div style={{ borderTop: "1px solid #d2cab4", marginTop: 14, paddingTop: 14, display: "grid", gridTemplateColumns: `repeat(${Math.min(properties.filter(p => showPlanned || p.status !== "planned").length, 3)}, 1fr)`, gap: 10 }}>
+                      {properties.filter(p => showPlanned || p.status !== "planned").map(p => {
+                        const isPlanned = p.status === "planned";
                         const mortgage = mortgages.find(m => m.property_id === p.id);
-                        const income = p.status === "rented" ? p.rent_amount : 0;
+                        const income = p.status === "rented" || p.status === "planned" ? p.rent_amount : 0;
                         const mortgage_payment = mortgage?.monthly_payment ?? 0;
                         const insurance = p.insurance_amount ? p.insurance_amount / 12 : 0;
                         const costs = p.monthly_costs ?? 0;
@@ -1470,12 +1494,15 @@ export default function EquityDashboard() {
                         const net = income - totalOut;
 
                         return (
-                          <div key={p.id} style={{ background: "#ede9dd", borderRadius: 8, padding: "12px 14px" }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: "#5c6359", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>{p.name}</div>
+                          <div key={p.id} style={{ background: isPlanned ? "transparent" : "#ede9dd", borderRadius: 8, padding: "12px 14px", border: isPlanned ? "1.5px dashed #4a7c59" : "none" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: "#5c6359", textTransform: "uppercase", letterSpacing: "0.06em" }}>{p.name}</div>
+                              {isPlanned && <span style={{ fontSize: 9, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 8, padding: "1px 5px" }}>plán.</span>}
+                            </div>
 
                             {cfExpanded === "income" || cfExpanded === "net" ? (
                               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                                <span style={{ fontSize: 12, color: "#5c6359" }}>Nájem</span>
+                                <span style={{ fontSize: 12, color: "#5c6359" }}>{isPlanned ? "Plán. nájem" : "Nájem"}</span>
                                 <span style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(income)} Kč</span>
                               </div>
                             ) : null}
@@ -1531,22 +1558,31 @@ export default function EquityDashboard() {
                     return (
                       <div key={p.id}
                         onClick={() => setCfPropExpanded(prev => prev === p.id ? null : p.id)}
-                        style={{ background: "#f5f1e6", borderRadius: 10, padding: "16px 18px", borderLeft: `3px solid ${p.net >= 0 ? "#1f3d2e" : "#c0392b"}`, cursor: "pointer" }}>
+                        style={{
+                          background: p.planned ? "transparent" : "#f5f1e6",
+                          borderRadius: 10, padding: "16px 18px",
+                          border: p.planned ? `2px dashed ${p.net >= 0 ? "#4a7c59" : "#c0392b"}` : `none`,
+                          borderLeft: p.planned ? undefined : `3px solid ${p.net >= 0 ? "#1f3d2e" : "#c0392b"}`,
+                          cursor: "pointer", opacity: p.planned ? 0.85 : 1,
+                        }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: "#5c6359" }}>{p.name}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "#5c6359" }}>{p.name}</div>
+                            {p.planned && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "1px 7px" }}>plánovaná</span>}
+                          </div>
                           <span style={{ fontSize: 11, color: "#9a9483" }}>{isOpen ? "▴" : "▾"}</span>
                         </div>
                         <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 20, fontWeight: 800, color: p.net >= 0 ? "#1f3d2e" : "#c0392b", marginBottom: 6 }}>
                           {p.net >= 0 ? "+" : ""}{fmt(p.net)} Kč
                         </div>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9a9483" }}>
-                          <span>+{fmt(p.income)} příjem</span>
+                          <span>{p.planned ? "plán. příjem" : "příjem"} +{fmt(p.income)} Kč</span>
                           <span>−{fmt(p.out)} výdaje</span>
                         </div>
                         {isOpen && (
                           <div style={{ borderTop: "1px solid #d2cab4", marginTop: 12, paddingTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                              <span style={{ fontSize: 12, color: "#5c6359" }}>Nájem</span>
+                              <span style={{ fontSize: 12, color: "#5c6359" }}>{p.planned ? "Plánovaný nájem" : "Nájem"}</span>
                               <span style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(p.income)} Kč</span>
                             </div>
                             {expItems.map(item => (
