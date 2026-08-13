@@ -515,6 +515,11 @@ function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Pro
             <text x={cx} y={cy - 7} textAnchor="middle" fill="#7c8378" fontSize="9" fontWeight="700">PŘÍJMY</text>
             <text x={cx} y={cy + 9} textAnchor="middle" fill="#1f3d2e" fontSize="13" fontWeight="800">{fmt(totalRent)}</text>
             <text x={cx} y={cy + 23} textAnchor="middle" fill="#9a9483" fontSize="9">Kč / měs</text>
+            {showPlanned && (() => {
+              const plannedRent = properties.filter(p => p.status === "planned").reduce((s, p) => s + p.rent_amount, 0);
+              if (!plannedRent) return null;
+              return <text x={cx} y={cy + 36} textAnchor="middle" fill="#4a7c59" fontSize="8">z toho {fmt(plannedRent)} plán.</text>;
+            })()}
           </svg>
         </div>
         <div style={{ flex: 1 }}>
