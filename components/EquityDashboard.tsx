@@ -1546,7 +1546,7 @@ export default function EquityDashboard() {
                 </div>
 
                 {/* Per-nemovitost cashflow */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
                   {propCf.map(p => {
                     const isOpen = cfPropExpanded === p.id;
                     const mortgage = mortgages.find(m => m.property_id === p.id);
@@ -1559,11 +1559,13 @@ export default function EquityDashboard() {
                       <div key={p.id}
                         onClick={() => setCfPropExpanded(prev => prev === p.id ? null : p.id)}
                         style={{
+                          flex: "0 0 calc(33.333% - 8px)",
                           background: p.planned ? "transparent" : "#f5f1e6",
                           borderRadius: 10, padding: "16px 18px",
                           border: p.planned ? `2px dashed ${p.net >= 0 ? "#4a7c59" : "#c0392b"}` : `none`,
                           borderLeft: p.planned ? undefined : `3px solid ${p.net >= 0 ? "#1f3d2e" : "#c0392b"}`,
                           cursor: "pointer", opacity: p.planned ? 0.85 : 1,
+                          boxSizing: "border-box",
                         }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
