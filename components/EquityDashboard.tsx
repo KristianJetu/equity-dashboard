@@ -73,6 +73,18 @@ type Message = {
   created_at: string;
 };
 
+type Debt = {
+  id: string;
+  direction: "i_owe" | "they_owe";
+  name: string;
+  amount_original: number;
+  amount_remaining: number;
+  monthly_payment?: number | null;
+  interest_rate?: number | null;
+  note?: string | null;
+  due_date?: string | null;
+};
+
 const NAV_ITEMS = [
   {
     id: "dashboard", title: "Dashboard",
@@ -97,6 +109,10 @@ const NAV_ITEMS = [
   {
     id: "asistent", title: "Asistent",
     icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.6-.8L3 21l1.8-5.4A8.5 8.5 0 1 1 21 11.5z" /></svg>,
+  },
+  {
+    id: "dluhy", title: "Dluhy",
+    icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
   },
 ];
 
@@ -684,6 +700,131 @@ function TenantCard({ tenant, properties, supabase, onSaved, onDeleted }: {
   );
 }
 
+// ── Debt Modal ────────────────────────────────────────────────────────────────
+function DebtModal({ debt, supabase, onClose, onSaved, onDeleted }: {
+  debt: Debt | null;
+  supabase: ReturnType<typeof createClient>;
+  onClose: () => void;
+  onSaved: (d: Debt) => void;
+  onDeleted: (id: string) => void;
+}) {
+  const [form, setForm] = useState({
+    direction: (debt?.direction ?? "i_owe") as "i_owe" | "they_owe",
+    name: debt?.name ?? "",
+    amount_original: debt?.amount_original?.toString() ?? "",
+    amount_remaining: debt?.amount_remaining?.toString() ?? "",
+    monthly_payment: debt?.monthly_payment?.toString() ?? "",
+    interest_rate: debt?.interest_rate?.toString() ?? "",
+    note: debt?.note ?? "",
+    due_date: debt?.due_date ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  async function save() {
+    if (!form.name.trim() || !form.amount_remaining) return;
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const payload = {
+      user_id: user!.id,
+      direction: form.direction,
+      name: form.name.trim(),
+      amount_original: parseFloat(form.amount_original) || parseFloat(form.amount_remaining) || 0,
+      amount_remaining: parseFloat(form.amount_remaining) || 0,
+      monthly_payment: form.monthly_payment ? parseFloat(form.monthly_payment) : null,
+      interest_rate: form.interest_rate ? parseFloat(form.interest_rate) : null,
+      note: form.note.trim() || null,
+      due_date: form.due_date || null,
+    };
+    if (debt) {
+      await supabase.from("debts").update(payload).eq("id", debt.id);
+      onSaved({ ...debt, ...payload });
+    } else {
+      const { data } = await supabase.from("debts").insert(payload).select().single();
+      if (data) onSaved(data);
+    }
+    setSaving(false);
+    onClose();
+  }
+
+  async function deleteDebt() {
+    if (!debt) return;
+    await supabase.from("debts").delete().eq("id", debt.id);
+    onDeleted(debt.id);
+    onClose();
+  }
+
+  const field = (label: string, key: keyof typeof form, type = "text", placeholder = "") => (
+    <div key={key}>
+      <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>{label}</div>
+      <input type={type} value={form[key] as string} placeholder={placeholder}
+        onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+        style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
+    </div>
+  );
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,43,34,0.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
+      onClick={onClose}>
+      <div style={{ background: "#faf8f3", borderRadius: 16, padding: "28px 28px 24px", width: 420, maxWidth: "95vw", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 18, color: "#1c2b22", marginBottom: 20 }}>
+          {debt ? "Upravit záznam" : "Nový záznam"}
+        </div>
+
+        <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3, marginBottom: 16 }}>
+          {(["i_owe", "they_owe"] as const).map(dir => (
+            <button key={dir} onClick={() => setForm(f => ({ ...f, direction: dir }))}
+              style={{ flex: 1, padding: "6px 0", borderRadius: 18, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13,
+                background: form.direction === dir ? (dir === "i_owe" ? "#c0392b" : "#1f3d2e") : "transparent",
+                color: form.direction === dir ? "#f5f1e6" : "#5c6359" }}>
+              {dir === "i_owe" ? "Já dlužím" : "Mně dluží"}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {field("Komu / od koho", "name", "text", "např. Máma, Spotřebitelský úvěr…")}
+          {field("Zbývá splatit (Kč)", "amount_remaining", "number", "0")}
+          {field("Původní částka (Kč)", "amount_original", "number", "0")}
+          {field("Měsíční splátka (Kč)", "monthly_payment", "number", "")}
+          {field("Úroková sazba (%)", "interest_rate", "number", "")}
+          {field("Splatnost do", "due_date", "date", "")}
+          {field("Poznámka", "note", "text", "")}
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 20 }}>
+          <div>
+            {debt && !confirmDelete && (
+              <button onClick={() => setConfirmDelete(true)}
+                style={{ fontSize: 13, color: "#c0392b", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>
+                Smazat
+              </button>
+            )}
+            {debt && confirmDelete && (
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: "#7c8378" }}>Opravdu smazat?</span>
+                <button onClick={deleteDebt} style={{ fontSize: 12, color: "#c0392b", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>Ano</button>
+                <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 12, color: "#5c6359", background: "none", border: "none", cursor: "pointer" }}>Zrušit</button>
+              </div>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={onClose}
+              style={{ fontSize: 13, padding: "8px 16px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", cursor: "pointer" }}>
+              Zrušit
+            </button>
+            <button onClick={save} disabled={saving || !form.name.trim() || !form.amount_remaining}
+              style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 600, opacity: saving || !form.name.trim() || !form.amount_remaining ? 0.6 : 1 }}>
+              {saving ? "Ukládám…" : "Uložit"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Add Tenant Modal ──────────────────────────────────────────────────────────
 function AddTenantModal({ properties, supabase, onClose, onSaved }: {
   properties: Property[];
@@ -764,7 +905,7 @@ function AddTenantModal({ properties, supabase, onClose, onSaved }: {
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function EquityDashboard() {
-  const SECTION_IDS = ["dashboard", "nemovitosti", "platby", "najemnici", "komunikace", "asistent"];
+  const SECTION_IDS = ["dashboard", "nemovitosti", "platby", "najemnici", "komunikace", "asistent", "dluhy"];
 
   const supabase = createClient();
   const [properties, setProperties] = useState<Property[]>([]);
@@ -820,6 +961,8 @@ export default function EquityDashboard() {
   const [cfPropExpanded, setCfPropExpanded] = useState<string | null>(null);
   const [showPlanned, setShowPlanned] = useState(false);
   const [showPlannedProps, setShowPlannedProps] = useState(false);
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [debtModal, setDebtModal] = useState<{ open: boolean; debt: Debt | null }>({ open: false, debt: null });
   const [copied, setCopied] = useState(false);
 
   async function loadMessages(propertyId: string) {
@@ -896,14 +1039,16 @@ export default function EquityDashboard() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: props }, { data: morts }, { data: tens }] = await Promise.all([
+      const [{ data: props }, { data: morts }, { data: tens }, { data: dts }] = await Promise.all([
         supabase.from("properties").select("*").order("sort_order", { ascending: true }),
         supabase.from("mortgages").select("*"),
         supabase.from("tenants").select("*"),
+        supabase.from("debts").select("*").order("created_at", { ascending: true }),
       ]);
       setProperties(props ?? []);
       setMortgages(morts ?? []);
       setTenants(tens ?? []);
+      setDebts(dts ?? []);
       await loadPayments();
       setLoading(false);
     }
@@ -1057,6 +1202,17 @@ export default function EquityDashboard() {
             setProperties(props ?? []);
             setMortgages(morts ?? []);
           }}
+        />
+      )}
+
+      {/* Debt Modal */}
+      {debtModal.open && (
+        <DebtModal
+          debt={debtModal.debt}
+          supabase={supabase}
+          onClose={() => setDebtModal({ open: false, debt: null })}
+          onSaved={d => setDebts(prev => debtModal.debt ? prev.map(x => x.id === d.id ? d : x) : [...prev, d])}
+          onDeleted={id => setDebts(prev => prev.filter(x => x.id !== id))}
         />
       )}
 
@@ -1884,7 +2040,7 @@ export default function EquityDashboard() {
         </section>
 
         {/* ASISTENT */}
-        <section id="asistent" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 100 }}>
+        <section id="asistent" style={{ marginTop: 38, scrollMarginTop: 28 }}>
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Asistent</div>
           {chatMessages.length === 0 ? (
             <div style={{ fontSize: 14, color: "#7c8378", lineHeight: 1.6 }}>
@@ -1907,6 +2063,105 @@ export default function EquityDashboard() {
               <div ref={chatEndRef} />
             </div>
           )}
+        </section>
+
+        {/* DLUHY */}
+        <section id="dluhy" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 100 }}>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Dluhy</div>
+
+          {(() => {
+            const iOwe = debts.filter(d => d.direction === "i_owe");
+            const theyOwe = debts.filter(d => d.direction === "they_owe");
+            const totalIOwe = iOwe.reduce((s, d) => s + d.amount_remaining, 0);
+            const totalTheyOwe = theyOwe.reduce((s, d) => s + d.amount_remaining, 0);
+            const balance = totalTheyOwe - totalIOwe;
+
+            const DebtCard = ({ d }: { d: Debt }) => (
+              <div onClick={() => setDebtModal({ open: true, debt: d })}
+                style={{ background: "#f5f1e6", borderRadius: 10, padding: "14px 18px", cursor: "pointer", transition: "box-shadow 0.15s", borderLeft: `3px solid ${d.direction === "i_owe" ? "#c0392b" : "#1f3d2e"}` }}
+                onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 2px 12px rgba(31,61,46,0.10)")}
+                onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{d.name}</div>
+                    <div style={{ fontSize: 12, color: "#7c8378", marginTop: 2 }}>
+                      {d.monthly_payment ? `Splátka ${fmt(d.monthly_payment)} Kč/měs` : ""}
+                      {d.monthly_payment && d.interest_rate ? " · " : ""}
+                      {d.interest_rate ? `Úrok ${d.interest_rate} %` : ""}
+                      {d.due_date ? `${d.monthly_payment || d.interest_rate ? " · " : ""}Splatnost ${d.due_date}` : ""}
+                    </div>
+                    {d.note && <div style={{ fontSize: 12, color: "#9a9483", marginTop: 4 }}>{d.note}</div>}
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 16, color: d.direction === "i_owe" ? "#c0392b" : "#1f3d2e" }}>
+                      {d.direction === "i_owe" ? "−" : "+"}{fmt(d.amount_remaining)} Kč
+                    </div>
+                    {d.amount_original !== d.amount_remaining && (
+                      <div style={{ fontSize: 11, color: "#9a9483" }}>z {fmt(d.amount_original)} Kč</div>
+                    )}
+                  </div>
+                </div>
+                {d.amount_original > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ height: 4, borderRadius: 3, background: "#e3ddcb", overflow: "hidden" }}>
+                      <div style={{ width: `${Math.min(100 - (d.amount_remaining / d.amount_original) * 100, 100)}%`, height: "100%", background: d.direction === "i_owe" ? "#c0392b" : "#1f3d2e", transition: "width .4s" }} />
+                    </div>
+                    <div style={{ fontSize: 11, color: "#9a9483", marginTop: 3 }}>
+                      Splaceno {fmt(d.amount_original - d.amount_remaining)} Kč z {fmt(d.amount_original)} Kč
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+
+            return (
+              <div>
+                {/* Souhrn */}
+                <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+                  {[
+                    { label: "Já dlužím", value: totalIOwe, color: "#c0392b", bg: "#fde8e8" },
+                    { label: "Mně dluží", value: totalTheyOwe, color: "#1f3d2e", bg: "#d6e4d6" },
+                    { label: "Bilance", value: Math.abs(balance), color: balance >= 0 ? "#1f3d2e" : "#c0392b", bg: "#f5f1e6", prefix: balance >= 0 ? "+" : "−" },
+                  ].map(({ label, value, color, bg, prefix }) => (
+                    <div key={label} style={{ flex: 1, background: bg, borderRadius: 10, padding: "14px 18px" }}>
+                      <div style={{ fontSize: 11, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 22, color }}>{prefix ?? ""}{fmt(value)} Kč</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Já dlužím */}
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#c0392b", textTransform: "uppercase", letterSpacing: "0.08em" }}>Já dlužím</div>
+                    <button onClick={() => setDebtModal({ open: true, debt: null })}
+                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 8, border: "1px solid #e3ddcb", background: "transparent", color: "#5c6359", cursor: "pointer", fontWeight: 600 }}>
+                      + Přidat
+                    </button>
+                  </div>
+                  {iOwe.length === 0
+                    ? <div style={{ fontSize: 13, color: "#9a9483" }}>Žádné záznamy</div>
+                    : <div className="flex flex-col gap-[8px]">{iOwe.map(d => <DebtCard key={d.id} d={d} />)}</div>
+                  }
+                </div>
+
+                {/* Mně dluží */}
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#1f3d2e", textTransform: "uppercase", letterSpacing: "0.08em" }}>Mně dluží</div>
+                    <button onClick={() => setDebtModal({ open: true, debt: null })}
+                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 8, border: "1px solid #e3ddcb", background: "transparent", color: "#5c6359", cursor: "pointer", fontWeight: 600 }}>
+                      + Přidat
+                    </button>
+                  </div>
+                  {theyOwe.length === 0
+                    ? <div style={{ fontSize: 13, color: "#9a9483" }}>Žádné záznamy</div>
+                    : <div className="flex flex-col gap-[8px]">{theyOwe.map(d => <DebtCard key={d.id} d={d} />)}</div>
+                  }
+                </div>
+              </div>
+            );
+          })()}
         </section>
 
       </main>
