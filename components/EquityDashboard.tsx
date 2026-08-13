@@ -8,6 +8,7 @@ type Property = {
   name: string;
   address: string | null;
   bank: string | null;
+  type?: string | null;
   status: "rented" | "vacant" | "planned";
   rent_amount: number;
   estimated_value: number;
@@ -162,6 +163,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   onSaved: () => void;
 }) {
   const [name, setName] = useState(property.name);
+  const [type, setType] = useState(property.type ?? "apartment");
   const [status, setStatus] = useState(property.status);
   const [estimatedValue, setEstimatedValue] = useState(String(property.estimated_value));
   const [rentAmount, setRentAmount] = useState(String(property.rent_amount));
@@ -192,7 +194,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   async function handleSave() {
     setSaving(true);
     await supabase.from("properties").update({
-      name, status,
+      name, status, type,
       estimated_value: Number(estimatedValue),
       rent_amount: Number(rentAmount),
       rent_due_day: Number(rentDueDay),
@@ -264,6 +266,19 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
         </div>
 
         {field("Název nemovitosti", name, setName, "text")}
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Typ</div>
+          <select value={type} onChange={e => { setType(e.target.value); setSaved(false); }}
+            style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22" }}>
+            <option value="apartment">Byt</option>
+            <option value="house">Dům</option>
+            <option value="garage">Garáž</option>
+            <option value="land">Pozemek</option>
+            <option value="commercial">Komerční</option>
+            <option value="other">Ostatní</option>
+          </select>
+        </div>
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Stav</div>
@@ -1516,6 +1531,11 @@ export default function EquityDashboard() {
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{p.name}</span>
                           {p.status === "planned" && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>plánovaná</span>}
+                          {p.type && p.type !== "apartment" && (
+                            <span style={{ fontSize: 10, fontWeight: 600, color: "#7c8378", background: "#e6e0d0", borderRadius: 10, padding: "2px 8px" }}>
+                              {{ house: "Dům", garage: "Garáž", land: "Pozemek", commercial: "Komerční", other: "Ostatní" }[p.type] ?? p.type}
+                            </span>
+                          )}
                         </div>
                         <div style={{ fontSize: 12, color: "#7c8378", marginTop: 2 }}>
                           {p.status === "rented" ? `Nájem ${fmt(p.rent_amount)} Kč / měs` : p.address ?? ""}
