@@ -715,6 +715,102 @@ function TenantCard({ tenant, properties, supabase, onSaved, onDeleted }: {
   );
 }
 
+// ── Add Property Modal ────────────────────────────────────────────────────────
+function AddPropertyModal({ supabase, onClose, onSaved }: {
+  supabase: ReturnType<typeof createClient>;
+  onClose: () => void;
+  onSaved: (p: Property) => void;
+}) {
+  const [name, setName] = useState("");
+  const [type, setType] = useState("apartment");
+  const [status, setStatus] = useState<"rented" | "vacant" | "planned">("vacant");
+  const [address, setAddress] = useState("");
+  const [estimatedValue, setEstimatedValue] = useState("");
+  const [rentAmount, setRentAmount] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!name.trim()) return;
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase.from("properties").insert({
+      user_id: user!.id,
+      name: name.trim(),
+      type,
+      status,
+      address: address.trim() || null,
+      estimated_value: estimatedValue ? Number(estimatedValue) : 0,
+      rent_amount: rentAmount ? Number(rentAmount) : 0,
+      monthly_costs: 0,
+    }).select().single();
+    if (error) { alert("Chyba: " + error.message); setSaving(false); return; }
+    onSaved(data);
+    onClose();
+  }
+
+  const field = (label: string, value: string, onChange: (v: string) => void, type = "text", placeholder = "") => (
+    <div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{label}</div>
+      <input type={type} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
+        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
+    </div>
+  );
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,43,34,0.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
+      onClick={onClose}>
+      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "28px 28px 24px", width: 460, maxWidth: "95vw", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 18, color: "#1c2b22", marginBottom: 20 }}>Nová nemovitost</div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {field("Název", name, setName, "text", "např. Byt Praha 3")}
+          {field("Adresa", address, setAddress, "text", "")}
+
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Typ</div>
+            <select value={type} onChange={e => setType(e.target.value)}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22" }}>
+              <option value="apartment">Byt</option>
+              <option value="house">Dům</option>
+              <option value="garage">Garáž</option>
+              <option value="land">Pozemek</option>
+              <option value="commercial">Komerční</option>
+              <option value="other">Ostatní</option>
+            </select>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Stav</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {(["rented", "vacant", "planned"] as const).map(s => (
+                <button key={s} onClick={() => setStatus(s)}
+                  style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `2px solid ${status === s ? "#1f3d2e" : "#d2cab4"}`, background: status === s ? "#1f3d2e" : "transparent", color: status === s ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  {s === "rented" ? "Pronajato" : s === "vacant" ? "Volné" : "Plánováno"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {field("Odhadovaná hodnota (Kč)", estimatedValue, setEstimatedValue, "number", "0")}
+          {field("Měsíční nájem (Kč)", rentAmount, setRentAmount, "number", "0")}
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
+          <button onClick={onClose}
+            style={{ fontSize: 13, padding: "8px 16px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", cursor: "pointer" }}>
+            Zrušit
+          </button>
+          <button onClick={save} disabled={saving || !name.trim()}
+            style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 600, opacity: saving || !name.trim() ? 0.6 : 1 }}>
+            {saving ? "Ukládám…" : "Přidat"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Debt Modal ────────────────────────────────────────────────────────────────
 function DebtModal({ debt, supabase, onClose, onSaved, onDeleted }: {
   debt: Debt | null;
@@ -976,6 +1072,7 @@ export default function EquityDashboard() {
   const [cfPropExpanded, setCfPropExpanded] = useState<string | null>(null);
   const [showPlanned, setShowPlanned] = useState(false);
   const [showPlannedProps, setShowPlannedProps] = useState(false);
+  const [showAddProperty, setShowAddProperty] = useState(false);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [debtModal, setDebtModal] = useState<{ open: boolean; debt: Debt | null }>({ open: false, debt: null });
   const [copied, setCopied] = useState(false);
@@ -1217,6 +1314,15 @@ export default function EquityDashboard() {
             setProperties(props ?? []);
             setMortgages(morts ?? []);
           }}
+        />
+      )}
+
+      {/* Add Property Modal */}
+      {showAddProperty && (
+        <AddPropertyModal
+          supabase={supabase}
+          onClose={() => setShowAddProperty(false)}
+          onSaved={p => { setProperties(prev => [...prev, p]); setShowAddProperty(false); }}
         />
       )}
 
@@ -1506,6 +1612,11 @@ export default function EquityDashboard() {
         <section id="nemovitosti" style={{ marginTop: 38, scrollMarginTop: 28 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Tvé nemovitosti</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <button onClick={() => setShowAddProperty(true)}
+                style={{ fontSize: 12, padding: "6px 14px", borderRadius: 20, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 600 }}>
+                + Přidat
+              </button>
             <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3 }}>
               <button onClick={() => setShowPlannedProps(false)}
                 style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: !showPlannedProps ? "#1f3d2e" : "transparent", color: !showPlannedProps ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
@@ -1515,6 +1626,7 @@ export default function EquityDashboard() {
                 style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: showPlannedProps ? "#4a7c59" : "transparent", color: showPlannedProps ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                 Vč. plánovaných
               </button>
+            </div>
             </div>
           </div>
           {loading ? <div style={{ color: "#7c8378" }}>Načítám…</div> : (
