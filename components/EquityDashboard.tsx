@@ -819,6 +819,7 @@ export default function EquityDashboard() {
   const [cfExpanded, setCfExpanded] = useState<"income" | "expenses" | "net" | null>(null);
   const [cfPropExpanded, setCfPropExpanded] = useState<string | null>(null);
   const [showPlanned, setShowPlanned] = useState(false);
+  const [showPlannedProps, setShowPlannedProps] = useState(false);
   const [copied, setCopied] = useState(false);
 
   async function loadMessages(propertyId: string) {
@@ -1332,19 +1333,34 @@ export default function EquityDashboard() {
 
         {/* NEMOVITOSTI */}
         <section id="nemovitosti" style={{ marginTop: 38, scrollMarginTop: 28 }}>
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Tvé nemovitosti</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Tvé nemovitosti</div>
+            <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3 }}>
+              <button onClick={() => setShowPlannedProps(false)}
+                style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: !showPlannedProps ? "#1f3d2e" : "transparent", color: !showPlannedProps ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                Reálné
+              </button>
+              <button onClick={() => setShowPlannedProps(true)}
+                style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: showPlannedProps ? "#4a7c59" : "transparent", color: showPlannedProps ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                Vč. plánovaných
+              </button>
+            </div>
+          </div>
           {loading ? <div style={{ color: "#7c8378" }}>Načítám…</div> : (
             <div className="flex flex-col gap-[10px]">
-              {activeProperties.map((p) => {
+              {(showPlannedProps ? properties : activeProperties).map((p) => {
                 const { label, cls } = statusBadge(p.status);
                 const mortgage = mortgages.find((m) => m.property_id === p.id);
                 return (
-                  <div key={p.id} onClick={() => setSelectedProperty(p)} style={{ background: "#f5f1e6", borderRadius: 10, padding: "15px 18px", border: p.status === "planned" ? "1px dashed #c9c0aa" : "1px solid transparent", cursor: "pointer", transition: "box-shadow 0.15s" }}
+                  <div key={p.id} onClick={() => setSelectedProperty(p)} style={{ background: p.status === "planned" ? "#eef5ee" : "#f5f1e6", borderRadius: 10, padding: "15px 18px", border: p.status === "planned" ? "2px dashed #4a7c59" : "1px solid transparent", cursor: "pointer", transition: "box-shadow 0.15s" }}
                     onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 2px 12px rgba(31,61,46,0.10)")}
                     onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{p.name}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{p.name}</span>
+                          {p.status === "planned" && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>plánovaná</span>}
+                        </div>
                         <div style={{ fontSize: 12, color: "#7c8378", marginTop: 2 }}>
                           {p.status === "rented" ? `Nájem ${fmt(p.rent_amount)} Kč / měs` : p.address ?? ""}
                           {mortgage ? ` · Splátka ${fmt(mortgage.monthly_payment)} Kč` : ""}
