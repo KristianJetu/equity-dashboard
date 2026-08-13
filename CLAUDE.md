@@ -1,5 +1,12 @@
 # Equity Dashboard — Dokumentace projektu
 
+## Sekce Dluhy
+- Tabulka `debts`: id, user_id, direction (`i_owe`/`they_owe`), name, amount_original, amount_remaining, monthly_payment, interest_rate, note, due_date
+- RLS: `USING (user_id = auth.uid())` na SELECT/INSERT/UPDATE/DELETE — každý vidí jen své záznamy
+- Komponenta `DebtModal` (samostatná funkce před `AddTenantModal`) — přidání, editace, mazání
+- State: `debts`, `debtModal` v hlavním `EquityDashboard`
+- Fetch v hlavním `useEffect` spolu s properties/mortgages/tenants
+
 ## Cashflow sekce — přepínač Reálné / Vč. plánovaných
 - Header cashflow sekce obsahuje přepínač `showPlanned` (state v `EquityDashboard.tsx`)
 - Při zapnutí se do výpočtu příjmů/výdajů zahrnou i nemovitosti se statusem `planned`
