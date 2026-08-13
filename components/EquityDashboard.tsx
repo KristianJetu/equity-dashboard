@@ -784,7 +784,7 @@ function DebtModal({ debt, supabase, onClose, onSaved, onDeleted }: {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {field("Komu / od koho", "name", "text", "např. Máma, Spotřebitelský úvěr…")}
+          {field("Komu / od koho", "name", "text", "např. Spotřebitelský úvěr, Půjčka…")}
           {field("Zbývá splatit (Kč)", "amount_remaining", "number", "0")}
           {field("Původní částka (Kč)", "amount_original", "number", "0")}
           {field("Měsíční splátka (Kč)", "monthly_payment", "number", "")}
