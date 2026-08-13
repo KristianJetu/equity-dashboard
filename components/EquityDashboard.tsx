@@ -1352,7 +1352,7 @@ export default function EquityDashboard() {
                 const { label, cls } = statusBadge(p.status);
                 const mortgage = mortgages.find((m) => m.property_id === p.id);
                 return (
-                  <div key={p.id} onClick={() => setSelectedProperty(p)} style={{ background: p.status === "planned" ? "#eef5ee" : "#f5f1e6", borderRadius: 10, padding: "15px 18px", border: p.status === "planned" ? "2px dashed #4a7c59" : "1px solid transparent", cursor: "pointer", transition: "box-shadow 0.15s" }}
+                  <div key={p.id} onClick={() => setSelectedProperty(p)} style={{ background: p.status === "planned" ? "#eef5ee" : "#f5f1e6", borderRadius: 10, padding: "15px 18px", border: "1px solid transparent", cursor: "pointer", transition: "box-shadow 0.15s" }}
                     onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 2px 12px rgba(31,61,46,0.10)")}
                     onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
                     <div className="flex items-center justify-between">
@@ -1510,7 +1510,7 @@ export default function EquityDashboard() {
                         const net = income - totalOut;
 
                         return (
-                          <div key={p.id} style={{ background: isPlanned ? "transparent" : "#ede9dd", borderRadius: 8, padding: "12px 14px", border: isPlanned ? "1.5px dashed #4a7c59" : "none" }}>
+                          <div key={p.id} style={{ background: isPlanned ? "#eef5ee" : "#ede9dd", borderRadius: 8, padding: "12px 14px", border: "none" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: "#5c6359", textTransform: "uppercase", letterSpacing: "0.06em" }}>{p.name}</div>
                               {isPlanned && <span style={{ fontSize: 9, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 8, padding: "1px 5px" }}>plán.</span>}
@@ -1576,10 +1576,10 @@ export default function EquityDashboard() {
                         onClick={() => setCfPropExpanded(prev => prev === p.id ? null : p.id)}
                         style={{
                           flex: "0 0 calc(33.333% - 8px)",
-                          background: p.planned ? "transparent" : "#f5f1e6",
+                          background: p.planned ? "#eef5ee" : "#f5f1e6",
                           borderRadius: 10, padding: "16px 18px",
-                          border: p.planned ? `2px dashed ${p.net >= 0 ? "#4a7c59" : "#c0392b"}` : `none`,
-                          borderLeft: p.planned ? undefined : `3px solid ${p.net >= 0 ? "#1f3d2e" : "#c0392b"}`,
+                          border: "none",
+                          borderLeft: `3px solid ${p.net >= 0 ? "#1f3d2e" : "#c0392b"}`,
                           cursor: "pointer", opacity: p.planned ? 0.85 : 1,
                           boxSizing: "border-box",
                         }}>
