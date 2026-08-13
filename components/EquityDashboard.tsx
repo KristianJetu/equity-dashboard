@@ -1641,6 +1641,17 @@ export default function EquityDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          {(() => {
+                            const icons: Record<string, JSX.Element> = {
+                              apartment: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c8378" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="1"/><line x1="9" y1="22" x2="9" y2="12"/><line x1="15" y1="22" x2="15" y2="12"/><rect x="9" y="6" width="2" height="2"/><rect x="13" y="6" width="2" height="2"/><rect x="9" y="10" width="2" height="2"/><rect x="13" y="10" width="2" height="2"/></svg>,
+                              house: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c8378" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.5L12 3l9 6.5V21a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>,
+                              garage: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c8378" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="1"/><path d="M2 7l2-4h16l2 4"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="8" y1="12" x2="8" y2="21"/><line x1="16" y1="12" x2="16" y2="21"/></svg>,
+                              land: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c8378" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 20h18"/><path d="M3 20l4-8 4 4 3-6 4 10"/></svg>,
+                              commercial: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c8378" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="18" rx="1"/><line x1="2" y1="9" x2="22" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/><rect x="13" y="13" width="3" height="3"/><rect x="13" y="17" width="3" height="3"/></svg>,
+                              other: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c8378" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+                            };
+                            return icons[p.type ?? "apartment"] ?? icons.apartment;
+                          })()}
                           <span style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{p.name}</span>
                           {p.status === "planned" && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>plánovaná</span>}
                           {p.type && p.type !== "apartment" && (
