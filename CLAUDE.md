@@ -1,5 +1,11 @@
 # Equity Dashboard — Dokumentace projektu
 
+## Cashflow sekce — přepínač Reálné / Vč. plánovaných
+- Header cashflow sekce obsahuje přepínač `showPlanned` (state v `EquityDashboard.tsx`)
+- Při zapnutí se do výpočtu příjmů/výdajů zahrnou i nemovitosti se statusem `planned`
+- Plánované položky mají badge „plánovaná" a jemně zelené pozadí — bez přerušovaného rámečku
+- Přepínač je i v sekci „Tvé nemovitosti" (`showPlannedProps`) — zobrazí plánované nemovitosti v přehledu karet, umožňuje jejich editaci přes modal
+
 ## Co to je
 Aplikace pro správu portfolia nemovitostí. Majitel vidí přehled nemovitostí, hypotéky, nájmy, cashflow a historii plateb. Multi-user — každý uživatel vidí jen svá data.
 
