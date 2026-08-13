@@ -1546,7 +1546,7 @@ export default function EquityDashboard() {
                 </div>
 
                 {/* Per-nemovitost cashflow */}
-                <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(propCf.length, 3)}, 1fr)`, gap: 12, marginBottom: 24 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
                   {propCf.map(p => {
                     const isOpen = cfPropExpanded === p.id;
                     const mortgage = mortgages.find(m => m.property_id === p.id);
