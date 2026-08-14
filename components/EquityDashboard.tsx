@@ -1451,7 +1451,7 @@ export default function EquityDashboard() {
                   </div>
                   <div className="flex items-center gap-[14px] mt-[22px]">
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#1f3d2e", background: "#c9a24b", borderRadius: 30, padding: "8px 15px", fontSize: 14, fontWeight: 700 }}>
-                      {activeProperties.length} {activeProperties.length === 1 ? "nemovitost" : activeProperties.length < 5 ? "nemovitosti" : "nemovitostí"}
+                      {ownedProperties.length} {ownedProperties.length === 1 ? "nemovitost" : ownedProperties.length < 5 ? "nemovitosti" : "nemovitostí"}
                     </span>
                     <span style={{ fontSize: 15, color: "#cfe0d4", fontWeight: 500 }}>Hodnota portfolia {fmtMil(totalValue)} mil Kč</span>
                   </div>
@@ -1480,7 +1480,7 @@ export default function EquityDashboard() {
                   )}
                   <div>
                     <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>Nemovitosti</div>
-                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{activeProperties.length} {activeProperties.length === 1 ? "objekt" : activeProperties.length < 5 ? "objekty" : "objektů"}</div>
+                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{ownedProperties.length} {ownedProperties.length === 1 ? "objekt" : ownedProperties.length < 5 ? "objekty" : "objektů"}</div>
                   </div>
                 </div>
               </div>
