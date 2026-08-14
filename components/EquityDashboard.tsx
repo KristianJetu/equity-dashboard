@@ -9,6 +9,7 @@ type Property = {
   address: string | null;
   bank: string | null;
   type?: string | null;
+  ownership_type?: string | null;
   status: "rented" | "vacant" | "planned";
   rent_amount: number;
   estimated_value: number;
@@ -164,6 +165,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
 }) {
   const [name, setName] = useState(property.name);
   const [type, setType] = useState(property.type ?? "apartment");
+  const [ownershipType, setOwnershipType] = useState(property.ownership_type ?? "owner");
   const [status, setStatus] = useState(property.status);
   const [estimatedValue, setEstimatedValue] = useState(String(property.estimated_value));
   const [rentAmount, setRentAmount] = useState(String(property.rent_amount));
@@ -194,7 +196,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   async function handleSave() {
     setSaving(true);
     await supabase.from("properties").update({
-      name, status, type,
+      name, status, type, ownership_type: ownershipType,
       estimated_value: Number(estimatedValue),
       rent_amount: Number(rentAmount),
       rent_due_day: Number(rentDueDay),
@@ -278,6 +280,18 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
             <option value="commercial">Komerční</option>
             <option value="other">Ostatní</option>
           </select>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Vlastnictví</div>
+          <div className="flex gap-2">
+            {(["owner", "manager"] as const).map(o => (
+              <button key={o} onClick={() => { setOwnershipType(o); setSaved(false); }}
+                style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `2px solid ${ownershipType === o ? "#1f3d2e" : "#d2cab4"}`, background: ownershipType === o ? "#1f3d2e" : "transparent", color: ownershipType === o ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                {o === "owner" ? "Vlastním" : "Spravuji"}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div style={{ marginBottom: 16 }}>
@@ -728,6 +742,7 @@ function AddPropertyModal({ supabase, onClose, onSaved }: {
 }) {
   const [name, setName] = useState("");
   const [type, setType] = useState("apartment");
+  const [ownershipType, setOwnershipType] = useState("owner");
   const [status, setStatus] = useState<"rented" | "vacant" | "planned">("vacant");
   const [address, setAddress] = useState("");
   const [estimatedValue, setEstimatedValue] = useState("");
@@ -747,6 +762,7 @@ function AddPropertyModal({ supabase, onClose, onSaved }: {
       estimated_value: estimatedValue ? Number(estimatedValue) : 0,
       rent_amount: rentAmount ? Number(rentAmount) : 0,
       monthly_costs: 0,
+      ownership_type: ownershipType,
     }).select().single();
     if (error) { alert("Chyba: " + error.message); setSaving(false); return; }
     onSaved(data);
@@ -783,6 +799,18 @@ function AddPropertyModal({ supabase, onClose, onSaved }: {
               <option value="commercial">Komerční</option>
               <option value="other">Ostatní</option>
             </select>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Vlastnictví</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {(["owner", "manager"] as const).map(o => (
+                <button key={o} onClick={() => setOwnershipType(o)}
+                  style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `2px solid ${ownershipType === o ? "#1f3d2e" : "#d2cab4"}`, background: ownershipType === o ? "#1f3d2e" : "transparent", color: ownershipType === o ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  {o === "owner" ? "Vlastním" : "Spravuji"}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -1275,8 +1303,9 @@ export default function EquityDashboard() {
   }
 
   const activeProperties = properties.filter((p) => p.status !== "planned");
-  const totalValue = activeProperties.reduce((s, p) => s + p.estimated_value, 0);
-  const totalDebt = mortgages.reduce((s, m) => s + m.outstanding_balance, 0);
+  const ownedProperties = activeProperties.filter((p) => p.ownership_type !== "manager");
+  const totalValue = ownedProperties.reduce((s, p) => s + p.estimated_value, 0);
+  const totalDebt = mortgages.filter(m => ownedProperties.some(p => p.id === m.property_id)).reduce((s, m) => s + m.outstanding_balance, 0);
   const equity = totalValue - totalDebt;
   const filteredPayments = activeFilter ? payments.filter((p) => p.property_id === activeFilter) : payments;
   const activeProperty = properties.find((p) => p.id === activeFilter);
@@ -1637,8 +1666,11 @@ export default function EquityDashboard() {
           {loading ? <div style={{ color: "#7c8378" }}>Načítám…</div> : (
             <div className="flex flex-col gap-[10px]">
               {(showPlannedProps ? properties : activeProperties).map((p) => {
-                const { label, cls } = statusBadge(p.status);
-                const mortgage = mortgages.find((m) => m.property_id === p.id);
+                const isManaged = p.ownership_type === "manager";
+                const { label, cls } = isManaged
+                  ? { label: "Spravováno", cls: "text-[#2255aa] bg-[#dce8f8]" }
+                  : statusBadge(p.status);
+                const mortgage = isManaged ? undefined : mortgages.find((m) => m.property_id === p.id);
                 return (
                   <div key={p.id} onClick={() => setSelectedProperty(p)} style={{ background: p.status === "planned" ? "#eef5ee" : "#f5f1e6", borderRadius: 10, padding: "15px 18px", border: "1px solid transparent", cursor: "pointer", transition: "box-shadow 0.15s" }}
                     onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 2px 12px rgba(31,61,46,0.10)")}
@@ -1682,8 +1714,8 @@ export default function EquityDashboard() {
                         })()}
                       </div>
                       <div className="flex items-center gap-3">
-                        <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{fmtMil(p.estimated_value)} mil</span>
-                        <button onClick={e => { e.stopPropagation(); handleToggleStatus(p.id, p.status); }} className={`inline-flex items-center rounded-[20px] ${cls}`} style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 11px", border: "none", cursor: "pointer" }}>{label}</button>
+                        {!isManaged && <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{fmtMil(p.estimated_value)} mil</span>}
+                        <button onClick={e => { e.stopPropagation(); if (!isManaged) handleToggleStatus(p.id, p.status); }} className={`inline-flex items-center rounded-[20px] ${cls}`} style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 11px", border: "none", cursor: isManaged ? "default" : "pointer" }}>{label}</button>
                       </div>
                     </div>
                     {mortgage && (() => {
