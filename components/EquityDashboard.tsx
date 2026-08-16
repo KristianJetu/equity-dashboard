@@ -575,7 +575,7 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
   return (
     <div style={{ padding: "34px 4px 8px" }}>
       <div className="flex justify-between items-center mb-4">
-        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Jak roste&scaron; v &ccaron;ase</div>
+        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>{"Jak rosteš v čase"}</div>
         <div className="flex gap-5" style={{ fontSize: 12, fontWeight: 600, color: "#5c6359" }}>
           {([{ color: "#1f3d2e", label: "Majetek" }, { color: "#c39a3f", label: "Hodnota portfolia" }, { color: "#b08c7a", label: "Dluh" }] as {color:string;label:string}[]).map(({ color, label }) => (
             <span key={label} className="inline-flex items-center gap-[7px]">
