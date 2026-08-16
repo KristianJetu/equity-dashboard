@@ -1542,15 +1542,24 @@ export default function EquityDashboard() {
               let value = 0, debt = 0;
               for (const p of properties) {
                 const growth = (p.annual_growth_pct ?? 3) / 100;
-                const purchaseMs = p.purchase_date ? new Date(p.purchase_date).getTime() : nowMs;
-                const purchasePrice = p.purchase_price ?? p.estimated_value;
-                // Value: interpolate from purchase price to now, then project with growth
-                if (ms <= nowMs) {
-                  const t = Math.max(0, (ms - purchaseMs) / (nowMs - purchaseMs + 1));
-                  value += purchasePrice + t * (p.estimated_value - purchasePrice);
+                if (!p.purchase_date) {
+                  // No purchase date — show estimated_value flat in history, grow in future
+                  if (ms <= nowMs) {
+                    value += p.estimated_value;
+                  } else {
+                    const yearsAhead = (ms - nowMs) / (365 * 86400000);
+                    value += p.estimated_value * Math.pow(1 + growth, yearsAhead);
+                  }
                 } else {
-                  const yearsAhead = (ms - nowMs) / (365 * 86400000);
-                  value += p.estimated_value * Math.pow(1 + growth, yearsAhead);
+                  const purchaseMs = new Date(p.purchase_date).getTime();
+                  const purchasePrice = p.purchase_price ?? p.estimated_value;
+                  if (ms <= nowMs) {
+                    const t = Math.max(0, (ms - purchaseMs) / (nowMs - purchaseMs + 1));
+                    value += purchasePrice + t * (p.estimated_value - purchasePrice);
+                  } else {
+                    const yearsAhead = (ms - nowMs) / (365 * 86400000);
+                    value += p.estimated_value * Math.pow(1 + growth, yearsAhead);
+                  }
                 }
                 // Debt: linear paydown
                 const mort = mortgages.find(m => m.property_id === p.id);
