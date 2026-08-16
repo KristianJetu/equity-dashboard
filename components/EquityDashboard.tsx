@@ -1604,7 +1604,7 @@ export default function EquityDashboard() {
         <div className="flex justify-between items-center mb-[30px]">
           <div className="flex items-center gap-[11px]">
             <div style={{ width: 11, height: 11, borderRadius: "50%", background: "#c39a3f" }} />
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 23, fontWeight: 700, letterSpacing: "-0.01em", color: "#1c2b22" }}>Equity</div>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 23, fontWeight: 700, letterSpacing: "-0.01em", color: "#1c2b22" }}>{"Majetek"}</div>
           </div>
           <div className="flex items-center gap-3">
             <span style={{ fontSize: 13, color: "#7c8378" }}>
