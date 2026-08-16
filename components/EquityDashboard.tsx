@@ -685,7 +685,6 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
       {avgGrowthPct !== null && (
         <div style={{ marginTop: 10, display: "flex", gap: 24, fontSize: 12, color: "#7c8378" }}>
           <span>{"Průměrný roční růst majetku:"} <strong style={{ color: avgGrowthPct >= 0 ? "#4a7c59" : "#c0392b" }}>{avgGrowthPct >= 0 ? "+" : ""}{avgGrowthPct.toFixed(1)} %</strong></span>
-          {todayPt && <span>{"Majetek dnes:"} <strong style={{ color: "#1c2b22" }}>{fmtMil(todayPt.value - todayPt.debt)} mil {"Kč"}</strong></span>}
         </div>
       )}
     </div>
