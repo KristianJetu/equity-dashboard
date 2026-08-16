@@ -480,7 +480,7 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
   const [range, setRange] = React.useState<"5" | "10" | "all">("all");
   const svgRef = React.useRef<SVGSVGElement>(null);
 
-  const W = 600, H = 240, PAD_L = 40, PAD_R = 50, PAD_T = 20, PAD_B = 30;
+  const W = 600, H = 240, PAD_L = 40, PAD_R = 16, PAD_T = 20, PAD_B = 30;
   const nowMs = Date.now();
   const FUTURE_YEARS = 5;
 
@@ -540,12 +540,8 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
   const toX = (ms: number) => PAD_L + ((ms - minMs) / totalMs) * (W - PAD_L - PAD_R);
   const toY = (v: number) => PAD_T + (1 - (v - minVal) / valRange) * (H - PAD_T - PAD_B);
 
-  // Right axis for debt
-  const maxDebt = Math.max(...allPoints.map(p => p.debt), 1);
-  const toYDebt = (v: number) => PAD_T + (1 - v / maxDebt) * (H - PAD_T - PAD_B);
-
   const valuePts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value).toFixed(1)}`).join(" ");
-  const debtPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toYDebt(p.debt).toFixed(1)}`).join(" ");
+  const debtPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.debt).toFixed(1)}`).join(" ");
   const equityPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value - p.debt).toFixed(1)}`).join(" ");
   const equityFill = equityPts + ` ${toX(maxMs).toFixed(1)},${toY(minVal).toFixed(1)} ${toX(minMs).toFixed(1)},${toY(minVal).toFixed(1)}`;
   const todayX = toX(nowMs);
@@ -557,7 +553,6 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
   for (let y = firstLabel; y <= endYear; y += 5) labelMs.push(new Date(y, 0, 1).getTime());
 
   const gridVals = [maxVal * 0.25, maxVal * 0.5, maxVal * 0.75, maxVal].map(v => ({ v, y: toY(v) }));
-  const debtGridVals = [maxDebt * 0.5, maxDebt].map(v => ({ v, y: toYDebt(v) }));
 
   // Average annual equity growth (from first point with value > 0 to today)
   const firstPt = allPoints.find(p => p.value - p.debt > 0);
@@ -630,10 +625,6 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
           {gridVals.map(({ v, y }, i) => (
             <text key={i} x={PAD_L - 4} y={y + 4} textAnchor="end" fontSize="9" fill="#9a9483">{fmtMil(v)}M</text>
           ))}
-          {/* Right axis for debt */}
-          {debtGridVals.map(({ v, y }, i) => (
-            <text key={i} x={W - PAD_R + 4} y={y + 4} textAnchor="start" fontSize="9" fill="#b08c7a">{fmtMil(v)}M</text>
-          ))}
           {/* Today line */}
           <line x1={todayX.toFixed(1)} y1={PAD_T} x2={todayX.toFixed(1)} y2={H - PAD_B} stroke="#c9a24b" strokeWidth="1.5" strokeDasharray="4 3" />
           <text x={todayX + 4} y={PAD_T + 10} fontSize="9" fill="#c9a24b" fontWeight="600">dnes</text>
@@ -666,7 +657,7 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
           {hp && <>
             <circle cx={hpX.toFixed(1)} cy={toY(hp.value).toFixed(1)} r="3.5" fill="#c39a3f" />
             <circle cx={hpX.toFixed(1)} cy={toY(hp.value - hp.debt).toFixed(1)} r="3.5" fill="#1f3d2e" />
-            <circle cx={hpX.toFixed(1)} cy={toYDebt(hp.debt).toFixed(1)} r="3" fill="#b08c7a" />
+            <circle cx={hpX.toFixed(1)} cy={toY(hp.debt).toFixed(1)} r="3" fill="#b08c7a" />
           </>}
         </svg>
         {/* Tooltip */}
