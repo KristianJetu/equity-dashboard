@@ -1595,9 +1595,14 @@ export default function EquityDashboard() {
             const todayX = toX(nowMs);
 
             // Label months on x axis
+            // Round year labels at 5-year intervals
+            const startYear = new Date(minMs).getFullYear();
+            const endYear = new Date(maxMs).getFullYear();
             const labelMs: number[] = [];
-            const step = totalMs / 5;
-            for (let i = 0; i <= 5; i++) labelMs.push(minMs + i * step);
+            const firstLabel = Math.ceil(startYear / 5) * 5;
+            for (let y = firstLabel; y <= endYear; y += 5) {
+              labelMs.push(new Date(y, 0, 1).getTime());
+            }
 
             // Grid lines
             const gridVals = [maxVal * 0.25, maxVal * 0.5, maxVal * 0.75, maxVal].map(v => ({ v, y: toY(v) }));
@@ -1645,7 +1650,7 @@ export default function EquityDashboard() {
                   {/* X axis labels */}
                   {labelMs.map((ms, i) => {
                     const d = new Date(ms);
-                    const lbl = d.toLocaleDateString("cs-CZ", { month: "short", year: "2-digit" });
+                    const lbl = String(d.getFullYear());
                     return <text key={i} x={toX(ms).toFixed(1)} y={H - 6} textAnchor="middle" fontSize="9" fill="#9a9483">{lbl}</text>;
                   })}
                 </svg>
