@@ -474,6 +474,183 @@ function PaymentModal({
 
 
 
+// ── Growth Chart ─────────────────────────────────────────────────────────────
+function GrowthChart({ properties, mortgages }: { properties: Property[]; mortgages: Mortgage[] }) {
+  const [hoverIdx, setHoverIdx] = React.useState<number | null>(null);
+  const svgRef = React.useRef<SVGSVGElement>(null);
+
+  const W = 600, H = 240, PAD_L = 40, PAD_R = 20, PAD_T = 20, PAD_B = 30;
+  const nowMs = Date.now();
+  const FUTURE_YEARS = 5;
+
+  let minMs = nowMs;
+  for (const p of properties) {
+    if (p.purchase_date) {
+      const ms = new Date(p.purchase_date).getTime();
+      if (ms < minMs) minMs = ms;
+    }
+  }
+  if (minMs === nowMs) minMs = nowMs - 2 * 365 * 86400000;
+  const maxMs = nowMs + FUTURE_YEARS * 365 * 86400000;
+  const totalMs = maxMs - minMs;
+
+  type Pt = { ms: number; value: number; debt: number };
+  const allPoints: Pt[] = [];
+  const MONTHS = Math.round(totalMs / (30 * 86400000));
+  for (let i = 0; i <= MONTHS; i++) {
+    const ms = minMs + (i / MONTHS) * totalMs;
+    let value = 0, debt = 0;
+    for (const p of properties) {
+      const growth = (p.annual_growth_pct ?? 3) / 100;
+      const purchaseMs = p.purchase_date ? new Date(p.purchase_date).getTime() : nowMs;
+      if (!p.purchase_date) {
+        value += ms <= nowMs ? p.estimated_value : p.estimated_value * Math.pow(1 + growth, (ms - nowMs) / (365 * 86400000));
+      } else {
+        const purchasePrice = p.purchase_price ?? p.estimated_value;
+        if (ms < purchaseMs) {
+          // not yet purchased
+        } else if (ms <= nowMs) {
+          const t = Math.min(1, (ms - purchaseMs) / (nowMs - purchaseMs || 1));
+          value += purchasePrice + t * (p.estimated_value - purchasePrice);
+        } else {
+          value += p.estimated_value * Math.pow(1 + growth, (ms - nowMs) / (365 * 86400000));
+        }
+      }
+      const mort = mortgages.find(m => m.property_id === p.id);
+      if (mort) {
+        const loanMs = mort.loan_start_date ? new Date(mort.loan_start_date).getTime() : purchaseMs;
+        const termMs = (mort.loan_term_years ?? 30) * 365 * 86400000;
+        const loanAmt = mort.loan_amount ?? mort.outstanding_balance;
+        debt += Math.max(0, loanAmt * (1 - Math.max(0, Math.min(1, (ms - loanMs) / termMs))));
+      }
+    }
+    allPoints.push({ ms, value, debt });
+  }
+
+  if (allPoints.length === 0) return null;
+
+  const maxVal = Math.max(...allPoints.map(p => p.value));
+  const minVal = Math.min(...allPoints.map(p => Math.min(p.value - p.debt, 0)));
+  const range = maxVal - minVal || 1;
+  const toX = (ms: number) => PAD_L + ((ms - minMs) / totalMs) * (W - PAD_L - PAD_R);
+  const toY = (v: number) => PAD_T + (1 - (v - minVal) / range) * (H - PAD_T - PAD_B);
+
+  const valuePts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value).toFixed(1)}`).join(" ");
+  const debtPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.debt).toFixed(1)}`).join(" ");
+  const equityPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value - p.debt).toFixed(1)}`).join(" ");
+  const equityFill = equityPts + ` ${toX(maxMs).toFixed(1)},${toY(minVal).toFixed(1)} ${toX(minMs).toFixed(1)},${toY(minVal).toFixed(1)}`;
+  const todayX = toX(nowMs);
+
+  const startYear = new Date(minMs).getFullYear();
+  const endYear = new Date(maxMs).getFullYear();
+  const labelMs: number[] = [];
+  const firstLabel = Math.ceil(startYear / 5) * 5;
+  for (let y = firstLabel; y <= endYear; y += 5) labelMs.push(new Date(y, 0, 1).getTime());
+
+  const gridVals = [maxVal * 0.25, maxVal * 0.5, maxVal * 0.75, maxVal].map(v => ({ v, y: toY(v) }));
+
+  const purchaseMarkers: { ms: number }[] = [];
+  const seenDates = new Set<string>();
+  for (const p of properties) {
+    if (p.purchase_date && !seenDates.has(p.purchase_date)) {
+      const ms = new Date(p.purchase_date).getTime();
+      if (ms <= nowMs) { purchaseMarkers.push({ ms }); seenDates.add(p.purchase_date); }
+    }
+  }
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left) / rect.width) * W;
+    const ms = minMs + ((svgX - PAD_L) / (W - PAD_L - PAD_R)) * totalMs;
+    const idx = allPoints.reduce((best, p, i) => Math.abs(p.ms - ms) < Math.abs(allPoints[best].ms - ms) ? i : best, 0);
+    setHoverIdx(idx);
+  };
+
+  const hp = hoverIdx !== null ? allPoints[hoverIdx] : null;
+  const hpX = hp ? toX(hp.ms) : 0;
+  const tooltipRight = hpX > W * 0.6;
+
+  return (
+    <div style={{ padding: "34px 4px 8px" }}>
+      <div className="flex justify-between items-center mb-4">
+        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Jak roste&scaron; v &ccaron;ase</div>
+        <div className="flex gap-5" style={{ fontSize: 12, fontWeight: 600, color: "#5c6359" }}>
+          {([{ color: "#1f3d2e", label: "Majetek" }, { color: "#c39a3f", label: "Hodnota portfolia" }, { color: "#b08c7a", label: "Dluh" }] as {color:string;label:string}[]).map(({ color, label }) => (
+            <span key={label} className="inline-flex items-center gap-[7px]">
+              <span style={{ width: 18, height: 3, borderRadius: 2, background: color, display: "inline-block" }} />{label}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div style={{ position: "relative" }}>
+        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width="100%" height="250"
+          style={{ display: "block", overflow: "visible", cursor: "crosshair" }}
+          onMouseMove={handleMouseMove} onMouseLeave={() => setHoverIdx(null)}>
+          <defs>
+            <linearGradient id="eqfill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#1f3d2e" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="#1f3d2e" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {gridVals.map(({ y }, i) => <line key={i} x1={PAD_L} y1={y.toFixed(1)} x2={W - PAD_R} y2={y.toFixed(1)} stroke="#d8d0bd" strokeWidth="1" />)}
+          {gridVals.map(({ v, y }, i) => (
+            <text key={i} x={PAD_L - 4} y={y + 4} textAnchor="end" fontSize="9" fill="#9a9483">{fmtMil(v)}M</text>
+          ))}
+          <line x1={todayX.toFixed(1)} y1={PAD_T} x2={todayX.toFixed(1)} y2={H - PAD_B} stroke="#c9a24b" strokeWidth="1.5" strokeDasharray="4 3" />
+          <text x={todayX + 4} y={PAD_T + 10} fontSize="9" fill="#c9a24b" fontWeight="600">dnes</text>
+          <polygon points={equityFill} fill="url(#eqfill)" />
+          <polyline points={debtPts} fill="none" stroke="#b08c7a" strokeWidth="2" />
+          <polyline points={valuePts} fill="none" stroke="#c39a3f" strokeWidth="2" />
+          <polyline points={equityPts} fill="none" stroke="#1f3d2e" strokeWidth="3" />
+          {(() => {
+            const tp = allPoints.find(p => p.ms >= nowMs);
+            if (!tp) return null;
+            return <circle cx={todayX.toFixed(1)} cy={toY(tp.value - tp.debt).toFixed(1)} r="4.5" fill="#1f3d2e" />;
+          })()}
+          {purchaseMarkers.map((m, i) => {
+            const x = toX(m.ms);
+            return (
+              <g key={i}>
+                <line x1={x.toFixed(1)} y1={(H - PAD_B).toFixed(1)} x2={x.toFixed(1)} y2={(H - PAD_B + 6).toFixed(1)} stroke="#c39a3f" strokeWidth="2" />
+                <circle cx={x.toFixed(1)} cy={(H - PAD_B + 8).toFixed(1)} r="3" fill="#c39a3f" opacity="0.8" />
+              </g>
+            );
+          })}
+          {labelMs.map((ms, i) => (
+            <text key={i} x={toX(ms).toFixed(1)} y={H - 6} textAnchor="middle" fontSize="9" fill="#9a9483">{new Date(ms).getFullYear()}</text>
+          ))}
+          {hp && <line x1={hpX.toFixed(1)} y1={PAD_T} x2={hpX.toFixed(1)} y2={H - PAD_B} stroke="#888" strokeWidth="1" strokeDasharray="3 2" opacity="0.5" />}
+          {hp && <>
+            <circle cx={hpX.toFixed(1)} cy={toY(hp.value).toFixed(1)} r="3.5" fill="#c39a3f" />
+            <circle cx={hpX.toFixed(1)} cy={toY(hp.value - hp.debt).toFixed(1)} r="3.5" fill="#1f3d2e" />
+          </>}
+        </svg>
+        {hp && (
+          <div style={{
+            position: "absolute",
+            top: `${Math.max(0, (toY(hp.value) / H * 250 - 10))}px`,
+            ...(tooltipRight ? { right: `${((W - hpX) / W * 100).toFixed(1)}%` } : { left: `${(hpX / W * 100 + 1).toFixed(1)}%` }),
+            background: "#1c2b22", color: "#f5f1e6", borderRadius: 8, padding: "8px 12px",
+            fontSize: 12, fontWeight: 600, pointerEvents: "none", whiteSpace: "nowrap",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.18)", zIndex: 10,
+          }}>
+            <div style={{ color: "#9ab8a0", fontSize: 10, marginBottom: 4 }}>
+              {new Date(hp.ms).toLocaleDateString("cs-CZ", { month: "short", year: "numeric" })}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <div><span style={{ color: "#c39a3f" }}>Hodnota portfolia</span>{"  "}{fmtMil(hp.value)} mil</div>
+              <div><span style={{ color: "#9ab8a0" }}>Dluh</span>{"  "}{fmtMil(hp.debt)} mil</div>
+              <div><span style={{ color: "#6fcf8a" }}>Majetek</span>{"  "}{fmtMil(hp.value - hp.debt)} mil</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Cashflow Extra (donut + nejlepší/nejhorší) ────────────────────────────────
 function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Property[]; mortgages: Mortgage[]; showPlanned: boolean }) {
   if (properties.length === 0) return null;
@@ -1512,151 +1689,7 @@ export default function EquityDashboard() {
           )}
 
           {/* Chart */}
-          {(() => {
-            const W = 600, H = 240, PAD_L = 40, PAD_R = 20, PAD_T = 20, PAD_B = 30;
-            const now = new Date();
-            const nowMs = now.getTime();
-            const FUTURE_YEARS = 5;
-
-            // Collect data points per property per month
-            type Point = { ms: number; value: number; debt: number };
-            const allPoints: Point[] = [];
-
-            // Earliest purchase date across all properties
-            let minMs = nowMs;
-            for (const p of properties) {
-              if (p.purchase_date) {
-                const ms = new Date(p.purchase_date).getTime();
-                if (ms < minMs) minMs = ms;
-              }
-            }
-            // If no purchase dates, start 2 years ago
-            if (minMs === nowMs) minMs = nowMs - 2 * 365 * 86400000;
-            const maxMs = nowMs + FUTURE_YEARS * 365 * 86400000;
-            const totalMs = maxMs - minMs;
-
-            // Generate monthly points
-            const MONTHS = Math.round(totalMs / (30 * 86400000));
-            for (let i = 0; i <= MONTHS; i++) {
-              const ms = minMs + (i / MONTHS) * totalMs;
-              let value = 0, debt = 0;
-              for (const p of properties) {
-                const growth = (p.annual_growth_pct ?? 3) / 100;
-                const purchaseMs = p.purchase_date ? new Date(p.purchase_date).getTime() : nowMs;
-                if (!p.purchase_date) {
-                  // No purchase date — use estimated_value flat in history, grow in future
-                  if (ms <= nowMs) {
-                    value += p.estimated_value;
-                  } else {
-                    const yearsAhead = (ms - nowMs) / (365 * 86400000);
-                    value += p.estimated_value * Math.pow(1 + growth, yearsAhead);
-                  }
-                } else {
-                  const purchasePrice = p.purchase_price ?? p.estimated_value;
-                  if (ms < purchaseMs) {
-                    // Property not yet purchased at this point in time — skip
-                  } else if (ms <= nowMs) {
-                    const denom = nowMs - purchaseMs || 1;
-                    const t = Math.min(1, (ms - purchaseMs) / denom);
-                    value += purchasePrice + t * (p.estimated_value - purchasePrice);
-                  } else {
-                    const yearsAhead = (ms - nowMs) / (365 * 86400000);
-                    value += p.estimated_value * Math.pow(1 + growth, yearsAhead);
-                  }
-                }
-                // Debt: linear paydown
-                const mort = mortgages.find(m => m.property_id === p.id);
-                if (mort) {
-                  const loanMs = mort.loan_start_date ? new Date(mort.loan_start_date).getTime() : purchaseMs;
-                  const termMs = (mort.loan_term_years ?? 30) * 365 * 86400000;
-                  const loanAmt = mort.loan_amount ?? mort.outstanding_balance;
-                  const elapsed = Math.max(0, Math.min(1, (ms - loanMs) / termMs));
-                  debt += Math.max(0, loanAmt * (1 - elapsed));
-                }
-              }
-              allPoints.push({ ms, value, debt });
-            }
-
-            if (allPoints.length === 0) return null;
-
-            const maxVal = Math.max(...allPoints.map(p => p.value));
-            const minVal = Math.min(...allPoints.map(p => Math.min(p.value - p.debt, 0)));
-            const range = maxVal - minVal || 1;
-
-            const toX = (ms: number) => PAD_L + ((ms - minMs) / totalMs) * (W - PAD_L - PAD_R);
-            const toY = (v: number) => PAD_T + (1 - (v - minVal) / range) * (H - PAD_T - PAD_B);
-
-            const valuePts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value).toFixed(1)}`).join(" ");
-            const debtPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.debt).toFixed(1)}`).join(" ");
-            const equityPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value - p.debt).toFixed(1)}`).join(" ");
-            const equityFill = equityPts + ` ${toX(maxMs).toFixed(1)},${toY(minVal).toFixed(1)} ${toX(minMs).toFixed(1)},${toY(minVal).toFixed(1)}`;
-
-            // Today line x
-            const todayX = toX(nowMs);
-
-            // Label months on x axis
-            // Round year labels at 5-year intervals
-            const startYear = new Date(minMs).getFullYear();
-            const endYear = new Date(maxMs).getFullYear();
-            const labelMs: number[] = [];
-            const firstLabel = Math.ceil(startYear / 5) * 5;
-            for (let y = firstLabel; y <= endYear; y += 5) {
-              labelMs.push(new Date(y, 0, 1).getTime());
-            }
-
-            // Grid lines
-            const gridVals = [maxVal * 0.25, maxVal * 0.5, maxVal * 0.75, maxVal].map(v => ({ v, y: toY(v) }));
-
-            return (
-              <div style={{ padding: "34px 4px 8px" }}>
-                <div className="flex justify-between items-center mb-4">
-                  <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Jak rosteš v čase</div>
-                  <div className="flex gap-5" style={{ fontSize: 12, fontWeight: 600, color: "#5c6359" }}>
-                    {[{ color: "#1f3d2e", label: "Equity" }, { color: "#c39a3f", label: "Hodnota" }, { color: "#b08c7a", label: "Dluh" }].map(({ color, label }) => (
-                      <span key={label} className="inline-flex items-center gap-[7px]">
-                        <span style={{ width: 18, height: 3, borderRadius: 2, background: color, display: "inline-block" }} />{label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="250" style={{ display: "block", overflow: "visible" }}>
-                  <defs>
-                    <linearGradient id="eqfill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#1f3d2e" stopOpacity="0.15" />
-                      <stop offset="100%" stopColor="#1f3d2e" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  {/* Grid */}
-                  {gridVals.map(({ y }, i) => <line key={i} x1={PAD_L} y1={y.toFixed(1)} x2={W - PAD_R} y2={y.toFixed(1)} stroke="#d8d0bd" strokeWidth="1" />)}
-                  {/* Y axis labels */}
-                  {gridVals.map(({ v, y }, i) => (
-                    <text key={i} x={PAD_L - 4} y={y + 4} textAnchor="end" fontSize="9" fill="#9a9483">{fmtMil(v)}M</text>
-                  ))}
-                  {/* Today line */}
-                  <line x1={todayX.toFixed(1)} y1={PAD_T} x2={todayX.toFixed(1)} y2={H - PAD_B} stroke="#c9a24b" strokeWidth="1.5" strokeDasharray="4 3" />
-                  <text x={todayX + 4} y={PAD_T + 10} fontSize="9" fill="#c9a24b" fontWeight="600">dnes</text>
-                  {/* Equity fill */}
-                  <polygon points={equityFill} fill="url(#eqfill)" />
-                  {/* Lines */}
-                  <polyline points={debtPts} fill="none" stroke="#b08c7a" strokeWidth="2" />
-                  <polyline points={valuePts} fill="none" stroke="#c39a3f" strokeWidth="2" />
-                  <polyline points={equityPts} fill="none" stroke="#1f3d2e" strokeWidth="3" />
-                  {/* Dot at today */}
-                  {(() => {
-                    const todayPoint = allPoints.find(p => p.ms >= nowMs);
-                    if (!todayPoint) return null;
-                    return <circle cx={todayX.toFixed(1)} cy={toY(todayPoint.value - todayPoint.debt).toFixed(1)} r="4.5" fill="#1f3d2e" />;
-                  })()}
-                  {/* X axis labels */}
-                  {labelMs.map((ms, i) => {
-                    const d = new Date(ms);
-                    const lbl = String(d.getFullYear());
-                    return <text key={i} x={toX(ms).toFixed(1)} y={H - 6} textAnchor="middle" fontSize="9" fill="#9a9483">{lbl}</text>;
-                  })}
-                </svg>
-              </div>
-            );
-          })()}
+          <GrowthChart properties={properties} mortgages={mortgages} />
         </section>
 
         {/* NEMOVITOSTI */}
