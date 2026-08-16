@@ -1542,6 +1542,7 @@ export default function EquityDashboard() {
               let value = 0, debt = 0;
               for (const p of properties) {
                 const growth = (p.annual_growth_pct ?? 3) / 100;
+                const purchaseMs = p.purchase_date ? new Date(p.purchase_date).getTime() : nowMs;
                 if (!p.purchase_date) {
                   // No purchase date — use estimated_value flat in history, grow in future
                   if (ms <= nowMs) {
@@ -1551,17 +1552,14 @@ export default function EquityDashboard() {
                     value += p.estimated_value * Math.pow(1 + growth, yearsAhead);
                   }
                 } else {
-                  const purchaseMs = new Date(p.purchase_date).getTime();
                   const purchasePrice = p.purchase_price ?? p.estimated_value;
                   if (ms < purchaseMs) {
                     // Property not yet purchased at this point in time — skip
                   } else if (ms <= nowMs) {
-                    // Historical: interpolate from purchasePrice to estimated_value
                     const denom = nowMs - purchaseMs || 1;
                     const t = Math.min(1, (ms - purchaseMs) / denom);
                     value += purchasePrice + t * (p.estimated_value - purchasePrice);
                   } else {
-                    // Future: project with growth
                     const yearsAhead = (ms - nowMs) / (365 * 86400000);
                     value += p.estimated_value * Math.pow(1 + growth, yearsAhead);
                   }
