@@ -477,20 +477,25 @@ function PaymentModal({
 // ── Growth Chart ─────────────────────────────────────────────────────────────
 function GrowthChart({ properties, mortgages }: { properties: Property[]; mortgages: Mortgage[] }) {
   const [hoverIdx, setHoverIdx] = React.useState<number | null>(null);
+  const [range, setRange] = React.useState<"5" | "10" | "all">("all");
   const svgRef = React.useRef<SVGSVGElement>(null);
 
-  const W = 600, H = 240, PAD_L = 40, PAD_R = 20, PAD_T = 20, PAD_B = 30;
+  const W = 600, H = 240, PAD_L = 40, PAD_R = 50, PAD_T = 20, PAD_B = 30;
   const nowMs = Date.now();
   const FUTURE_YEARS = 5;
 
-  let minMs = nowMs;
+  let earliestMs = nowMs;
   for (const p of properties) {
     if (p.purchase_date) {
       const ms = new Date(p.purchase_date).getTime();
-      if (ms < minMs) minMs = ms;
+      if (ms < earliestMs) earliestMs = ms;
     }
   }
-  if (minMs === nowMs) minMs = nowMs - 2 * 365 * 86400000;
+  if (earliestMs === nowMs) earliestMs = nowMs - 2 * 365 * 86400000;
+
+  const minMs = range === "all" ? earliestMs
+    : range === "10" ? Math.max(earliestMs, nowMs - 10 * 365 * 86400000)
+    : Math.max(earliestMs, nowMs - 5 * 365 * 86400000);
   const maxMs = nowMs + FUTURE_YEARS * 365 * 86400000;
   const totalMs = maxMs - minMs;
 
@@ -531,12 +536,16 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
 
   const maxVal = Math.max(...allPoints.map(p => p.value));
   const minVal = Math.min(...allPoints.map(p => Math.min(p.value - p.debt, 0)));
-  const range = maxVal - minVal || 1;
+  const valRange = maxVal - minVal || 1;
   const toX = (ms: number) => PAD_L + ((ms - minMs) / totalMs) * (W - PAD_L - PAD_R);
-  const toY = (v: number) => PAD_T + (1 - (v - minVal) / range) * (H - PAD_T - PAD_B);
+  const toY = (v: number) => PAD_T + (1 - (v - minVal) / valRange) * (H - PAD_T - PAD_B);
+
+  // Right axis for debt
+  const maxDebt = Math.max(...allPoints.map(p => p.debt), 1);
+  const toYDebt = (v: number) => PAD_T + (1 - v / maxDebt) * (H - PAD_T - PAD_B);
 
   const valuePts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value).toFixed(1)}`).join(" ");
-  const debtPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.debt).toFixed(1)}`).join(" ");
+  const debtPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toYDebt(p.debt).toFixed(1)}`).join(" ");
   const equityPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value - p.debt).toFixed(1)}`).join(" ");
   const equityFill = equityPts + ` ${toX(maxMs).toFixed(1)},${toY(minVal).toFixed(1)} ${toX(minMs).toFixed(1)},${toY(minVal).toFixed(1)}`;
   const todayX = toX(nowMs);
@@ -548,6 +557,14 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
   for (let y = firstLabel; y <= endYear; y += 5) labelMs.push(new Date(y, 0, 1).getTime());
 
   const gridVals = [maxVal * 0.25, maxVal * 0.5, maxVal * 0.75, maxVal].map(v => ({ v, y: toY(v) }));
+  const debtGridVals = [maxDebt * 0.5, maxDebt].map(v => ({ v, y: toYDebt(v) }));
+
+  // Average annual equity growth (from first point with value > 0 to today)
+  const firstPt = allPoints.find(p => p.value - p.debt > 0);
+  const todayPt = allPoints.find(p => p.ms >= nowMs);
+  const avgGrowthPct = firstPt && todayPt && firstPt.ms < todayPt.ms && firstPt.value - firstPt.debt > 0
+    ? (Math.pow((todayPt.value - todayPt.debt) / (firstPt.value - firstPt.debt), 1 / ((todayPt.ms - firstPt.ms) / (365 * 86400000))) - 1) * 100
+    : null;
 
   const purchaseMarkers: { ms: number }[] = [];
   const seenDates = new Set<string>();
@@ -574,14 +591,28 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
 
   return (
     <div style={{ padding: "34px 4px 8px" }}>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-3">
         <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>{"Jak rosteš v čase"}</div>
-        <div className="flex gap-5" style={{ fontSize: 12, fontWeight: 600, color: "#5c6359" }}>
-          {([{ color: "#1f3d2e", label: "Majetek" }, { color: "#c39a3f", label: "Hodnota portfolia" }, { color: "#b08c7a", label: "Dluh" }] as {color:string;label:string}[]).map(({ color, label }) => (
-            <span key={label} className="inline-flex items-center gap-[7px]">
-              <span style={{ width: 18, height: 3, borderRadius: 2, background: color, display: "inline-block" }} />{label}
-            </span>
-          ))}
+        <div className="flex items-center gap-4">
+          {/* Range switcher */}
+          <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 16, padding: 2 }}>
+            {(["5", "10", "all"] as const).map(r => (
+              <button key={r} onClick={() => setRange(r)}
+                style={{ padding: "3px 10px", borderRadius: 14, border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                  background: range === r ? "#1f3d2e" : "transparent",
+                  color: range === r ? "#f5f1e6" : "#5c6359" }}>
+                {r === "all" ? "Vše" : `${r} let`}
+              </button>
+            ))}
+          </div>
+          {/* Legend */}
+          <div className="flex gap-4" style={{ fontSize: 11, fontWeight: 600, color: "#5c6359" }}>
+            {([{ color: "#1f3d2e", label: "Majetek" }, { color: "#c39a3f", label: "Hodnota portfolia" }, { color: "#b08c7a", label: "Dluh" }] as {color:string;label:string}[]).map(({ color, label }) => (
+              <span key={label} className="inline-flex items-center gap-[6px]">
+                <span style={{ width: 14, height: 3, borderRadius: 2, background: color, display: "inline-block" }} />{label}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
       <div style={{ position: "relative" }}>
@@ -594,12 +625,19 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
               <stop offset="100%" stopColor="#1f3d2e" stopOpacity="0" />
             </linearGradient>
           </defs>
+          {/* Left grid + axis */}
           {gridVals.map(({ y }, i) => <line key={i} x1={PAD_L} y1={y.toFixed(1)} x2={W - PAD_R} y2={y.toFixed(1)} stroke="#d8d0bd" strokeWidth="1" />)}
           {gridVals.map(({ v, y }, i) => (
             <text key={i} x={PAD_L - 4} y={y + 4} textAnchor="end" fontSize="9" fill="#9a9483">{fmtMil(v)}M</text>
           ))}
+          {/* Right axis for debt */}
+          {debtGridVals.map(({ v, y }, i) => (
+            <text key={i} x={W - PAD_R + 4} y={y + 4} textAnchor="start" fontSize="9" fill="#b08c7a">{fmtMil(v)}M</text>
+          ))}
+          {/* Today line */}
           <line x1={todayX.toFixed(1)} y1={PAD_T} x2={todayX.toFixed(1)} y2={H - PAD_B} stroke="#c9a24b" strokeWidth="1.5" strokeDasharray="4 3" />
           <text x={todayX + 4} y={PAD_T + 10} fontSize="9" fill="#c9a24b" fontWeight="600">dnes</text>
+          {/* Chart lines */}
           <polygon points={equityFill} fill="url(#eqfill)" />
           <polyline points={debtPts} fill="none" stroke="#b08c7a" strokeWidth="2" />
           <polyline points={valuePts} fill="none" stroke="#c39a3f" strokeWidth="2" />
@@ -609,6 +647,7 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
             if (!tp) return null;
             return <circle cx={todayX.toFixed(1)} cy={toY(tp.value - tp.debt).toFixed(1)} r="4.5" fill="#1f3d2e" />;
           })()}
+          {/* Purchase markers */}
           {purchaseMarkers.map((m, i) => {
             const x = toX(m.ms);
             return (
@@ -618,15 +657,19 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
               </g>
             );
           })}
+          {/* X axis labels */}
           {labelMs.map((ms, i) => (
             <text key={i} x={toX(ms).toFixed(1)} y={H - 6} textAnchor="middle" fontSize="9" fill="#9a9483">{new Date(ms).getFullYear()}</text>
           ))}
+          {/* Hover */}
           {hp && <line x1={hpX.toFixed(1)} y1={PAD_T} x2={hpX.toFixed(1)} y2={H - PAD_B} stroke="#888" strokeWidth="1" strokeDasharray="3 2" opacity="0.5" />}
           {hp && <>
             <circle cx={hpX.toFixed(1)} cy={toY(hp.value).toFixed(1)} r="3.5" fill="#c39a3f" />
             <circle cx={hpX.toFixed(1)} cy={toY(hp.value - hp.debt).toFixed(1)} r="3.5" fill="#1f3d2e" />
+            <circle cx={hpX.toFixed(1)} cy={toYDebt(hp.debt).toFixed(1)} r="3" fill="#b08c7a" />
           </>}
         </svg>
+        {/* Tooltip */}
         {hp && (
           <div style={{
             position: "absolute",
@@ -640,13 +683,20 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
               {new Date(hp.ms).toLocaleDateString("cs-CZ", { month: "short", year: "numeric" })}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <div><span style={{ color: "#c39a3f" }}>Hodnota portfolia</span>{"  "}{fmtMil(hp.value)} mil</div>
-              <div><span style={{ color: "#9ab8a0" }}>Dluh</span>{"  "}{fmtMil(hp.debt)} mil</div>
-              <div><span style={{ color: "#6fcf8a" }}>Majetek</span>{"  "}{fmtMil(hp.value - hp.debt)} mil</div>
+              <div><span style={{ color: "#c39a3f" }}>{"Hodnota portfolia"}</span>{"  "}{fmtMil(hp.value)} mil</div>
+              <div><span style={{ color: "#b08c7a" }}>{"Dluh"}</span>{"  "}{fmtMil(hp.debt)} mil</div>
+              <div><span style={{ color: "#6fcf8a" }}>{"Majetek"}</span>{"  "}{fmtMil(hp.value - hp.debt)} mil</div>
             </div>
           </div>
         )}
       </div>
+      {/* Avg annual growth stat */}
+      {avgGrowthPct !== null && (
+        <div style={{ marginTop: 10, display: "flex", gap: 24, fontSize: 12, color: "#7c8378" }}>
+          <span>{"Průměrný roční růst majetku:"} <strong style={{ color: avgGrowthPct >= 0 ? "#4a7c59" : "#c0392b" }}>{avgGrowthPct >= 0 ? "+" : ""}{avgGrowthPct.toFixed(1)} %</strong></span>
+          {todayPt && <span>{"Majetek dnes:"} <strong style={{ color: "#1c2b22" }}>{fmtMil(todayPt.value - todayPt.debt)} mil {"Kč"}</strong></span>}
+        </div>
+      )}
     </div>
   );
 }
