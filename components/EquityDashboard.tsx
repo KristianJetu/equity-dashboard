@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/auth";
@@ -101,7 +101,7 @@ const NAV_ITEMS = [
     icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="7" y1="15" x2="11" y2="15" /></svg>,
   },
   {
-    id: "najemnici", title: "NĂˇjemnĂ­ci",
+    id: "najemnici", title: "Nájemníci",
     icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
   },
   {
@@ -120,8 +120,8 @@ const NAV_ITEMS = [
 
 function statusBadge(status: string) {
   if (status === "rented") return { label: "Pronajato", cls: "text-[#1f3d2e] bg-[#d6e4d6]" };
-  if (status === "vacant") return { label: "VolnĂ©", cls: "text-[#a07b2f] bg-[#efe3c6]" };
-  return { label: "PlĂˇnovĂˇno", cls: "text-[#7c8378] bg-[#e6e0d0]" };
+  if (status === "vacant") return { label: "Volné", cls: "text-[#a07b2f] bg-[#efe3c6]" };
+  return { label: "Plánováno", cls: "text-[#7c8378] bg-[#e6e0d0]" };
 }
 
 function daysUntil(dateStr: string): number {
@@ -144,17 +144,17 @@ function daysLate(paymentDate: string, month: string, dueDay: number): number {
 }
 function matchTypeLabel(t?: string) {
   if (t === "auto") return { label: "Automaticky", color: "#1f3d2e", bg: "#d6e4d6" };
-  if (t === "manual") return { label: "RuÄŤnÄ›", color: "#a07b2f", bg: "#efe3c6" };
-  return { label: "NespĂˇrovĂˇno", color: "#c0392b", bg: "#fde8e8" };
+  if (t === "manual") return { label: "Ručně", color: "#a07b2f", bg: "#efe3c6" };
+  return { label: "Nespárováno", color: "#c0392b", bg: "#fde8e8" };
 }
 function paymentTypeLabel(t?: string) {
   if (t === "deposit") return "Kauce";
-  if (t === "partial") return "ÄŚĂˇsteÄŤnĂˇ platba";
-  if (t === "other") return "OstatnĂ­";
-  return "NĂˇjem";
+  if (t === "partial") return "Částečná platba";
+  if (t === "other") return "Ostatní";
+  return "Nájem";
 }
 
-// â”€â”€ Property Detail Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Property Detail Modal ─────────────────────────────────────────────────────
 
 function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   property: Property;
@@ -224,7 +224,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
         interest_rate: interestRate ? Number(interestRate) : null,
         loan_term_years: loanTermYears ? Number(loanTermYears) : null,
       }).eq("id", mortgage.id);
-      if (mortErr) { console.error("mortgage save error:", mortErr); alert("Chyba pĹ™i uklĂˇdĂˇnĂ­ hypotĂ©ky: " + mortErr.message); setSaving(false); return; }
+      if (mortErr) { console.error("mortgage save error:", mortErr); alert("Chyba při ukládání hypotéky: " + mortErr.message); setSaving(false); return; }
     } else if (addMortgage && loanAmount) {
       const { data: { user } } = await supabase.auth.getUser();
       const { error: mortErr } = await supabase.from("mortgages").insert({
@@ -239,7 +239,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
         interest_rate: interestRate ? Number(interestRate) : null,
         loan_term_years: loanTermYears ? Number(loanTermYears) : null,
       });
-      if (mortErr) { console.error("mortgage insert error:", mortErr); alert("Chyba pĹ™i pĹ™idĂˇvĂˇnĂ­ hypotĂ©ky: " + mortErr.message); setSaving(false); return; }
+      if (mortErr) { console.error("mortgage insert error:", mortErr); alert("Chyba při přidávání hypotéky: " + mortErr.message); setSaving(false); return; }
     }
     setSaving(false);
     setSaved(true);
@@ -264,31 +264,31 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
         onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-start mb-6">
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 20, color: "#1c2b22" }}>Detail nemovitosti</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9a9483", fontSize: 22 }}>Ă—</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9a9483", fontSize: 22 }}>×</button>
         </div>
 
-        {field("NĂˇzev nemovitosti", name, setName, "text")}
+        {field("Název nemovitosti", name, setName, "text")}
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Typ</div>
           <select value={type} onChange={e => { setType(e.target.value); setSaved(false); }}
             style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22" }}>
             <option value="apartment">Byt</option>
-            <option value="house">DĹŻm</option>
-            <option value="garage">GarĂˇĹľ</option>
+            <option value="house">Dům</option>
+            <option value="garage">Garáž</option>
             <option value="land">Pozemek</option>
-            <option value="commercial">KomerÄŤnĂ­</option>
-            <option value="other">OstatnĂ­</option>
+            <option value="commercial">Komerční</option>
+            <option value="other">Ostatní</option>
           </select>
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>VlastnictvĂ­</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Vlastnictví</div>
           <div className="flex gap-2">
             {(["owner", "manager"] as const).map(o => (
               <button key={o} onClick={() => { setOwnershipType(o); setSaved(false); }}
                 style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `2px solid ${ownershipType === o ? "#1f3d2e" : "#d2cab4"}`, background: ownershipType === o ? "#1f3d2e" : "transparent", color: ownershipType === o ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                {o === "owner" ? "VlastnĂ­m" : "Spravuji"}
+                {o === "owner" ? "Vlastním" : "Spravuji"}
               </button>
             ))}
           </div>
@@ -300,66 +300,66 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
             {(["rented", "vacant", "planned"] as const).map(s => (
               <button key={s} onClick={() => { setStatus(s); setSaved(false); }}
                 style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `2px solid ${status === s ? "#1f3d2e" : "#d2cab4"}`, background: status === s ? "#1f3d2e" : "transparent", color: status === s ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                {s === "rented" ? "Pronajato" : s === "vacant" ? "VolnĂ©" : "PlĂˇnovĂˇno"}
+                {s === "rented" ? "Pronajato" : s === "vacant" ? "Volné" : "Plánováno"}
               </button>
             ))}
           </div>
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>PoznĂˇmky</div>
-          <textarea value={notes} onChange={e => { setNotes(e.target.value); setSaved(false); }} placeholder="PoznĂˇmky, technickĂ© info, kontaktyâ€¦"
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Poznámky</div>
+          <textarea value={notes} onChange={e => { setNotes(e.target.value); setSaved(false); }} placeholder="Poznámky, technické info, kontakty…"
             style={{ width: "100%", minHeight: 200, padding: "10px 13px", borderRadius: 9, border: "1.5px solid #d2cab4", background: "#fff", fontSize: 15, color: "#1c2b22", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit", lineHeight: 1.8, outline: "none" }} />
         </div>
 
         <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Nemovitost</div>
-        {field("Hodnota nemovitosti", estimatedValue, setEstimatedValue, "number", "KÄŤ")}
-        {field("VĂ˝Ĺˇe nĂˇjmu", rentAmount, setRentAmount, "number", "KÄŤ / mÄ›s")}
-        {field("Den splatnosti nĂˇjmu", rentDueDay, setRentDueDay, "number", "v mÄ›sĂ­ci")}
-        {field("Datum koupÄ›", purchaseDate, setPurchaseDate, "date")}
-        {field("KupnĂ­ cena", purchasePrice, setPurchasePrice, "number", "KÄŤ")}
-        {field("OdhadovanĂ˝ roÄŤnĂ­ rĹŻst hodnoty", annualGrowthPct, setAnnualGrowthPct, "number", "% / rok")}
+        {field("Hodnota nemovitosti", estimatedValue, setEstimatedValue, "number", "Kč")}
+        {field("Výše nájmu", rentAmount, setRentAmount, "number", "Kč / měs")}
+        {field("Den splatnosti nájmu", rentDueDay, setRentDueDay, "number", "v měsíci")}
+        {field("Datum koupě", purchaseDate, setPurchaseDate, "date")}
+        {field("Kupní cena", purchasePrice, setPurchasePrice, "number", "Kč")}
+        {field("Odhadovaný roční růst hodnoty", annualGrowthPct, setAnnualGrowthPct, "number", "% / rok")}
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, marginTop: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em" }}>HypotĂ©ka</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em" }}>Hypotéka</div>
           {!mortgage && !addMortgage && (
             <button onClick={() => setAddMortgage(true)}
               style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e", background: "none", border: "1px solid #1f3d2e", borderRadius: 6, padding: "3px 10px", cursor: "pointer" }}>
-              + PĹ™idat
+              + Přidat
             </button>
           )}
         </div>
         {(mortgage || addMortgage) && <>
-          {field("VĂ˝Ĺˇe ĂşvÄ›ru", loanAmount, setLoanAmount, "number", "KÄŤ")}
-          {field("Datum ÄŤerpĂˇnĂ­", loanStartDate, setLoanStartDate, "date")}
-          {field("ĂšrokovĂˇ sazba", interestRate, setInterestRate, "number", "%")}
+          {field("Výše úvěru", loanAmount, setLoanAmount, "number", "Kč")}
+          {field("Datum čerpání", loanStartDate, setLoanStartDate, "date")}
+          {field("Úroková sazba", interestRate, setInterestRate, "number", "%")}
           {field("Splatnost", loanTermYears, setLoanTermYears, "number", "let")}
-          {field("MÄ›sĂ­ÄŤnĂ­ splĂˇtka", monthlyPayment, setMonthlyPayment, "number", "KÄŤ / mÄ›s")}
+          {field("Měsíční splátka", monthlyPayment, setMonthlyPayment, "number", "Kč / měs")}
           {field("Konec fixace", refixDate, setRefixDate, "date")}
         </>}
 
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>NĂˇjemnĂ­ smlouva</div>
-        {field("ZaÄŤĂˇtek nĂˇjmu", leaseStart, setLeaseStart, "date")}
-        {field("Konec nĂˇjmu", leaseEnd, setLeaseEnd, "date")}
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Nájemní smlouva</div>
+        {field("Začátek nájmu", leaseStart, setLeaseStart, "date")}
+        {field("Konec nájmu", leaseEnd, setLeaseEnd, "date")}
 
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>PojiĹˇtÄ›nĂ­</div>
-        {field("PojiĹˇĹĄovna", insuranceCompany, setInsuranceCompany, "text")}
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Pojištění</div>
+        {field("Pojišťovna", insuranceCompany, setInsuranceCompany, "text")}
         {field("Platnost od", insuranceFrom, setInsuranceFrom, "date")}
         {field("Platnost do", insuranceTo, setInsuranceTo, "date")}
-        {field("RoÄŤnĂ­ pojistnĂ©", insuranceAmount, setInsuranceAmount, "number", "KÄŤ / rok")}
+        {field("Roční pojistné", insuranceAmount, setInsuranceAmount, "number", "Kč / rok")}
         {field("Odkaz na smlouvu", insuranceUrl, setInsuranceUrl, "url")}
 
         <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Dokumenty</div>
         {field("Odkaz na dokument", documentUrl, setDocumentUrl, "url")}
 
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>NĂˇklady</div>
-        {field("MÄ›sĂ­ÄŤnĂ­ nĂˇklady (pauĹˇĂˇl)", monthlyCosts, setMonthlyCosts, "number", "KÄŤ / mÄ›s")}
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Náklady</div>
+        {field("Měsíční náklady (paušál)", monthlyCosts, setMonthlyCosts, "number", "Kč / měs")}
 
         <div className="flex gap-3 justify-end mt-4">
-          <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>ZavĹ™Ă­t</button>
+          <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>Zavřít</button>
           <button onClick={handleSave} disabled={saving}
             style={{ padding: "9px 18px", borderRadius: 8, border: "none", background: saved ? "#2d6a4f" : "#1f3d2e", fontSize: 14, fontWeight: 600, color: "#f5f1e6", cursor: "pointer", opacity: saving ? 0.7 : 1 }}>
-            {saved ? "âś“ UloĹľeno" : saving ? "UklĂˇdĂˇmâ€¦" : "UloĹľit"}
+            {saved ? "✓ Uloženo" : saving ? "Ukládám…" : "Uložit"}
           </button>
         </div>
       </div>
@@ -367,7 +367,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   );
 }
 
-// â”€â”€ Payment Detail Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Payment Detail Modal ──────────────────────────────────────────────────────
 function PaymentModal({
   payment, properties, supabase, onClose, onSave,
 }: {
@@ -402,15 +402,15 @@ function PaymentModal({
             </div>
             <div style={{ fontSize: 13, color: "#7c8378", marginTop: 2 }}>{monthLabel(payment.month)}</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9a9483", fontSize: 22, lineHeight: 1 }}>Ă—</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9a9483", fontSize: 22, lineHeight: 1 }}>×</button>
         </div>
 
-        {/* ÄŚĂˇstky */}
+        {/* Částky */}
         <div className="flex gap-3 mb-6">
           {[
-            { label: "NĂˇjem", value: `+${fmt(payment.rent_received)} KÄŤ`, color: "#1f3d2e" },
-            { label: "VĂ˝daje", value: `â’${fmt(payment.mortgage_payment)} KÄŤ`, color: "#a07b2f" },
-            { label: "ÄŚistĂ˝ zisk", value: `${payment.net_cashflow >= 0 ? "+" : ""}${fmt(payment.net_cashflow)} KÄŤ`, color: payment.net_cashflow >= 0 ? "#1f3d2e" : "#c0392b" },
+            { label: "Nájem", value: `+${fmt(payment.rent_received)} Kč`, color: "#1f3d2e" },
+            { label: "Výdaje", value: `−${fmt(payment.mortgage_payment)} Kč`, color: "#a07b2f" },
+            { label: "Čistý zisk", value: `${payment.net_cashflow >= 0 ? "+" : ""}${fmt(payment.net_cashflow)} Kč`, color: payment.net_cashflow >= 0 ? "#1f3d2e" : "#c0392b" },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ flex: 1, background: "#ece6d8", borderRadius: 10, padding: "12px 14px" }}>
               <div style={{ fontSize: 11, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{label}</div>
@@ -419,12 +419,12 @@ function PaymentModal({
           ))}
         </div>
 
-        {/* OdesĂ­latel + poznĂˇmky k nĂˇjemnĂ­kovi */}
+        {/* Odesílatel + poznámky k nájemníkovi */}
         {(payment.sender_name || payment.sender_account) && (
           <div style={{ background: "#ece6d8", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>OdesĂ­latel</div>
+            <div style={{ fontSize: 11, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Odesílatel</div>
             {payment.sender_name && <div style={{ fontSize: 14, fontWeight: 600, color: "#1c2b22" }}>{payment.sender_name}</div>}
-            {payment.sender_account && <div style={{ fontSize: 13, color: "#7c8378", marginTop: 2 }}>ĂšÄŤet: {payment.sender_account}</div>}
+            {payment.sender_account && <div style={{ fontSize: 13, color: "#7c8378", marginTop: 2 }}>Účet: {payment.sender_account}</div>}
           </div>
         )}
 
@@ -434,12 +434,12 @@ function PaymentModal({
           <span style={{ fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 20, color: "#5c6359", background: "#e6e0d0" }}>{paymentTypeLabel(payment.payment_type)}</span>
         </div>
 
-        {/* PĹ™iĹ™azenĂ­ nemovitosti */}
+        {/* Přiřazení nemovitosti */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>PĹ™iĹ™azenĂˇ nemovitost</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Přiřazená nemovitost</div>
           <select value={selectedProperty} onChange={(e) => setSelectedProperty(e.target.value)}
             style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", cursor: "pointer" }}>
-            <option value="">â€” NevybrĂˇno â€”</option>
+            <option value="">— Nevybráno —</option>
             {properties.filter(p => p.status !== "planned").map(p => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -449,7 +449,7 @@ function PaymentModal({
         {/* Raw email */}
         {payment.raw_email_text && (
           <details style={{ marginBottom: 20 }}>
-            <summary style={{ fontSize: 12, fontWeight: 600, color: "#9a9483", cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.06em" }}>PĹŻvodnĂ­ email</summary>
+            <summary style={{ fontSize: 12, fontWeight: 600, color: "#9a9483", cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.06em" }}>Původní email</summary>
             <pre style={{ fontSize: 11, color: "#7c8378", background: "#ece6d8", borderRadius: 8, padding: "12px", marginTop: 8, whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 200, overflowY: "auto" }}>
               {payment.raw_email_text}
             </pre>
@@ -460,11 +460,11 @@ function PaymentModal({
         <div className="flex gap-3 justify-end">
           <button onClick={onClose}
             style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>
-            ZavĹ™Ă­t
+            Zavřít
           </button>
           <button onClick={handleSave} disabled={!selectedProperty || saving}
             style={{ padding: "9px 18px", borderRadius: 8, border: "none", background: selectedProperty ? "#1f3d2e" : "#c5bfb0", fontSize: 14, fontWeight: 600, color: "#f5f1e6", cursor: selectedProperty ? "pointer" : "not-allowed" }}>
-            {saving ? "UklĂˇdĂˇmâ€¦" : "UloĹľit pĹ™iĹ™azenĂ­"}
+            {saving ? "Ukládám…" : "Uložit přiřazení"}
           </button>
         </div>
       </div>
@@ -474,208 +474,7 @@ function PaymentModal({
 
 
 
-// â”€â”€ Growth Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function GrowthChart({ properties, mortgages }: { properties: Property[]; mortgages: Mortgage[] }) {
-  const [hoverIdx, setHoverIdx] = React.useState<number | null>(null);
-  const svgRef = React.useRef<SVGSVGElement>(null);
-
-  const W = 600, H = 240, PAD_L = 40, PAD_R = 20, PAD_T = 20, PAD_B = 30;
-  const nowMs = Date.now();
-  const FUTURE_YEARS = 5;
-
-  let minMs = nowMs;
-  for (const p of properties) {
-    if (p.purchase_date) {
-      const ms = new Date(p.purchase_date).getTime();
-      if (ms < minMs) minMs = ms;
-    }
-  }
-  if (minMs === nowMs) minMs = nowMs - 2 * 365 * 86400000;
-  const maxMs = nowMs + FUTURE_YEARS * 365 * 86400000;
-  const totalMs = maxMs - minMs;
-
-  type Pt = { ms: number; value: number; debt: number };
-  const allPoints: Pt[] = [];
-  const MONTHS = Math.round(totalMs / (30 * 86400000));
-  for (let i = 0; i <= MONTHS; i++) {
-    const ms = minMs + (i / MONTHS) * totalMs;
-    let value = 0, debt = 0;
-    for (const p of properties) {
-      const growth = (p.annual_growth_pct ?? 3) / 100;
-      const purchaseMs = p.purchase_date ? new Date(p.purchase_date).getTime() : nowMs;
-      if (!p.purchase_date) {
-        value += ms <= nowMs ? p.estimated_value : p.estimated_value * Math.pow(1 + growth, (ms - nowMs) / (365 * 86400000));
-      } else {
-        const purchasePrice = p.purchase_price ?? p.estimated_value;
-        if (ms < purchaseMs) {
-          // not yet purchased
-        } else if (ms <= nowMs) {
-          const t = Math.min(1, (ms - purchaseMs) / (nowMs - purchaseMs || 1));
-          value += purchasePrice + t * (p.estimated_value - purchasePrice);
-        } else {
-          value += p.estimated_value * Math.pow(1 + growth, (ms - nowMs) / (365 * 86400000));
-        }
-      }
-      const mort = mortgages.find(m => m.property_id === p.id);
-      if (mort) {
-        const loanMs = mort.loan_start_date ? new Date(mort.loan_start_date).getTime() : purchaseMs;
-        const termMs = (mort.loan_term_years ?? 30) * 365 * 86400000;
-        const loanAmt = mort.loan_amount ?? mort.outstanding_balance;
-        debt += Math.max(0, loanAmt * (1 - Math.max(0, Math.min(1, (ms - loanMs) / termMs))));
-      }
-    }
-    allPoints.push({ ms, value, debt });
-  }
-
-  if (allPoints.length === 0) return null;
-
-  const maxVal = Math.max(...allPoints.map(p => p.value));
-  const minVal = Math.min(...allPoints.map(p => Math.min(p.value - p.debt, 0)));
-  const range = maxVal - minVal || 1;
-  const toX = (ms: number) => PAD_L + ((ms - minMs) / totalMs) * (W - PAD_L - PAD_R);
-  const toY = (v: number) => PAD_T + (1 - (v - minVal) / range) * (H - PAD_T - PAD_B);
-
-  const valuePts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value).toFixed(1)}`).join(" ");
-  const debtPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.debt).toFixed(1)}`).join(" ");
-  const equityPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value - p.debt).toFixed(1)}`).join(" ");
-  const equityFill = equityPts + ` ${toX(maxMs).toFixed(1)},${toY(minVal).toFixed(1)} ${toX(minMs).toFixed(1)},${toY(minVal).toFixed(1)}`;
-  const todayX = toX(nowMs);
-
-  const startYear = new Date(minMs).getFullYear();
-  const endYear = new Date(maxMs).getFullYear();
-  const labelMs: number[] = [];
-  const firstLabel = Math.ceil(startYear / 5) * 5;
-  for (let y = firstLabel; y <= endYear; y += 5) labelMs.push(new Date(y, 0, 1).getTime());
-
-  const gridVals = [maxVal * 0.25, maxVal * 0.5, maxVal * 0.75, maxVal].map(v => ({ v, y: toY(v) }));
-
-  // Purchase markers â€” unique dates, past only
-  const purchaseMarkers = Array.from(
-    new Map(properties.filter(p => p.purchase_date && new Date(p.purchase_date).getTime() <= nowMs)
-      .map(p => [p.purchase_date!, { ms: new Date(p.purchase_date!).getTime(), names: [] as string[] }]))
-      .values()
-  );
-  for (const p of properties) {
-    if (!p.purchase_date) continue;
-    const marker = purchaseMarkers.find(m => m.ms === new Date(p.purchase_date!).getTime());
-    if (marker) marker.names.push(p.name);
-  }
-
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const svgX = ((e.clientX - rect.left) / rect.width) * W;
-    const ms = minMs + ((svgX - PAD_L) / (W - PAD_L - PAD_R)) * totalMs;
-    const idx = allPoints.reduce((best, p, i) =>
-      Math.abs(p.ms - ms) < Math.abs(allPoints[best].ms - ms) ? i : best, 0);
-    setHoverIdx(idx);
-  };
-
-  const hp = hoverIdx !== null ? allPoints[hoverIdx] : null;
-  const hpX = hp ? toX(hp.ms) : 0;
-  const tooltipRight = hpX > W * 0.6;
-
-  return (
-    <div style={{ padding: "34px 4px 8px" }}>
-      <div className="flex justify-between items-center mb-4">
-        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Jak rosteĹˇ v ÄŤase</div>
-        <div className="flex gap-5" style={{ fontSize: 12, fontWeight: 600, color: "#5c6359" }}>
-          {[{ color: "#1f3d2e", label: "Equity" }, { color: "#c39a3f", label: "Hodnota" }, { color: "#b08c7a", label: "Dluh" }].map(({ color, label }) => (
-            <span key={label} className="inline-flex items-center gap-[7px]">
-              <span style={{ width: 18, height: 3, borderRadius: 2, background: color, display: "inline-block" }} />{label}
-            </span>
-          ))}
-        </div>
-      </div>
-      <div style={{ position: "relative" }}>
-        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width="100%" height="250"
-          style={{ display: "block", overflow: "visible", cursor: "crosshair" }}
-          onMouseMove={handleMouseMove} onMouseLeave={() => setHoverIdx(null)}>
-          <defs>
-            <linearGradient id="eqfill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#1f3d2e" stopOpacity="0.15" />
-              <stop offset="100%" stopColor="#1f3d2e" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          {gridVals.map(({ y }, i) => <line key={i} x1={PAD_L} y1={y.toFixed(1)} x2={W - PAD_R} y2={y.toFixed(1)} stroke="#d8d0bd" strokeWidth="1" />)}
-          {gridVals.map(({ v, y }, i) => (
-            <text key={i} x={PAD_L - 4} y={y + 4} textAnchor="end" fontSize="9" fill="#9a9483">{fmtMil(v)}M</text>
-          ))}
-          {/* Today line */}
-          <line x1={todayX.toFixed(1)} y1={PAD_T} x2={todayX.toFixed(1)} y2={H - PAD_B} stroke="#c9a24b" strokeWidth="1.5" strokeDasharray="4 3" />
-          <text x={todayX + 4} y={PAD_T + 10} fontSize="9" fill="#c9a24b" fontWeight="600">dnes</text>
-          {/* Equity fill */}
-          <polygon points={equityFill} fill="url(#eqfill)" />
-          {/* Lines */}
-          <polyline points={debtPts} fill="none" stroke="#b08c7a" strokeWidth="2" />
-          <polyline points={valuePts} fill="none" stroke="#c39a3f" strokeWidth="2" />
-          <polyline points={equityPts} fill="none" stroke="#1f3d2e" strokeWidth="3" />
-          {/* Today dot */}
-          {(() => {
-            const tp = allPoints.find(p => p.ms >= nowMs);
-            if (!tp) return null;
-            return <circle cx={todayX.toFixed(1)} cy={toY(tp.value - tp.debt).toFixed(1)} r="4.5" fill="#1f3d2e" />;
-          })()}
-          {/* Purchase markers */}
-          {purchaseMarkers.map((m, i) => {
-            const x = toX(m.ms);
-            return (
-              <g key={i}>
-                <line x1={x.toFixed(1)} y1={(H - PAD_B).toFixed(1)} x2={x.toFixed(1)} y2={(H - PAD_B + 6).toFixed(1)} stroke="#c39a3f" strokeWidth="2" />
-                <circle cx={x.toFixed(1)} cy={(H - PAD_B + 8).toFixed(1)} r="3" fill="#c39a3f" opacity="0.8" />
-              </g>
-            );
-          })}
-          {/* X axis labels */}
-          {labelMs.map((ms, i) => (
-            <text key={i} x={toX(ms).toFixed(1)} y={H - 6} textAnchor="middle" fontSize="9" fill="#9a9483">{new Date(ms).getFullYear()}</text>
-          ))}
-          {/* Hover line */}
-          {hp && (
-            <line x1={hpX.toFixed(1)} y1={PAD_T} x2={hpX.toFixed(1)} y2={H - PAD_B} stroke="#888" strokeWidth="1" strokeDasharray="3 2" opacity="0.5" />
-          )}
-          {/* Hover dots */}
-          {hp && (
-            <>
-              <circle cx={hpX.toFixed(1)} cy={toY(hp.value).toFixed(1)} r="3.5" fill="#c39a3f" />
-              <circle cx={hpX.toFixed(1)} cy={toY(hp.value - hp.debt).toFixed(1)} r="3.5" fill="#1f3d2e" />
-            </>
-          )}
-        </svg>
-        {/* Tooltip */}
-        {hp && (
-          <div style={{
-            position: "absolute",
-            top: `${(toY(hp.value) / H * 250 - 10).toFixed(0)}px`,
-            ...(tooltipRight ? { right: `${((W - hpX) / W * 100).toFixed(1)}%` } : { left: `${(hpX / W * 100 + 1).toFixed(1)}%` }),
-            background: "#1c2b22",
-            color: "#f5f1e6",
-            borderRadius: 8,
-            padding: "8px 12px",
-            fontSize: 12,
-            fontWeight: 600,
-            pointerEvents: "none",
-            whiteSpace: "nowrap",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
-            zIndex: 10,
-          }}>
-            <div style={{ color: "#9ab8a0", fontSize: 10, marginBottom: 4 }}>
-              {new Date(hp.ms).toLocaleDateString("cs-CZ", { month: "short", year: "numeric" })}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <div><span style={{ color: "#c39a3f" }}>Hodnota</span> {fmtMil(hp.value)} mil KÄŤ</div>
-              <div><span style={{ color: "#9ab8a0" }}>Dluh</span> {fmtMil(hp.debt)} mil KÄŤ</div>
-              <div><span style={{ color: "#6fcf8a" }}>Equity</span> {fmtMil(hp.value - hp.debt)} mil KÄŤ</div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// â”€â”€ Cashflow Extra (donut + nejlepĹˇĂ­/nejhorĹˇĂ­) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Cashflow Extra (donut + nejlepší/nejhorší) ────────────────────────────────
 function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Property[]; mortgages: Mortgage[]; showPlanned: boolean }) {
   if (properties.length === 0) return null;
 
@@ -698,10 +497,10 @@ function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Pro
   const cx = 80, cy = 80, R = 60, sw = 20;
   const circ = 2 * Math.PI * R;
   const slices = [
-    { label: "SplĂˇtky", value: totalMortgage, color: "#c0392b" },
+    { label: "Splátky", value: totalMortgage, color: "#c0392b" },
     { label: "Pojistky", value: Math.round(totalInsurance), color: "#e07b39" },
-    { label: "NĂˇklady", value: totalCosts, color: "#b8860b" },
-    { label: "ÄŚistĂ˝ pĹ™Ă­jem", value: Math.max(net, 0), color: "#1f3d2e" },
+    { label: "Náklady", value: totalCosts, color: "#b8860b" },
+    { label: "Čistý příjem", value: Math.max(net, 0), color: "#1f3d2e" },
   ].filter(s => s.value > 0);
   const total = slices.reduce((s, sl) => s + sl.value, 0) || 1;
 
@@ -727,54 +526,54 @@ function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Pro
                 transform={`rotate(${sl.startAngle} ${cx} ${cy})`}
               />
             ))}
-            <text x={cx} y={cy - 7} textAnchor="middle" fill="#7c8378" fontSize="9" fontWeight="700">PĹĂŤJMY</text>
+            <text x={cx} y={cy - 7} textAnchor="middle" fill="#7c8378" fontSize="9" fontWeight="700">PŘÍJMY</text>
             <text x={cx} y={cy + 9} textAnchor="middle" fill="#1f3d2e" fontSize="13" fontWeight="800">{fmt(totalRent)}</text>
-            <text x={cx} y={cy + 23} textAnchor="middle" fill="#9a9483" fontSize="9">KÄŤ / mÄ›s</text>
+            <text x={cx} y={cy + 23} textAnchor="middle" fill="#9a9483" fontSize="9">Kč / měs</text>
             {showPlanned && (() => {
               const plannedRent = properties.filter(p => p.status === "planned").reduce((s, p) => s + p.rent_amount, 0);
               if (!plannedRent) return null;
-              return <text x={cx} y={cy + 36} textAnchor="middle" fill="#4a7c59" fontSize="8">z toho {fmt(plannedRent)} plĂˇn.</text>;
+              return <text x={cx} y={cy + 36} textAnchor="middle" fill="#4a7c59" fontSize="8">z toho {fmt(plannedRent)} plán.</text>;
             })()}
           </svg>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Struktura vĂ˝dajĹŻ</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Struktura výdajů</div>
           {slices.map(sl => (
             <div key={sl.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: sl.color, flexShrink: 0 }} />
               <span style={{ fontSize: 13, color: "#5c6359", flex: 1 }}>{sl.label}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: sl.label === "ÄŚistĂ˝ pĹ™Ă­jem" ? "#1f3d2e" : "#c0392b" }}>
-                {sl.label === "ÄŚistĂ˝ pĹ™Ă­jem" ? "+" : "â’"}{fmt(sl.value)} KÄŤ
+              <span style={{ fontSize: 13, fontWeight: 600, color: sl.label === "Čistý příjem" ? "#1f3d2e" : "#c0392b" }}>
+                {sl.label === "Čistý příjem" ? "+" : "−"}{fmt(sl.value)} Kč
               </span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* NejlepĹˇĂ­ / nejhorĹˇĂ­ */}
+      {/* Nejlepší / nejhorší */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: "1 1 200px" }}>
         <div style={{ background: "#eaf4ed", border: "1.5px solid #a8d5b5", borderRadius: 12, padding: "18px 20px" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#2d7a4f", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>đźŹ† NejlepĹˇĂ­ nemovitost</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#2d7a4f", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>🏆 Nejlepší nemovitost</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: "#1c2b22", marginBottom: 4 }}>{best.name}</div>
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 22, fontWeight: 800, color: "#1f3d2e" }}>
-            {best.netCf >= 0 ? "+" : ""}{fmt(best.netCf)} KÄŤ
+            {best.netCf >= 0 ? "+" : ""}{fmt(best.netCf)} Kč
           </div>
-          <div style={{ fontSize: 11, color: "#5a8a6a", marginTop: 2 }}>ÄŤistĂ˝ cashflow / mÄ›s</div>
+          <div style={{ fontSize: 11, color: "#5a8a6a", marginTop: 2 }}>čistý cashflow / měs</div>
         </div>
         <div style={{ background: "#fdf0ee", border: "1.5px solid #f0b8b0", borderRadius: 12, padding: "18px 20px" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#a0392b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>đź’¸ NejhorĹˇĂ­ nemovitost</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#a0392b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>💸 Nejhorší nemovitost</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: "#1c2b22", marginBottom: 4 }}>{worst.name}</div>
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 22, fontWeight: 800, color: "#c0392b" }}>
-            {worst.netCf >= 0 ? "+" : ""}{fmt(worst.netCf)} KÄŤ
+            {worst.netCf >= 0 ? "+" : ""}{fmt(worst.netCf)} Kč
           </div>
-          <div style={{ fontSize: 11, color: "#a07070", marginTop: 2 }}>ÄŤistĂ˝ cashflow / mÄ›s</div>
+          <div style={{ fontSize: 11, color: "#a07070", marginTop: 2 }}>čistý cashflow / měs</div>
         </div>
       </div>
     </div>
   );
 }
 
-// â”€â”€ Tenant Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tenant Edit Modal ─────────────────────────────────────────────────────────
 function TenantEditModal({ tenant, properties, supabase, onClose, onSaved, onDeleted }: {
   tenant: Tenant;
   properties: Property[];
@@ -815,22 +614,22 @@ function TenantEditModal({ tenant, properties, supabase, onClose, onSaved, onDel
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1f3d2e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 17, fontWeight: 700, color: "#1c2b22" }}>{tenant.name || "NĂˇjemnĂ­k"}</div>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 17, fontWeight: 700, color: "#1c2b22" }}>{tenant.name || "Nájemník"}</div>
             <div style={{ fontSize: 12, color: "#9a9483", marginTop: 1 }}>{tenant.account_number}</div>
           </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "#f0ebe1", color: "#5c6359", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>Ă—</button>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "#f0ebe1", color: "#5c6359", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>×</button>
         </div>
 
         {/* Fields */}
         <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>JmĂ©no</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>Jméno</label>
               <input value={name} onChange={e => setName(e.target.value)}
                 style={{ width: "100%", padding: "10px 13px", borderRadius: 9, border: "1.5px solid #e0d8cc", background: "#faf8f3", fontSize: 14, color: "#1c2b22", boxSizing: "border-box", outline: "none" }} />
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>ÄŚĂ­slo ĂşÄŤtu</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>Číslo účtu</label>
               <input value={account} onChange={e => setAccount(e.target.value)}
                 style={{ width: "100%", padding: "10px 13px", borderRadius: 9, border: "1.5px solid #e0d8cc", background: "#faf8f3", fontSize: 14, color: "#1c2b22", boxSizing: "border-box", outline: "none" }} />
             </div>
@@ -839,13 +638,13 @@ function TenantEditModal({ tenant, properties, supabase, onClose, onSaved, onDel
             <label style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>Nemovitost</label>
             <select value={propertyId} onChange={e => setPropertyId(e.target.value)}
               style={{ width: "100%", padding: "10px 13px", borderRadius: 9, border: "1.5px solid #e0d8cc", background: "#faf8f3", fontSize: 14, color: "#1c2b22", boxSizing: "border-box" }}>
-              <option value="">â€” nevybrĂˇno â€”</option>
+              <option value="">— nevybráno —</option>
               {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>PoznĂˇmky</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Kontakt, dohody, smlouva, referenceâ€¦"
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>Poznámky</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Kontakt, dohody, smlouva, reference…"
               style={{ width: "100%", minHeight: 260, padding: "14px 16px", borderRadius: 9, border: "1.5px solid #e0d8cc", background: "#faf8f3", fontSize: 15, color: "#1c2b22", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit", lineHeight: 1.8, outline: "none", letterSpacing: "0.01em" }} />
           </div>
         </div>
@@ -861,23 +660,23 @@ function TenantEditModal({ tenant, properties, supabase, onClose, onSaved, onDel
               </button>
               <button onClick={() => setConfirmDelete(false)}
                 style={{ fontSize: 13, padding: "7px 14px", borderRadius: 8, border: "1.5px solid #e0d8cc", background: "#faf8f3", color: "#5c6359", cursor: "pointer", fontWeight: 600 }}>
-                ZruĹˇit
+                Zrušit
               </button>
             </div>
           ) : (
             <button onClick={() => setConfirmDelete(true)}
               style={{ fontSize: 13, padding: "8px 16px", borderRadius: 8, border: "1.5px solid #f5c6c6", background: "#fff5f5", color: "#c0392b", cursor: "pointer", fontWeight: 600 }}>
-              Smazat nĂˇjemnĂ­ka
+              Smazat nájemníka
             </button>
           )}
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={onClose}
               style={{ fontSize: 13, padding: "9px 18px", borderRadius: 9, border: "1.5px solid #e0d8cc", background: "#faf8f3", color: "#5c6359", cursor: "pointer", fontWeight: 600 }}>
-              ZruĹˇit
+              Zrušit
             </button>
             <button onClick={save} disabled={saving}
               style={{ fontSize: 13, padding: "9px 22px", borderRadius: 9, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 700, opacity: saving ? 0.7 : 1 }}>
-              {saving ? "UklĂˇdĂˇmâ€¦" : "UloĹľit"}
+              {saving ? "Ukládám…" : "Uložit"}
             </button>
           </div>
         </div>
@@ -886,7 +685,7 @@ function TenantEditModal({ tenant, properties, supabase, onClose, onSaved, onDel
   );
 }
 
-// â”€â”€ Tenant Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tenant Card ───────────────────────────────────────────────────────────────
 function TenantCard({ tenant, properties, supabase, onSaved, onDeleted }: {
   tenant: Tenant;
   properties: Property[];
@@ -905,7 +704,7 @@ function TenantCard({ tenant, properties, supabase, onSaved, onDeleted }: {
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1f3d2e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, color: "#1c2b22", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tenant.name || "â€”"}</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: "#1c2b22", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tenant.name || "—"}</div>
             <div style={{ fontSize: 12, color: "#9a9483", marginTop: 1 }}>{tenant.account_number}</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
@@ -935,7 +734,7 @@ function TenantCard({ tenant, properties, supabase, onSaved, onDeleted }: {
   );
 }
 
-// â”€â”€ Add Property Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Add Property Modal ────────────────────────────────────────────────────────
 function AddPropertyModal({ supabase, onClose, onSaved }: {
   supabase: ReturnType<typeof createClient>;
   onClose: () => void;
@@ -983,10 +782,10 @@ function AddPropertyModal({ supabase, onClose, onSaved }: {
       onClick={onClose}>
       <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "28px 28px 24px", width: 460, maxWidth: "95vw", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
         onClick={e => e.stopPropagation()}>
-        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 18, color: "#1c2b22", marginBottom: 20 }}>NovĂˇ nemovitost</div>
+        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 18, color: "#1c2b22", marginBottom: 20 }}>Nová nemovitost</div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {field("NĂˇzev", name, setName, "text", "napĹ™. Byt Praha 3")}
+          {field("Název", name, setName, "text", "např. Byt Praha 3")}
           {field("Adresa", address, setAddress, "text", "")}
 
           <div>
@@ -994,21 +793,21 @@ function AddPropertyModal({ supabase, onClose, onSaved }: {
             <select value={type} onChange={e => setType(e.target.value)}
               style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22" }}>
               <option value="apartment">Byt</option>
-              <option value="house">DĹŻm</option>
-              <option value="garage">GarĂˇĹľ</option>
+              <option value="house">Dům</option>
+              <option value="garage">Garáž</option>
               <option value="land">Pozemek</option>
-              <option value="commercial">KomerÄŤnĂ­</option>
-              <option value="other">OstatnĂ­</option>
+              <option value="commercial">Komerční</option>
+              <option value="other">Ostatní</option>
             </select>
           </div>
 
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>VlastnictvĂ­</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Vlastnictví</div>
             <div style={{ display: "flex", gap: 8 }}>
               {(["owner", "manager"] as const).map(o => (
                 <button key={o} onClick={() => setOwnershipType(o)}
                   style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `2px solid ${ownershipType === o ? "#1f3d2e" : "#d2cab4"}`, background: ownershipType === o ? "#1f3d2e" : "transparent", color: ownershipType === o ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                  {o === "owner" ? "VlastnĂ­m" : "Spravuji"}
+                  {o === "owner" ? "Vlastním" : "Spravuji"}
                 </button>
               ))}
             </div>
@@ -1020,24 +819,24 @@ function AddPropertyModal({ supabase, onClose, onSaved }: {
               {(["rented", "vacant", "planned"] as const).map(s => (
                 <button key={s} onClick={() => setStatus(s)}
                   style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `2px solid ${status === s ? "#1f3d2e" : "#d2cab4"}`, background: status === s ? "#1f3d2e" : "transparent", color: status === s ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                  {s === "rented" ? "Pronajato" : s === "vacant" ? "VolnĂ©" : "PlĂˇnovĂˇno"}
+                  {s === "rented" ? "Pronajato" : s === "vacant" ? "Volné" : "Plánováno"}
                 </button>
               ))}
             </div>
           </div>
 
-          {field("OdhadovanĂˇ hodnota (KÄŤ)", estimatedValue, setEstimatedValue, "number", "0")}
-          {field("MÄ›sĂ­ÄŤnĂ­ nĂˇjem (KÄŤ)", rentAmount, setRentAmount, "number", "0")}
+          {field("Odhadovaná hodnota (Kč)", estimatedValue, setEstimatedValue, "number", "0")}
+          {field("Měsíční nájem (Kč)", rentAmount, setRentAmount, "number", "0")}
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
           <button onClick={onClose}
             style={{ fontSize: 13, padding: "8px 16px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", cursor: "pointer" }}>
-            ZruĹˇit
+            Zrušit
           </button>
           <button onClick={save} disabled={saving || !name.trim()}
             style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 600, opacity: saving || !name.trim() ? 0.6 : 1 }}>
-            {saving ? "UklĂˇdĂˇmâ€¦" : "PĹ™idat"}
+            {saving ? "Ukládám…" : "Přidat"}
           </button>
         </div>
       </div>
@@ -1045,7 +844,7 @@ function AddPropertyModal({ supabase, onClose, onSaved }: {
   );
 }
 
-// â”€â”€ Debt Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Debt Modal ────────────────────────────────────────────────────────────────
 function DebtModal({ debt, supabase, onClose, onSaved, onDeleted }: {
   debt: Debt | null;
   supabase: ReturnType<typeof createClient>;
@@ -1114,7 +913,7 @@ function DebtModal({ debt, supabase, onClose, onSaved, onDeleted }: {
       <div style={{ background: "#faf8f3", borderRadius: 16, padding: "28px 28px 24px", width: 420, maxWidth: "95vw", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
         onClick={e => e.stopPropagation()}>
         <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 18, color: "#1c2b22", marginBottom: 20 }}>
-          {debt ? "Upravit zĂˇznam" : "NovĂ˝ zĂˇznam"}
+          {debt ? "Upravit záznam" : "Nový záznam"}
         </div>
 
         <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3, marginBottom: 16 }}>
@@ -1123,19 +922,19 @@ function DebtModal({ debt, supabase, onClose, onSaved, onDeleted }: {
               style={{ flex: 1, padding: "6px 0", borderRadius: 18, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13,
                 background: form.direction === dir ? (dir === "i_owe" ? "#c0392b" : "#1f3d2e") : "transparent",
                 color: form.direction === dir ? "#f5f1e6" : "#5c6359" }}>
-              {dir === "i_owe" ? "JĂˇ dluĹľĂ­m" : "MnÄ› dluĹľĂ­"}
+              {dir === "i_owe" ? "Já dlužím" : "Mně dluží"}
             </button>
           ))}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {field("Komu / od koho", "name", "text", "napĹ™. SpotĹ™ebitelskĂ˝ ĂşvÄ›r, PĹŻjÄŤkaâ€¦")}
-          {field("ZbĂ˝vĂˇ splatit (KÄŤ)", "amount_remaining", "number", "0")}
-          {field("PĹŻvodnĂ­ ÄŤĂˇstka (KÄŤ)", "amount_original", "number", "0")}
-          {field("MÄ›sĂ­ÄŤnĂ­ splĂˇtka (KÄŤ)", "monthly_payment", "number", "")}
-          {field("ĂšrokovĂˇ sazba (%)", "interest_rate", "number", "")}
+          {field("Komu / od koho", "name", "text", "např. Spotřebitelský úvěr, Půjčka…")}
+          {field("Zbývá splatit (Kč)", "amount_remaining", "number", "0")}
+          {field("Původní částka (Kč)", "amount_original", "number", "0")}
+          {field("Měsíční splátka (Kč)", "monthly_payment", "number", "")}
+          {field("Úroková sazba (%)", "interest_rate", "number", "")}
           {field("Splatnost do", "due_date", "date", "")}
-          {field("PoznĂˇmka", "note", "text", "")}
+          {field("Poznámka", "note", "text", "")}
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 20 }}>
@@ -1150,18 +949,18 @@ function DebtModal({ debt, supabase, onClose, onSaved, onDeleted }: {
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <span style={{ fontSize: 12, color: "#7c8378" }}>Opravdu smazat?</span>
                 <button onClick={deleteDebt} style={{ fontSize: 12, color: "#c0392b", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>Ano</button>
-                <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 12, color: "#5c6359", background: "none", border: "none", cursor: "pointer" }}>ZruĹˇit</button>
+                <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 12, color: "#5c6359", background: "none", border: "none", cursor: "pointer" }}>Zrušit</button>
               </div>
             )}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={onClose}
               style={{ fontSize: 13, padding: "8px 16px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", cursor: "pointer" }}>
-              ZruĹˇit
+              Zrušit
             </button>
             <button onClick={save} disabled={saving || !form.name.trim() || !form.amount_remaining}
               style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 600, opacity: saving || !form.name.trim() || !form.amount_remaining ? 0.6 : 1 }}>
-              {saving ? "UklĂˇdĂˇmâ€¦" : "UloĹľit"}
+              {saving ? "Ukládám…" : "Uložit"}
             </button>
           </div>
         </div>
@@ -1170,7 +969,7 @@ function DebtModal({ debt, supabase, onClose, onSaved, onDeleted }: {
   );
 }
 
-// â”€â”€ Add Tenant Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Add Tenant Modal ──────────────────────────────────────────────────────────
 function AddTenantModal({ properties, supabase, onClose, onSaved }: {
   properties: Property[];
   supabase: ReturnType<typeof createClient>;
@@ -1197,7 +996,7 @@ function AddTenantModal({ properties, supabase, onClose, onSaved }: {
       user_id: user!.id,
     }).select().single();
     if (err) {
-      setError(err.code === "23505" ? "NĂˇjemnĂ­k s tĂ­mto ÄŤĂ­slem ĂşÄŤtu uĹľ existuje." : "Chyba pĹ™i uklĂˇdĂˇnĂ­, zkus to znovu.");
+      setError(err.code === "23505" ? "Nájemník s tímto číslem účtu už existuje." : "Chyba při ukládání, zkus to znovu.");
     } else if (data) {
       onSaved(data as Tenant);
     }
@@ -1207,15 +1006,15 @@ function AddTenantModal({ properties, supabase, onClose, onSaved }: {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ background: "#fff", borderRadius: 16, padding: "28px 28px 24px", width: 420, maxWidth: "92vw", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}>
-        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 17, fontWeight: 700, color: "#1c2b22", marginBottom: 20 }}>PĹ™idat nĂˇjemnĂ­ka</div>
+        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 17, fontWeight: 700, color: "#1c2b22", marginBottom: 20 }}>Přidat nájemníka</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>JmĂ©no *</div>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Jan NovĂˇk"
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Jméno *</div>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Jan Novák"
               style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", boxSizing: "border-box" }} />
           </div>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>ÄŚĂ­slo ĂşÄŤtu</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Číslo účtu</div>
             <input value={account} onChange={e => setAccount(e.target.value)} placeholder="64183/0800"
               style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", boxSizing: "border-box" }} />
           </div>
@@ -1223,13 +1022,13 @@ function AddTenantModal({ properties, supabase, onClose, onSaved }: {
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Nemovitost</div>
             <select value={propertyId} onChange={e => setPropertyId(e.target.value)}
               style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", boxSizing: "border-box" }}>
-              <option value="">â€” nevybrĂˇno â€”</option>
+              <option value="">— nevybráno —</option>
               {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>PoznĂˇmky</div>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Kontakt, reference, dohodyâ€¦"
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Poznámky</div>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Kontakt, reference, dohody…"
               style={{ width: "100%", minHeight: 70, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
           </div>
         </div>
@@ -1237,10 +1036,10 @@ function AddTenantModal({ properties, supabase, onClose, onSaved }: {
           <div style={{ marginTop: 12, padding: "9px 13px", borderRadius: 8, background: "#fff5f5", border: "1px solid #f5c6c6", color: "#c0392b", fontSize: 13 }}>{error}</div>
         )}
         <div style={{ display: "flex", gap: 10, marginTop: 16, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", color: "#5c6359", cursor: "pointer", fontWeight: 600 }}>ZruĹˇit</button>
+          <button onClick={onClose} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", color: "#5c6359", cursor: "pointer", fontWeight: 600 }}>Zrušit</button>
           <button onClick={save} disabled={saving || !name.trim()}
             style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 600, opacity: saving || !name.trim() ? 0.6 : 1 }}>
-            {saving ? "UklĂˇdĂˇmâ€¦" : "PĹ™idat"}
+            {saving ? "Ukládám…" : "Přidat"}
           </button>
         </div>
       </div>
@@ -1248,7 +1047,7 @@ function AddTenantModal({ properties, supabase, onClose, onSaved }: {
   );
 }
 
-// â”€â”€ Main Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function EquityDashboard() {
   const SECTION_IDS = ["dashboard", "nemovitosti", "platby", "najemnici", "komunikace", "asistent", "dluhy"];
 
@@ -1265,7 +1064,7 @@ export default function EquityDashboard() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [activeSection, setActiveSection] = useState("dashboard");
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userInitials, setUserInitials] = useState("Â·Â·");
+  const [userInitials, setUserInitials] = useState("··");
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -1400,7 +1199,7 @@ export default function EquityDashboard() {
     }
     load();
 
-    // Realtime â€” automatickĂˇ aktualizace kdyĹľ pĹ™ijde novĂˇ platba
+    // Realtime — automatická aktualizace když přijde nová platba
     const channel = supabase
       .channel("payments-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => {
@@ -1411,7 +1210,7 @@ export default function EquityDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // No auto-select â€” default shows all payments
+  // No auto-select — default shows all payments
 
   useEffect(() => {
     const onScroll = () => {
@@ -1467,8 +1266,8 @@ export default function EquityDashboard() {
 
   async function handleToggleStatus(propertyId: string, currentStatus: string) {
     const newStatus = currentStatus === "rented" ? "vacant" : "rented";
-    const label = newStatus === "rented" ? "Pronajato" : "VolnĂ©";
-    if (!confirm(`ZmÄ›nit stav na "${label}"?`)) return;
+    const label = newStatus === "rented" ? "Pronajato" : "Volné";
+    if (!confirm(`Změnit stav na "${label}"?`)) return;
     await supabase.from("properties").update({ status: newStatus }).eq("id", propertyId);
     setProperties(prev => prev.map(p => p.id === propertyId ? { ...p, status: newStatus as Property["status"] } : p));
   }
@@ -1518,7 +1317,7 @@ export default function EquityDashboard() {
     const mort = mortgages.find(m => m.property_id === p.id);
     if (mort?.refix_date) {
       const d = Math.round((new Date(mort.refix_date).getTime() - today) / 86400000);
-      if (d <= 90) alerts.push({ type: d <= 30 ? "danger" : "warning", label: "Konec fixace hypotĂ©ky", property: p.name, daysLeft: d });
+      if (d <= 90) alerts.push({ type: d <= 30 ? "danger" : "warning", label: "Konec fixace hypotéky", property: p.name, daysLeft: d });
     }
     if (p.insurance_to) {
       const d = Math.round((new Date(p.insurance_to).getTime() - today) / 86400000);
@@ -1526,7 +1325,7 @@ export default function EquityDashboard() {
     }
     if (p.lease_end) {
       const d = Math.round((new Date(p.lease_end).getTime() - today) / 86400000);
-      if (d <= 60) alerts.push({ type: d <= 14 ? "danger" : "warning", label: "Konec nĂˇjemnĂ­ smlouvy", property: p.name, daysLeft: d });
+      if (d <= 60) alerts.push({ type: d <= 14 ? "danger" : "warning", label: "Konec nájemní smlouvy", property: p.name, daysLeft: d });
     }
   }
   alerts.sort((a, b) => a.daysLeft - b.daysLeft);
@@ -1600,7 +1399,7 @@ export default function EquityDashboard() {
             );
           })}
         </div>
-        {/* Badge na nespĂˇrovanĂ© */}
+        {/* Badge na nespárované */}
         {unmatchedPayments.length > 0 && (
           <a href="#platby" style={{ marginTop: 8, textDecoration: "none" }}>
             <span style={{ background: "#c0392b", color: "#fff", borderRadius: "50%", width: 20, height: 20, fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1608,7 +1407,7 @@ export default function EquityDashboard() {
             </span>
           </a>
         )}
-        <button title={userEmail ?? "OdhlĂˇsit"} onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
+        <button title={userEmail ?? "Odhlásit"} onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
           className="mt-auto flex items-center justify-center rounded-[12px]"
           style={{ width: 46, height: 46, background: "transparent", border: "none", cursor: "pointer" }}>
           <span style={{ color: "#86a191", display: "flex" }}>
@@ -1642,24 +1441,24 @@ export default function EquityDashboard() {
         <section id="dashboard" style={{ scrollMarginTop: 28 }}>
           <div style={{ background: "#1f3d2e", borderRadius: 14, padding: "38px 42px" }}>
             {loading ? (
-              <div style={{ color: "#9db8a6", fontSize: 15 }}>NaÄŤĂ­tĂˇm dataâ€¦</div>
+              <div style={{ color: "#9db8a6", fontSize: 15 }}>Načítám data…</div>
             ) : (
               <div className="flex justify-between items-start gap-10">
                 <div className="flex-1">
-                  <div style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9db8a6" }}>TvĹŻj vlastnĂ­ kapitĂˇl</div>
+                  <div style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9db8a6" }}>Tvůj vlastní kapitál</div>
                   <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontVariantNumeric: "tabular-nums", fontSize: 90, lineHeight: 0.94, letterSpacing: "-0.02em", color: "#f5f1e6", marginTop: 14 }}>
-                    {fmtMil(equity)}<span style={{ fontSize: 36, color: "#9db8a6", fontWeight: 600 }}> mil KÄŤ</span>
+                    {fmtMil(equity)}<span style={{ fontSize: 36, color: "#9db8a6", fontWeight: 600 }}> mil Kč</span>
                   </div>
                   <div className="flex items-center gap-[14px] mt-[22px]">
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#1f3d2e", background: "#c9a24b", borderRadius: 30, padding: "8px 15px", fontSize: 14, fontWeight: 700 }}>
-                      {ownedProperties.length} {ownedProperties.length === 1 ? "nemovitost" : ownedProperties.length < 5 ? "nemovitosti" : "nemovitostĂ­"}
+                      {ownedProperties.length} {ownedProperties.length === 1 ? "nemovitost" : ownedProperties.length < 5 ? "nemovitosti" : "nemovitostí"}
                     </span>
-                    <span style={{ fontSize: 15, color: "#cfe0d4", fontWeight: 500 }}>Hodnota portfolia {fmtMil(totalValue)} mil KÄŤ</span>
+                    <span style={{ fontSize: 15, color: "#cfe0d4", fontWeight: 500 }}>Hodnota portfolia {fmtMil(totalValue)} mil Kč</span>
                   </div>
                   {totalDebt > 0 && (
                     <div style={{ marginTop: 26, maxWidth: 440 }}>
                       <div className="flex justify-between items-baseline mb-[9px]" style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9db8a6" }}>
-                        <span>VlastnĂ­ kapitĂˇl / Hodnota portfolia</span>
+                        <span>Vlastní kapitál / Hodnota portfolia</span>
                         <span style={{ color: "#e7c773" }}>{Math.round((equity / totalValue) * 100)} %</span>
                       </div>
                       <div style={{ height: 9, borderRadius: 6, background: "rgba(255,255,255,.14)", overflow: "hidden" }}>
@@ -1671,17 +1470,17 @@ export default function EquityDashboard() {
                 <div className="text-right flex flex-col gap-[22px]" style={{ paddingTop: 6 }}>
                   <div>
                     <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>Hodnota portfolia</div>
-                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{fmtMil(totalValue)} mil KÄŤ</div>
+                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{fmtMil(totalValue)} mil Kč</div>
                   </div>
                   {totalDebt > 0 && (
                     <div>
-                      <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>CelkovĂ˝ dluh</div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{fmtMil(totalDebt)} mil KÄŤ</div>
+                      <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>Celkový dluh</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{fmtMil(totalDebt)} mil Kč</div>
                     </div>
                   )}
                   <div>
                     <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>Nemovitosti</div>
-                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{ownedProperties.length} {ownedProperties.length === 1 ? "objekt" : ownedProperties.length < 5 ? "objekty" : "objektĹŻ"}</div>
+                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{ownedProperties.length} {ownedProperties.length === 1 ? "objekt" : ownedProperties.length < 5 ? "objekty" : "objektů"}</div>
                   </div>
                 </div>
               </div>
@@ -1694,15 +1493,15 @@ export default function EquityDashboard() {
               {alerts.map((a, i) => {
                 const bg = a.type === "danger" ? "#fde8e8" : "#fef6e4";
                 const color = a.type === "danger" ? "#c0392b" : "#a07b2f";
-                const icon = a.type === "danger" ? "âš ď¸Ź" : "đź””";
-                const daysText = a.daysLeft <= 0 ? "dnes!" : a.daysLeft === 1 ? "zĂ­tra" : `za ${a.daysLeft} dnĂ­`;
+                const icon = a.type === "danger" ? "⚠️" : "🔔";
+                const daysText = a.daysLeft <= 0 ? "dnes!" : a.daysLeft === 1 ? "zítra" : `za ${a.daysLeft} dní`;
                 return (
                   <div key={i} style={{ background: bg, borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ fontSize: 16 }}>{icon}</span>
                       <div>
                         <span style={{ fontSize: 13, fontWeight: 700, color }}>{a.label}</span>
-                        <span style={{ fontSize: 13, color: "#5c6359" }}> Â· {a.property}</span>
+                        <span style={{ fontSize: 13, color: "#5c6359" }}> · {a.property}</span>
                       </div>
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 600, color, whiteSpace: "nowrap" }}>{daysText}</span>
@@ -1713,36 +1512,180 @@ export default function EquityDashboard() {
           )}
 
           {/* Chart */}
-          <GrowthChart properties={properties} mortgages={mortgages} />
+          {(() => {
+            const W = 600, H = 240, PAD_L = 40, PAD_R = 20, PAD_T = 20, PAD_B = 30;
+            const now = new Date();
+            const nowMs = now.getTime();
+            const FUTURE_YEARS = 5;
+
+            // Collect data points per property per month
+            type Point = { ms: number; value: number; debt: number };
+            const allPoints: Point[] = [];
+
+            // Earliest purchase date across all properties
+            let minMs = nowMs;
+            for (const p of properties) {
+              if (p.purchase_date) {
+                const ms = new Date(p.purchase_date).getTime();
+                if (ms < minMs) minMs = ms;
+              }
+            }
+            // If no purchase dates, start 2 years ago
+            if (minMs === nowMs) minMs = nowMs - 2 * 365 * 86400000;
+            const maxMs = nowMs + FUTURE_YEARS * 365 * 86400000;
+            const totalMs = maxMs - minMs;
+
+            // Generate monthly points
+            const MONTHS = Math.round(totalMs / (30 * 86400000));
+            for (let i = 0; i <= MONTHS; i++) {
+              const ms = minMs + (i / MONTHS) * totalMs;
+              let value = 0, debt = 0;
+              for (const p of properties) {
+                const growth = (p.annual_growth_pct ?? 3) / 100;
+                const purchaseMs = p.purchase_date ? new Date(p.purchase_date).getTime() : nowMs;
+                if (!p.purchase_date) {
+                  // No purchase date — use estimated_value flat in history, grow in future
+                  if (ms <= nowMs) {
+                    value += p.estimated_value;
+                  } else {
+                    const yearsAhead = (ms - nowMs) / (365 * 86400000);
+                    value += p.estimated_value * Math.pow(1 + growth, yearsAhead);
+                  }
+                } else {
+                  const purchasePrice = p.purchase_price ?? p.estimated_value;
+                  if (ms < purchaseMs) {
+                    // Property not yet purchased at this point in time — skip
+                  } else if (ms <= nowMs) {
+                    const denom = nowMs - purchaseMs || 1;
+                    const t = Math.min(1, (ms - purchaseMs) / denom);
+                    value += purchasePrice + t * (p.estimated_value - purchasePrice);
+                  } else {
+                    const yearsAhead = (ms - nowMs) / (365 * 86400000);
+                    value += p.estimated_value * Math.pow(1 + growth, yearsAhead);
+                  }
+                }
+                // Debt: linear paydown
+                const mort = mortgages.find(m => m.property_id === p.id);
+                if (mort) {
+                  const loanMs = mort.loan_start_date ? new Date(mort.loan_start_date).getTime() : purchaseMs;
+                  const termMs = (mort.loan_term_years ?? 30) * 365 * 86400000;
+                  const loanAmt = mort.loan_amount ?? mort.outstanding_balance;
+                  const elapsed = Math.max(0, Math.min(1, (ms - loanMs) / termMs));
+                  debt += Math.max(0, loanAmt * (1 - elapsed));
+                }
+              }
+              allPoints.push({ ms, value, debt });
+            }
+
+            if (allPoints.length === 0) return null;
+
+            const maxVal = Math.max(...allPoints.map(p => p.value));
+            const minVal = Math.min(...allPoints.map(p => Math.min(p.value - p.debt, 0)));
+            const range = maxVal - minVal || 1;
+
+            const toX = (ms: number) => PAD_L + ((ms - minMs) / totalMs) * (W - PAD_L - PAD_R);
+            const toY = (v: number) => PAD_T + (1 - (v - minVal) / range) * (H - PAD_T - PAD_B);
+
+            const valuePts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value).toFixed(1)}`).join(" ");
+            const debtPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.debt).toFixed(1)}`).join(" ");
+            const equityPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value - p.debt).toFixed(1)}`).join(" ");
+            const equityFill = equityPts + ` ${toX(maxMs).toFixed(1)},${toY(minVal).toFixed(1)} ${toX(minMs).toFixed(1)},${toY(minVal).toFixed(1)}`;
+
+            // Today line x
+            const todayX = toX(nowMs);
+
+            // Label months on x axis
+            // Round year labels at 5-year intervals
+            const startYear = new Date(minMs).getFullYear();
+            const endYear = new Date(maxMs).getFullYear();
+            const labelMs: number[] = [];
+            const firstLabel = Math.ceil(startYear / 5) * 5;
+            for (let y = firstLabel; y <= endYear; y += 5) {
+              labelMs.push(new Date(y, 0, 1).getTime());
+            }
+
+            // Grid lines
+            const gridVals = [maxVal * 0.25, maxVal * 0.5, maxVal * 0.75, maxVal].map(v => ({ v, y: toY(v) }));
+
+            return (
+              <div style={{ padding: "34px 4px 8px" }}>
+                <div className="flex justify-between items-center mb-4">
+                  <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Jak rosteš v čase</div>
+                  <div className="flex gap-5" style={{ fontSize: 12, fontWeight: 600, color: "#5c6359" }}>
+                    {[{ color: "#1f3d2e", label: "Equity" }, { color: "#c39a3f", label: "Hodnota" }, { color: "#b08c7a", label: "Dluh" }].map(({ color, label }) => (
+                      <span key={label} className="inline-flex items-center gap-[7px]">
+                        <span style={{ width: 18, height: 3, borderRadius: 2, background: color, display: "inline-block" }} />{label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="250" style={{ display: "block", overflow: "visible" }}>
+                  <defs>
+                    <linearGradient id="eqfill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#1f3d2e" stopOpacity="0.15" />
+                      <stop offset="100%" stopColor="#1f3d2e" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  {/* Grid */}
+                  {gridVals.map(({ y }, i) => <line key={i} x1={PAD_L} y1={y.toFixed(1)} x2={W - PAD_R} y2={y.toFixed(1)} stroke="#d8d0bd" strokeWidth="1" />)}
+                  {/* Y axis labels */}
+                  {gridVals.map(({ v, y }, i) => (
+                    <text key={i} x={PAD_L - 4} y={y + 4} textAnchor="end" fontSize="9" fill="#9a9483">{fmtMil(v)}M</text>
+                  ))}
+                  {/* Today line */}
+                  <line x1={todayX.toFixed(1)} y1={PAD_T} x2={todayX.toFixed(1)} y2={H - PAD_B} stroke="#c9a24b" strokeWidth="1.5" strokeDasharray="4 3" />
+                  <text x={todayX + 4} y={PAD_T + 10} fontSize="9" fill="#c9a24b" fontWeight="600">dnes</text>
+                  {/* Equity fill */}
+                  <polygon points={equityFill} fill="url(#eqfill)" />
+                  {/* Lines */}
+                  <polyline points={debtPts} fill="none" stroke="#b08c7a" strokeWidth="2" />
+                  <polyline points={valuePts} fill="none" stroke="#c39a3f" strokeWidth="2" />
+                  <polyline points={equityPts} fill="none" stroke="#1f3d2e" strokeWidth="3" />
+                  {/* Dot at today */}
+                  {(() => {
+                    const todayPoint = allPoints.find(p => p.ms >= nowMs);
+                    if (!todayPoint) return null;
+                    return <circle cx={todayX.toFixed(1)} cy={toY(todayPoint.value - todayPoint.debt).toFixed(1)} r="4.5" fill="#1f3d2e" />;
+                  })()}
+                  {/* X axis labels */}
+                  {labelMs.map((ms, i) => {
+                    const d = new Date(ms);
+                    const lbl = String(d.getFullYear());
+                    return <text key={i} x={toX(ms).toFixed(1)} y={H - 6} textAnchor="middle" fontSize="9" fill="#9a9483">{lbl}</text>;
+                  })}
+                </svg>
+              </div>
+            );
+          })()}
         </section>
 
         {/* NEMOVITOSTI */}
         <section id="nemovitosti" style={{ marginTop: 38, scrollMarginTop: 28 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>TvĂ© nemovitosti</div>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Tvé nemovitosti</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <button onClick={() => setShowAddProperty(true)}
                 style={{ fontSize: 12, padding: "6px 14px", borderRadius: 20, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 600 }}>
-                + PĹ™idat
+                + Přidat
               </button>
             <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3 }}>
               <button onClick={() => setShowPlannedProps(false)}
                 style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: !showPlannedProps ? "#1f3d2e" : "transparent", color: !showPlannedProps ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                ReĂˇlnĂ©
+                Reálné
               </button>
               <button onClick={() => setShowPlannedProps(true)}
                 style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: showPlannedProps ? "#4a7c59" : "transparent", color: showPlannedProps ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                VÄŤ. plĂˇnovanĂ˝ch
+                Vč. plánovaných
               </button>
             </div>
             </div>
           </div>
-          {loading ? <div style={{ color: "#7c8378" }}>NaÄŤĂ­tĂˇmâ€¦</div> : (
+          {loading ? <div style={{ color: "#7c8378" }}>Načítám…</div> : (
             <div className="flex flex-col gap-[10px]">
               {(showPlannedProps ? properties : activeProperties).map((p) => {
                 const isManaged = p.ownership_type === "manager";
                 const { label, cls } = isManaged
-                  ? { label: "SpravovĂˇno", cls: "text-[#2255aa] bg-[#dce8f8]" }
+                  ? { label: "Spravováno", cls: "text-[#2255aa] bg-[#dce8f8]" }
                   : statusBadge(p.status);
                 const mortgage = isManaged ? undefined : mortgages.find((m) => m.property_id === p.id);
                 return (
@@ -1764,17 +1707,17 @@ export default function EquityDashboard() {
                             return icons[p.type ?? "apartment"] ?? icons.apartment;
                           })()}
                           <span style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{p.name}</span>
-                          {p.status === "planned" && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>plĂˇnovanĂˇ</span>}
+                          {p.status === "planned" && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>plánovaná</span>}
                           {p.type && p.type !== "apartment" && (
                             <span style={{ fontSize: 10, fontWeight: 600, color: "#7c8378", background: "#e6e0d0", borderRadius: 10, padding: "2px 8px" }}>
-                              {{ house: "DĹŻm", garage: "GarĂˇĹľ", land: "Pozemek", commercial: "KomerÄŤnĂ­", other: "OstatnĂ­" }[p.type] ?? p.type}
+                              {{ house: "Dům", garage: "Garáž", land: "Pozemek", commercial: "Komerční", other: "Ostatní" }[p.type] ?? p.type}
                             </span>
                           )}
                         </div>
                         <div style={{ fontSize: 12, color: "#7c8378", marginTop: 2 }}>
-                          {p.status === "rented" ? `NĂˇjem ${fmt(p.rent_amount)} KÄŤ / mÄ›s` : p.address ?? ""}
-                          {mortgage ? ` Â· SplĂˇtka ${fmt(mortgage.monthly_payment)} KÄŤ` : ""}
-                          {mortgage?.refix_date ? ` Â· Konec fixace ${mortgage.refix_date}` : ""}
+                          {p.status === "rented" ? `Nájem ${fmt(p.rent_amount)} Kč / měs` : p.address ?? ""}
+                          {mortgage ? ` · Splátka ${fmt(mortgage.monthly_payment)} Kč` : ""}
+                          {mortgage?.refix_date ? ` · Konec fixace ${mortgage.refix_date}` : ""}
                         </div>
                         {mortgage?.refix_date && (() => {
                           const days = daysUntil(mortgage.refix_date);
@@ -1782,7 +1725,7 @@ export default function EquityDashboard() {
                           const urgent = days <= 30;
                           return (
                             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6, padding: "4px 10px", borderRadius: 20, background: urgent ? "#fde8e8" : "#efe3c6", color: urgent ? "#c0392b" : "#a07b2f", fontSize: 12, fontWeight: 700 }}>
-                              âš  Konec fixace za {days} dnĂ­ ({mortgage.refix_date})
+                              ⚠ Konec fixace za {days} dní ({mortgage.refix_date})
                             </div>
                           );
                         })()}
@@ -1803,7 +1746,7 @@ export default function EquityDashboard() {
                           <div style={{ height: 5, borderRadius: 3, background: "#e3ddcb", overflow: "hidden" }}>
                             <div style={{ width: `${Math.min(ltv, 100)}%`, height: "100%", background: color, transition: "width .4s" }} />
                           </div>
-                          <div style={{ fontSize: 11, color: "#9a9483", marginTop: 3 }}>Dluh {fmtMil(mortgage.outstanding_balance)} mil Â· Hodnota {fmtMil(p.estimated_value)} mil</div>
+                          <div style={{ fontSize: 11, color: "#9a9483", marginTop: 3 }}>Dluh {fmtMil(mortgage.outstanding_balance)} mil · Hodnota {fmtMil(p.estimated_value)} mil</div>
                         </div>
                       );
                     })()}
@@ -1817,20 +1760,20 @@ export default function EquityDashboard() {
         {/* PLATBY */}
         <section id="platby" style={{ marginTop: 38, scrollMarginTop: 28 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>MÄ›sĂ­ÄŤnĂ­ cashflow</div>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Měsíční cashflow</div>
             <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3 }}>
               <button onClick={() => setShowPlanned(false)}
                 style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: !showPlanned ? "#1f3d2e" : "transparent", color: !showPlanned ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                ReĂˇlnĂ©
+                Reálné
               </button>
               <button onClick={() => setShowPlanned(true)}
                 style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: showPlanned ? "#4a7c59" : "transparent", color: showPlanned ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                VÄŤ. plĂˇnovanĂ˝ch
+                Vč. plánovaných
               </button>
             </div>
           </div>
 
-          {/* Cashflow pĹ™ehled */}
+          {/* Cashflow přehled */}
           {(() => {
             const rentedProps = properties.filter(p => p.status === "rented");
             const plannedProps = properties.filter(p => p.status === "planned");
@@ -1869,44 +1812,44 @@ export default function EquityDashboard() {
 
             return (
               <>
-                {/* SouhrnnĂ˝ box */}
+                {/* Souhrnný box */}
                 <div style={{ background: "#f5f1e6", borderRadius: 12, padding: "14px 12px", marginBottom: 4 }}>
                   <div style={{ display: "flex", gap: 0, alignItems: "center" }}>
-                    {/* PĹ™Ă­jmy */}
+                    {/* Příjmy */}
                     <div style={panelStyle("income")} onClick={() => toggleCf("income")}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>PĹ™Ă­jmy</div>
-                        <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "income" ? "â–´" : "â–ľ"}</span>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>Příjmy</div>
+                        <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "income" ? "▴" : "▾"}</span>
                       </div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#1f3d2e", marginTop: 4 }}>+{fmt(totalRent)} KÄŤ</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#1f3d2e", marginTop: 4 }}>+{fmt(totalRent)} Kč</div>
                       {showPlanned && plannedRent > 0
-                        ? <div style={{ fontSize: 11, color: "#4a7c59", marginTop: 2 }}>z toho +{fmt(plannedRent)} KÄŤ plĂˇnovanĂ©</div>
-                        : <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>mÄ›sĂ­ÄŤnÄ›</div>
+                        ? <div style={{ fontSize: 11, color: "#4a7c59", marginTop: 2 }}>z toho +{fmt(plannedRent)} Kč plánované</div>
+                        : <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
                       }
                     </div>
-                    {/* VĂ˝daje */}
+                    {/* Výdaje */}
                     <div style={panelStyle("expenses")} onClick={() => toggleCf("expenses")}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>VĂ˝daje</div>
-                        <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "expenses" ? "â–´" : "â–ľ"}</span>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>Výdaje</div>
+                        <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "expenses" ? "▴" : "▾"}</span>
                       </div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#c0392b", marginTop: 4 }}>â’{fmt(totalOut)} KÄŤ</div>
-                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>mÄ›sĂ­ÄŤnÄ›</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#c0392b", marginTop: 4 }}>−{fmt(totalOut)} Kč</div>
+                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
                     </div>
-                    {/* ÄŚistĂ˝ cashflow */}
+                    {/* Čistý cashflow */}
                     <div style={panelStyle("net")} onClick={() => toggleCf("net")}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>ÄŚistĂ˝ cashflow</div>
-                        <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "net" ? "â–´" : "â–ľ"}</span>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>Čistý cashflow</div>
+                        <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "net" ? "▴" : "▾"}</span>
                       </div>
                       <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: net >= 0 ? "#1f3d2e" : "#c0392b", marginTop: 4 }}>
-                        {net >= 0 ? "+" : ""}{fmt(net)} KÄŤ
+                        {net >= 0 ? "+" : ""}{fmt(net)} Kč
                       </div>
-                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>mÄ›sĂ­ÄŤnÄ›</div>
+                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
                     </div>
                   </div>
 
-                  {/* RozbalenĂ˝ detail â€” grid karet per nemovitost */}
+                  {/* Rozbalený detail — grid karet per nemovitost */}
                   {cfExpanded && (
                     <div style={{ borderTop: "1px solid #d2cab4", marginTop: 14, paddingTop: 14, display: "grid", gridTemplateColumns: `repeat(${Math.min(properties.filter(p => showPlanned || p.status !== "planned").length, 3)}, 1fr)`, gap: 10 }}>
                       {properties.filter(p => showPlanned || p.status !== "planned").map(p => {
@@ -1923,13 +1866,13 @@ export default function EquityDashboard() {
                           <div key={p.id} style={{ background: isPlanned ? "#eef5ee" : "#ede9dd", borderRadius: 8, padding: "12px 14px", border: "none" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: "#5c6359", textTransform: "uppercase", letterSpacing: "0.06em" }}>{p.name}</div>
-                              {isPlanned && <span style={{ fontSize: 9, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 8, padding: "1px 5px" }}>plĂˇn.</span>}
+                              {isPlanned && <span style={{ fontSize: 9, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 8, padding: "1px 5px" }}>plán.</span>}
                             </div>
 
                             {cfExpanded === "income" || cfExpanded === "net" ? (
                               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                                <span style={{ fontSize: 12, color: "#5c6359" }}>{isPlanned ? "PlĂˇn. nĂˇjem" : "NĂˇjem"}</span>
-                                <span style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(income)} KÄŤ</span>
+                                <span style={{ fontSize: 12, color: "#5c6359" }}>{isPlanned ? "Plán. nájem" : "Nájem"}</span>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(income)} Kč</span>
                               </div>
                             ) : null}
 
@@ -1937,20 +1880,20 @@ export default function EquityDashboard() {
                               <>
                                 {mortgage_payment > 0 && (
                                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                    <span style={{ fontSize: 12, color: "#5c6359" }}>SplĂˇtka</span>
-                                    <span style={{ fontSize: 12, color: "#c0392b" }}>â’{fmt(mortgage_payment)} KÄŤ</span>
+                                    <span style={{ fontSize: 12, color: "#5c6359" }}>Splátka</span>
+                                    <span style={{ fontSize: 12, color: "#c0392b" }}>−{fmt(mortgage_payment)} Kč</span>
                                   </div>
                                 )}
                                 {insurance > 0 && (
                                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                    <span style={{ fontSize: 12, color: "#5c6359" }}>PojistnĂ©</span>
-                                    <span style={{ fontSize: 12, color: "#c0392b" }}>â’{fmt(insurance)} KÄŤ</span>
+                                    <span style={{ fontSize: 12, color: "#5c6359" }}>Pojistné</span>
+                                    <span style={{ fontSize: 12, color: "#c0392b" }}>−{fmt(insurance)} Kč</span>
                                   </div>
                                 )}
                                 {costs > 0 && (
                                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                    <span style={{ fontSize: 12, color: "#5c6359" }}>NĂˇklady</span>
-                                    <span style={{ fontSize: 12, color: "#c0392b" }}>â’{fmt(costs)} KÄŤ</span>
+                                    <span style={{ fontSize: 12, color: "#5c6359" }}>Náklady</span>
+                                    <span style={{ fontSize: 12, color: "#c0392b" }}>−{fmt(costs)} Kč</span>
                                   </div>
                                 )}
                               </>
@@ -1958,10 +1901,10 @@ export default function EquityDashboard() {
 
                             <div style={{ borderTop: "1px solid #d2cab4", paddingTop: 6, marginTop: 4, display: "flex", justifyContent: "space-between" }}>
                               <span style={{ fontSize: 12, fontWeight: 700, color: "#1c2b22" }}>
-                                {cfExpanded === "income" ? "PĹ™Ă­jem" : cfExpanded === "expenses" ? "VĂ˝daje" : "Cashflow"}
+                                {cfExpanded === "income" ? "Příjem" : cfExpanded === "expenses" ? "Výdaje" : "Cashflow"}
                               </span>
                               <span style={{ fontSize: 12, fontWeight: 700, color: cfExpanded === "income" ? "#1f3d2e" : cfExpanded === "expenses" ? "#c0392b" : net >= 0 ? "#1f3d2e" : "#c0392b" }}>
-                                {cfExpanded === "income" ? `+${fmt(income)}` : cfExpanded === "expenses" ? `â’${fmt(totalOut)}` : `${net >= 0 ? "+" : ""}${fmt(net)}`} KÄŤ
+                                {cfExpanded === "income" ? `+${fmt(income)}` : cfExpanded === "expenses" ? `−${fmt(totalOut)}` : `${net >= 0 ? "+" : ""}${fmt(net)}`} Kč
                               </span>
                             </div>
                           </div>
@@ -1977,10 +1920,10 @@ export default function EquityDashboard() {
                     const isOpen = cfPropExpanded === p.id;
                     const mortgage = mortgages.find(m => m.property_id === p.id);
                     const expItems: { label: string; amount: number }[] = [];
-                    if (mortgage?.monthly_payment) expItems.push({ label: "SplĂˇtka hypotĂ©ky", amount: mortgage.monthly_payment });
+                    if (mortgage?.monthly_payment) expItems.push({ label: "Splátka hypotéky", amount: mortgage.monthly_payment });
                     const prop = properties.find(pr => pr.id === p.id);
-                    if (prop?.insurance_amount) expItems.push({ label: "PojistnĂ©", amount: prop.insurance_amount / 12 });
-                    if (prop?.monthly_costs) expItems.push({ label: "NĂˇklady", amount: prop.monthly_costs });
+                    if (prop?.insurance_amount) expItems.push({ label: "Pojistné", amount: prop.insurance_amount / 12 });
+                    if (prop?.monthly_costs) expItems.push({ label: "Náklady", amount: prop.monthly_costs });
                     return (
                       <div key={p.id}
                         onClick={() => setCfPropExpanded(prev => prev === p.id ? null : p.id)}
@@ -1996,32 +1939,32 @@ export default function EquityDashboard() {
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <div style={{ fontSize: 12, fontWeight: 700, color: "#5c6359" }}>{p.name}</div>
-                            {p.planned && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "1px 7px" }}>plĂˇnovanĂˇ</span>}
+                            {p.planned && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "1px 7px" }}>plánovaná</span>}
                           </div>
-                          <span style={{ fontSize: 11, color: "#9a9483" }}>{isOpen ? "â–´" : "â–ľ"}</span>
+                          <span style={{ fontSize: 11, color: "#9a9483" }}>{isOpen ? "▴" : "▾"}</span>
                         </div>
                         <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 20, fontWeight: 800, color: p.net >= 0 ? "#1f3d2e" : "#c0392b", marginBottom: 6 }}>
-                          {p.net >= 0 ? "+" : ""}{fmt(p.net)} KÄŤ
+                          {p.net >= 0 ? "+" : ""}{fmt(p.net)} Kč
                         </div>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9a9483" }}>
-                          <span>{p.planned ? "plĂˇn. pĹ™Ă­jem" : "pĹ™Ă­jem"} +{fmt(p.income)} KÄŤ</span>
-                          <span>â’{fmt(p.out)} vĂ˝daje</span>
+                          <span>{p.planned ? "plán. příjem" : "příjem"} +{fmt(p.income)} Kč</span>
+                          <span>−{fmt(p.out)} výdaje</span>
                         </div>
                         {isOpen && (
                           <div style={{ borderTop: "1px solid #d2cab4", marginTop: 12, paddingTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                              <span style={{ fontSize: 12, color: "#5c6359" }}>{p.planned ? "PlĂˇnovanĂ˝ nĂˇjem" : "NĂˇjem"}</span>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(p.income)} KÄŤ</span>
+                              <span style={{ fontSize: 12, color: "#5c6359" }}>{p.planned ? "Plánovaný nájem" : "Nájem"}</span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(p.income)} Kč</span>
                             </div>
                             {expItems.map(item => (
                               <div key={item.label} style={{ display: "flex", justifyContent: "space-between" }}>
                                 <span style={{ fontSize: 12, color: "#5c6359" }}>{item.label}</span>
-                                <span style={{ fontSize: 12, color: "#c0392b" }}>â’{fmt(item.amount)} KÄŤ</span>
+                                <span style={{ fontSize: 12, color: "#c0392b" }}>−{fmt(item.amount)} Kč</span>
                               </div>
                             ))}
                             <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #d2cab4", paddingTop: 4, marginTop: 2 }}>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: "#1c2b22" }}>ÄŚistĂ˝ cashflow</span>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: p.net >= 0 ? "#1f3d2e" : "#c0392b" }}>{p.net >= 0 ? "+" : ""}{fmt(p.net)} KÄŤ</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#1c2b22" }}>Čistý cashflow</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: p.net >= 0 ? "#1f3d2e" : "#c0392b" }}>{p.net >= 0 ? "+" : ""}{fmt(p.net)} Kč</span>
                             </div>
                           </div>
                         )}
@@ -2037,35 +1980,35 @@ export default function EquityDashboard() {
 
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Historie plateb</div>
 
-          {/* NespĂˇrovanĂ© platby */}
+          {/* Nespárované platby */}
           {unmatchedPayments.length > 0 && (
             <div style={{ background: "#fde8e8", border: "1px solid #f5c0c0", borderRadius: 10, padding: "14px 18px", marginBottom: 18 }}>
               <div className="flex items-center gap-2 mb-2">
-                <span style={{ color: "#c0392b", fontSize: 13, fontWeight: 700 }}>âš  {unmatchedPayments.length} {unmatchedPayments.length === 1 ? "nespĂˇrovanĂˇ platba" : unmatchedPayments.length < 5 ? "nespĂˇrovanĂ© platby" : "nespĂˇrovanĂ˝ch plateb"}</span>
+                <span style={{ color: "#c0392b", fontSize: 13, fontWeight: 700 }}>⚠ {unmatchedPayments.length} {unmatchedPayments.length === 1 ? "nespárovaná platba" : unmatchedPayments.length < 5 ? "nespárované platby" : "nespárovaných plateb"}</span>
               </div>
               {unmatchedPayments.map(p => (
                 <div key={p.id} className="flex items-center justify-between"
                   style={{ fontSize: 13, color: "#7c3030", padding: "6px 0", borderTop: "1px solid #f5c0c0" }}>
                   <span>
-                    <strong>{fmt(p.rent_received)} KÄŤ</strong>
+                    <strong>{fmt(p.rent_received)} Kč</strong>
                     {p.sender_name ? ` od ${p.sender_name}` : ""}
-                    {" Â· "}{p.payment_date ? fmtDate(p.payment_date) : monthLabel(p.month)}
+                    {" · "}{p.payment_date ? fmtDate(p.payment_date) : monthLabel(p.month)}
                   </span>
                   <button onClick={() => setSelectedPayment(p)}
                     style={{ fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 20, border: "none", background: "#c0392b", color: "#fff", cursor: "pointer" }}>
-                    PĹ™iĹ™adit
+                    Přiřadit
                   </button>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Filtry nemovitostĂ­ */}
+          {/* Filtry nemovitostí */}
           <div className="flex gap-[7px] flex-wrap mb-4">
             <button onClick={() => setActiveFilter(null)}
               className="cursor-pointer rounded-[20px] border-none"
               style={{ fontWeight: 600, fontSize: 12, padding: "7px 13px", color: activeFilter === null ? "#f5f1e6" : "#5c6359", background: activeFilter === null ? "#1f3d2e" : "#e6e0d0" }}>
-              VĹˇe
+              Vše
             </button>
             {properties.filter((p) => p.status !== "planned").map((p) => (
               <button key={p.id} onClick={() => setActiveFilter(p.id)}
@@ -2076,18 +2019,18 @@ export default function EquityDashboard() {
             ))}
           </div>
 
-          {loading ? <div style={{ color: "#7c8378" }}>NaÄŤĂ­tĂˇmâ€¦</div>
+          {loading ? <div style={{ color: "#7c8378" }}>Načítám…</div>
             : filteredPayments.length === 0 ? (
               <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "24px 20px", color: "#9a9483", fontSize: 14 }}>
-                Ĺ˝ĂˇdnĂ© platby zatĂ­m.
+                Žádné platby zatím.
               </div>
             ) : (
               <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "6px 20px" }}>
                 <div className="flex" style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9a9483", padding: "13px 0 10px" }}>
-                  <span className="flex-1">MÄ›sĂ­c</span>
-                  <span style={{ width: 120, textAlign: "right" }}>NĂˇjem</span>
-                  <span style={{ width: 120, textAlign: "right" }}>VĂ˝daje</span>
-                  <span style={{ width: 120, textAlign: "right" }}>ÄŚistĂ˝ zisk</span>
+                  <span className="flex-1">Měsíc</span>
+                  <span style={{ width: 120, textAlign: "right" }}>Nájem</span>
+                  <span style={{ width: 120, textAlign: "right" }}>Výdaje</span>
+                  <span style={{ width: 120, textAlign: "right" }}>Čistý zisk</span>
                 </div>
                 {filteredPayments.map((p) => {
                   const prop = properties.find(pr => pr.id === p.property_id);
@@ -2111,15 +2054,15 @@ export default function EquityDashboard() {
                           {p.payment_date && <span style={{ fontSize: 12, color: "#9a9483" }}>{fmtDate(p.payment_date)}</span>}
                           {late !== null && (
                             late > 0
-                              ? <span style={{ fontSize: 11, fontWeight: 700, color: "#c0392b" }}>{late} {late === 1 ? "den" : late < 5 ? "dny" : "dnĂ­"} po splatnosti</span>
+                              ? <span style={{ fontSize: 11, fontWeight: 700, color: "#c0392b" }}>{late} {late === 1 ? "den" : late < 5 ? "dny" : "dní"} po splatnosti</span>
                               : late < 0
-                                ? <span style={{ fontSize: 11, fontWeight: 700, color: "#1f3d2e" }}>{Math.abs(late)} {Math.abs(late) === 1 ? "den" : Math.abs(late) < 5 ? "dny" : "dnĂ­"} pĹ™ed splatnostĂ­</span>
+                                ? <span style={{ fontSize: 11, fontWeight: 700, color: "#1f3d2e" }}>{Math.abs(late)} {Math.abs(late) === 1 ? "den" : Math.abs(late) < 5 ? "dny" : "dní"} před splatností</span>
                                 : <span style={{ fontSize: 11, fontWeight: 700, color: "#1f3d2e" }}>V den splatnosti</span>
                           )}
                         </span>
                       </span>
                       <span style={{ width: 120, textAlign: "right", color: "#1f3d2e", fontWeight: 600 }}>+{fmt(p.rent_received)}</span>
-                      <span style={{ width: 120, textAlign: "right", color: "#a07b2f" }}>â’{fmt(p.mortgage_payment)}</span>
+                      <span style={{ width: 120, textAlign: "right", color: "#a07b2f" }}>−{fmt(p.mortgage_payment)}</span>
                       <span style={{ width: 120, textAlign: "right", fontWeight: 700, color: p.net_cashflow >= 0 ? undefined : "#c0392b" }}>
                         {p.net_cashflow >= 0 ? "+" : ""}{fmt(p.net_cashflow)}
                       </span>
@@ -2130,17 +2073,17 @@ export default function EquityDashboard() {
             )}
         </section>
 
-        {/* NĂJEMNĂŤCI */}
+        {/* NÁJEMNÍCI */}
         <section id="najemnici" style={{ marginTop: 38, scrollMarginTop: 28 }}>
           <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>NĂˇjemnĂ­ci</div>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Nájemníci</div>
             <button onClick={() => setShowAddTenant(true)}
               style={{ fontSize: 13, fontWeight: 600, padding: "7px 16px", borderRadius: 8, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer" }}>
-              + PĹ™idat nĂˇjemnĂ­ka
+              + Přidat nájemníka
             </button>
           </div>
           {tenants.length === 0 ? (
-            <div style={{ color: "#9a9483", fontSize: 14, padding: "24px 0" }}>ZatĂ­m ĹľĂˇdnĂ­ nĂˇjemnĂ­ci. PĹ™idej je ruÄŤnÄ› nebo pĹ™iĹ™aÄŹ platbu k nemovitosti.</div>
+            <div style={{ color: "#9a9483", fontSize: 14, padding: "24px 0" }}>Zatím žádní nájemníci. Přidej je ručně nebo přiřaď platbu k nemovitosti.</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {tenants.map(tenant => (
@@ -2159,9 +2102,9 @@ export default function EquityDashboard() {
 
         {/* KOMUNIKACE */}
         <section id="komunikace" style={{ marginTop: 38, scrollMarginTop: 28 }}>
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Komunikace s nĂˇjemnĂ­ky</div>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Komunikace s nájemníky</div>
 
-          {/* VĂ˝bÄ›r nemovitosti */}
+          {/* Výběr nemovitosti */}
           <div className="flex gap-[7px] flex-wrap mb-4">
             {activeProperties.map((p) => (
               <button key={p.id} onClick={() => { setCommPropertyId(p.id); setIncomingText(""); setDraftText(""); }}
@@ -2174,28 +2117,28 @@ export default function EquityDashboard() {
 
           {!commPropertyId ? (
             <div style={{ fontSize: 14, color: "#7c8378", lineHeight: 1.6 }}>
-              Vyber nemovitost a veÄŹ historii komunikace s nĂˇjemnĂ­kem â€” vloĹľ zprĂˇvu, kterou ti poslal (pĹ™es WhatsApp, email nebo SMS), a AI ti navrhne odpovÄ›ÄŹ podle stavu plateb a smlouvy.
+              Vyber nemovitost a veď historii komunikace s nájemníkem — vlož zprávu, kterou ti poslal (přes WhatsApp, email nebo SMS), a AI ti navrhne odpověď podle stavu plateb a smlouvy.
             </div>
           ) : (
             <>
-              {/* Historie zprĂˇv */}
+              {/* Historie zpráv */}
               <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "16px 18px", marginBottom: 16, maxHeight: 340, overflowY: "auto" }}>
                 {commLoading ? (
-                  <div style={{ color: "#9a9483", fontSize: 13 }}>NaÄŤĂ­tĂˇmâ€¦</div>
+                  <div style={{ color: "#9a9483", fontSize: 13 }}>Načítám…</div>
                 ) : commMessages.length === 0 ? (
-                  <div style={{ color: "#9a9483", fontSize: 13 }}>ZatĂ­m ĹľĂˇdnĂˇ zaznamenanĂˇ komunikace.</div>
+                  <div style={{ color: "#9a9483", fontSize: 13 }}>Zatím žádná zaznamenaná komunikace.</div>
                 ) : (
                   <div className="flex flex-col gap-2">
                     {commMessages.map((m) => (
                       <div key={m.id} className={`flex ${m.direction === "outbound" ? "justify-end" : "justify-start"}`} style={{ gap: 6, alignItems: "flex-end" }}>
-                        {/* Delete button â€” inbound: right of bubble; outbound: left of bubble */}
+                        {/* Delete button — inbound: right of bubble; outbound: left of bubble */}
                         {m.direction === "outbound" && (
                           <button onClick={async () => {
                             await supabase.from("messages").delete().eq("id", m.id);
                             setCommMessages(prev => prev.filter(x => x.id !== m.id));
-                          }} title="Smazat zprĂˇvu"
+                          }} title="Smazat zprávu"
                             style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", border: "none", background: "transparent", color: "#c0a898", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.6, fontSize: 14, lineHeight: 1 }}>
-                            Ă—
+                            ×
                           </button>
                         )}
                         <div style={{ maxWidth: "78%" }}>
@@ -2208,16 +2151,16 @@ export default function EquityDashboard() {
                             {m.content}
                           </div>
                           <div style={{ fontSize: 10.5, color: "#9a9483", marginTop: 3, textAlign: m.direction === "outbound" ? "right" : "left" }}>
-                            {m.channel} Â· {fmtDate(m.created_at)}
+                            {m.channel} · {fmtDate(m.created_at)}
                           </div>
                         </div>
                         {m.direction === "inbound" && (
                           <button onClick={async () => {
                             await supabase.from("messages").delete().eq("id", m.id);
                             setCommMessages(prev => prev.filter(x => x.id !== m.id));
-                          }} title="Smazat zprĂˇvu"
+                          }} title="Smazat zprávu"
                             style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", border: "none", background: "transparent", color: "#c0a898", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.6, fontSize: 14, lineHeight: 1 }}>
-                            Ă—
+                            ×
                           </button>
                         )}
                       </div>
@@ -2226,14 +2169,14 @@ export default function EquityDashboard() {
                 )}
               </div>
 
-              {/* NovĂˇ zprĂˇva */}
+              {/* Nová zpráva */}
               <div className="flex items-center gap-3 mb-3">
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em" }}>VloĹľ zprĂˇvu</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em" }}>Vlož zprávu</div>
                 <div className="flex" style={{ background: "#ede9dd", borderRadius: 20, padding: 2 }}>
                   {(["inbound", "outbound"] as const).map(d => (
                     <button key={d} onClick={() => setIncomingDirection(d)}
                       style={{ padding: "4px 12px", borderRadius: 18, border: "none", background: incomingDirection === d ? "#1f3d2e" : "transparent", color: incomingDirection === d ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                      {d === "inbound" ? "PĹ™ijatĂˇ" : "OdeslanĂˇ"}
+                      {d === "inbound" ? "Přijatá" : "Odeslaná"}
                     </button>
                   ))}
                 </div>
@@ -2249,42 +2192,42 @@ export default function EquityDashboard() {
               <textarea
                 value={incomingText}
                 onChange={e => setIncomingText(e.target.value)}
-                placeholder={incomingDirection === "inbound" ? "VloĹľ text zprĂˇvy, kterou ti nĂˇjemnĂ­k poslalâ€¦" : "VloĹľ text zprĂˇvy, kterou jsi poslal nĂˇjemnĂ­koviâ€¦"}
+                placeholder={incomingDirection === "inbound" ? "Vlož text zprávy, kterou ti nájemník poslal…" : "Vlož text zprávy, kterou jsi poslal nájemníkovi…"}
                 rows={3}
                 style={{ width: "100%", padding: "10px 13px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", resize: "vertical", marginBottom: 10 }}
               />
               <div className="flex gap-2 mb-4">
                 <button onClick={handleLogIncoming} disabled={!incomingText.trim() || savingMsg}
                   style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 13, fontWeight: 600, color: "#5c6359", cursor: !incomingText.trim() ? "not-allowed" : "pointer" }}>
-                  UloĹľit do historie
+                  Uložit do historie
                 </button>
                 {incomingDirection === "inbound" && (
                   <button onClick={handleSuggestReply} disabled={!incomingText.trim() || suggesting}
                     style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: !incomingText.trim() ? "#9db8a6" : "#1f3d2e", fontSize: 13, fontWeight: 600, color: "#f5f1e6", cursor: !incomingText.trim() ? "not-allowed" : "pointer" }}>
-                    {suggesting ? "PĹ™emĂ˝ĹˇlĂ­mâ€¦" : "Navrhni odpovÄ›ÄŹ"}
+                    {suggesting ? "Přemýšlím…" : "Navrhni odpověď"}
                   </button>
                 )}
               </div>
 
-              {/* NĂˇvrh odpovÄ›di */}
+              {/* Návrh odpovědi */}
               {(draftText || suggesting) && (
                 <div style={{ background: "#fff", border: "1px solid #d2cab4", borderRadius: 10, padding: "14px 16px" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>NĂˇvrh odpovÄ›di</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Návrh odpovědi</div>
                   <textarea
                     value={draftText}
                     onChange={e => setDraftText(e.target.value)}
-                    placeholder={suggesting ? "Generuji nĂˇvrhâ€¦" : ""}
+                    placeholder={suggesting ? "Generuji návrh…" : ""}
                     rows={4}
                     style={{ width: "100%", padding: "10px 13px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fdfbf5", fontSize: 14, color: "#1c2b22", resize: "vertical", marginBottom: 10 }}
                   />
                   <div className="flex gap-2">
                     <button onClick={handleCopyDraft} disabled={!draftText}
                       style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 13, fontWeight: 600, color: "#5c6359", cursor: "pointer" }}>
-                      {copied ? "âś“ ZkopĂ­rovĂˇno" : "KopĂ­rovat"}
+                      {copied ? "✓ Zkopírováno" : "Kopírovat"}
                     </button>
                     <button onClick={handleSaveOutgoing} disabled={!draftText || savingMsg}
                       style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#1f3d2e", fontSize: 13, fontWeight: 600, color: "#f5f1e6", cursor: "pointer" }}>
-                      UloĹľit jako odeslanĂ©
+                      Uložit jako odeslané
                     </button>
                   </div>
                 </div>
@@ -2298,7 +2241,7 @@ export default function EquityDashboard() {
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Asistent</div>
           {chatMessages.length === 0 ? (
             <div style={{ fontSize: 14, color: "#7c8378", lineHeight: 1.6 }}>
-              Zeptej se na cokoli o svĂ©m portfoliu â€” vĂ˝nosy, cash-flow, vĂ˝voj equity nebo srovnĂˇnĂ­ nemovitostĂ­.
+              Zeptej se na cokoli o svém portfoliu — výnosy, cash-flow, vývoj equity nebo srovnání nemovitostí.
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -2310,7 +2253,7 @@ export default function EquityDashboard() {
                     color: m.role === "user" ? "#f5f1e6" : "#1c2b22",
                     fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap",
                   }}>
-                    {m.content || <span style={{ opacity: 0.5 }}>â€¦</span>}
+                    {m.content || <span style={{ opacity: 0.5 }}>…</span>}
                   </div>
                 </div>
               ))}
@@ -2339,19 +2282,19 @@ export default function EquityDashboard() {
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{d.name}</div>
                     <div style={{ fontSize: 12, color: "#7c8378", marginTop: 2 }}>
-                      {d.monthly_payment ? `SplĂˇtka ${fmt(d.monthly_payment)} KÄŤ/mÄ›s` : ""}
-                      {d.monthly_payment && d.interest_rate ? " Â· " : ""}
-                      {d.interest_rate ? `Ăšrok ${d.interest_rate} %` : ""}
-                      {d.due_date ? `${d.monthly_payment || d.interest_rate ? " Â· " : ""}Splatnost ${d.due_date}` : ""}
+                      {d.monthly_payment ? `Splátka ${fmt(d.monthly_payment)} Kč/měs` : ""}
+                      {d.monthly_payment && d.interest_rate ? " · " : ""}
+                      {d.interest_rate ? `Úrok ${d.interest_rate} %` : ""}
+                      {d.due_date ? `${d.monthly_payment || d.interest_rate ? " · " : ""}Splatnost ${d.due_date}` : ""}
                     </div>
                     {d.note && <div style={{ fontSize: 12, color: "#9a9483", marginTop: 4 }}>{d.note}</div>}
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 16, color: d.direction === "i_owe" ? "#c0392b" : "#1f3d2e" }}>
-                      {d.direction === "i_owe" ? "â’" : "+"}{fmt(d.amount_remaining)} KÄŤ
+                      {d.direction === "i_owe" ? "−" : "+"}{fmt(d.amount_remaining)} Kč
                     </div>
                     {d.amount_original !== d.amount_remaining && (
-                      <div style={{ fontSize: 11, color: "#9a9483" }}>z {fmt(d.amount_original)} KÄŤ</div>
+                      <div style={{ fontSize: 11, color: "#9a9483" }}>z {fmt(d.amount_original)} Kč</div>
                     )}
                   </div>
                 </div>
@@ -2361,7 +2304,7 @@ export default function EquityDashboard() {
                       <div style={{ width: `${Math.min(100 - (d.amount_remaining / d.amount_original) * 100, 100)}%`, height: "100%", background: d.direction === "i_owe" ? "#c0392b" : "#1f3d2e", transition: "width .4s" }} />
                     </div>
                     <div style={{ fontSize: 11, color: "#9a9483", marginTop: 3 }}>
-                      Splaceno {fmt(d.amount_original - d.amount_remaining)} KÄŤ z {fmt(d.amount_original)} KÄŤ
+                      Splaceno {fmt(d.amount_original - d.amount_remaining)} Kč z {fmt(d.amount_original)} Kč
                     </div>
                   </div>
                 )}
@@ -2373,43 +2316,43 @@ export default function EquityDashboard() {
                 {/* Souhrn */}
                 <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
                   {[
-                    { label: "JĂˇ dluĹľĂ­m", value: totalIOwe, color: "#c0392b", bg: "#fde8e8" },
-                    { label: "MnÄ› dluĹľĂ­", value: totalTheyOwe, color: "#1f3d2e", bg: "#d6e4d6" },
-                    { label: "Bilance", value: Math.abs(balance), color: balance >= 0 ? "#1f3d2e" : "#c0392b", bg: "#f5f1e6", prefix: balance >= 0 ? "+" : "â’" },
+                    { label: "Já dlužím", value: totalIOwe, color: "#c0392b", bg: "#fde8e8" },
+                    { label: "Mně dluží", value: totalTheyOwe, color: "#1f3d2e", bg: "#d6e4d6" },
+                    { label: "Bilance", value: Math.abs(balance), color: balance >= 0 ? "#1f3d2e" : "#c0392b", bg: "#f5f1e6", prefix: balance >= 0 ? "+" : "−" },
                   ].map(({ label, value, color, bg, prefix }) => (
                     <div key={label} style={{ flex: 1, background: bg, borderRadius: 10, padding: "14px 18px" }}>
                       <div style={{ fontSize: 11, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 22, color }}>{prefix ?? ""}{fmt(value)} KÄŤ</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 22, color }}>{prefix ?? ""}{fmt(value)} Kč</div>
                     </div>
                   ))}
                 </div>
 
-                {/* JĂˇ dluĹľĂ­m */}
+                {/* Já dlužím */}
                 <div style={{ marginBottom: 24 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#c0392b", textTransform: "uppercase", letterSpacing: "0.08em" }}>JĂˇ dluĹľĂ­m</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#c0392b", textTransform: "uppercase", letterSpacing: "0.08em" }}>Já dlužím</div>
                     <button onClick={() => setDebtModal({ open: true, debt: null })}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 8, border: "1px solid #e3ddcb", background: "transparent", color: "#5c6359", cursor: "pointer", fontWeight: 600 }}>
-                      + PĹ™idat
+                      + Přidat
                     </button>
                   </div>
                   {iOwe.length === 0
-                    ? <div style={{ fontSize: 13, color: "#9a9483" }}>Ĺ˝ĂˇdnĂ© zĂˇznamy</div>
+                    ? <div style={{ fontSize: 13, color: "#9a9483" }}>Žádné záznamy</div>
                     : <div className="flex flex-col gap-[8px]">{iOwe.map(d => <DebtCard key={d.id} d={d} />)}</div>
                   }
                 </div>
 
-                {/* MnÄ› dluĹľĂ­ */}
+                {/* Mně dluží */}
                 <div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#1f3d2e", textTransform: "uppercase", letterSpacing: "0.08em" }}>MnÄ› dluĹľĂ­</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#1f3d2e", textTransform: "uppercase", letterSpacing: "0.08em" }}>Mně dluží</div>
                     <button onClick={() => setDebtModal({ open: true, debt: null })}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 8, border: "1px solid #e3ddcb", background: "transparent", color: "#5c6359", cursor: "pointer", fontWeight: 600 }}>
-                      + PĹ™idat
+                      + Přidat
                     </button>
                   </div>
                   {theyOwe.length === 0
-                    ? <div style={{ fontSize: 13, color: "#9a9483" }}>Ĺ˝ĂˇdnĂ© zĂˇznamy</div>
+                    ? <div style={{ fontSize: 13, color: "#9a9483" }}>Žádné záznamy</div>
                     : <div className="flex flex-col gap-[8px]">{theyOwe.map(d => <DebtCard key={d.id} d={d} />)}</div>
                   }
                 </div>
@@ -2428,7 +2371,7 @@ export default function EquityDashboard() {
             style={{ border: "1px solid #d2cab4", background: "#f7f3e9", borderRadius: 28, padding: "10px 12px 10px 14px", boxShadow: "0 6px 24px rgba(31,61,46,.12)" }}>
             <button className="flex items-center justify-center flex-none"
               onClick={() => setChatMessages([])}
-              title="NovĂ˝ rozhovor"
+              title="Nový rozhovor"
               style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #cfc6af", background: "transparent", cursor: "pointer" }}>
               <svg width="16" height="16" viewBox="0 0 16 16">
                 <line x1="8" y1="3" x2="8" y2="13" stroke="#5c6359" strokeWidth="1.7" />
@@ -2440,7 +2383,7 @@ export default function EquityDashboard() {
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendChat(); } }}
-              placeholder={activeProperty ? `Ptej se na ${activeProperty.name} nebo celĂ© portfolioâ€¦` : "Zeptej se na svĂ© portfolioâ€¦"}
+              placeholder={activeProperty ? `Ptej se na ${activeProperty.name} nebo celé portfolio…` : "Zeptej se na své portfolio…"}
               style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 15, color: "#1c2b22" }}
             />
             <button
@@ -2459,4 +2402,3 @@ export default function EquityDashboard() {
     </div>
   );
 }
-
