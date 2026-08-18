@@ -1659,7 +1659,7 @@ export default function EquityDashboard() {
       </aside>
 
       {/* MAIN */}
-      <main className="eq-main" style={{ marginLeft: 78, padding: "40px 48px 160px", maxWidth: 1140 }}>
+      <main className="eq-main" style={{ marginLeft: 78, padding: "40px 48px 220px", maxWidth: 1140 }}>
 
         {/* Topbar */}
         <div className="eq-topbar flex justify-between items-center mb-[30px]">

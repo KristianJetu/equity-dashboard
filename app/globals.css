@@ -179,3 +179,28 @@ body {
     border-bottom: none !important;
   }
 }
+
+/* --- Vertikální sidebar na nižších monitorech ---
+   Na desktopu se sidebar nepřeklápí (to je jen do 640px šířky), ale s víc
+   položkami v menu se na kratších obrazovkách ikony natěsnají u spodní
+   odhlašovací ikony. Zmenši mezery a ikony, ať se vejdou s rezervou. */
+@media (max-height: 760px) and (min-width: 641px) {
+  .eq-sidebar {
+    padding-top: 14px !important;
+    padding-bottom: 14px !important;
+  }
+  .eq-sidebar-logo {
+    margin-bottom: 16px !important;
+  }
+  .eq-nav-items {
+    gap: 4px !important;
+  }
+  .eq-nav-items a {
+    width: 38px !important;
+    height: 38px !important;
+  }
+  .eq-nav-items svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+}
