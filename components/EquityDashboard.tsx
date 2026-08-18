@@ -1676,7 +1676,7 @@ export default function EquityDashboard() {
                   {totalDebt > 0 && (
                     <div className="eq-header-progress" style={{ marginTop: 26, maxWidth: 440 }}>
                       <div className="flex justify-between items-baseline mb-[9px]" style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9db8a6" }}>
-                        <span>Vlastní kapitál / Hodnota portfolia</span>
+                        <span>Vlastní kapitál</span>
                         <span style={{ color: "#e7c773" }}>{Math.round((equity / totalValue) * 100)} %</span>
                       </div>
                       <div style={{ height: 9, borderRadius: 6, background: "rgba(255,255,255,.14)", overflow: "hidden" }}>
