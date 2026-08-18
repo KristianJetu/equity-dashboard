@@ -134,6 +134,23 @@ const translations = {
     konecFixaceX: (d: string) => `Konec fixace ${d}`,
     konecFixaceZaDni: (d: number, date: string) => `⚠ Konec fixace za ${d} dní (${date})`,
     dluhHodnota: (dluh: string, hodnota: string) => `Dluh ${dluh} mil · Hodnota ${hodnota} mil`,
+    prijmy: "Příjmy",
+    vydaje: "Výdaje",
+    cistyCashflow: "Čistý cashflow",
+    zTohoPlanovane: (kc: string) => `z toho +${kc} Kč plánované`,
+    mesicne: "měsíčně",
+    planZkr: "plán.",
+    planNajemZkr: "Plán. nájem",
+    najem: "Nájem",
+    splatka: "Splátka",
+    pojistne: "Pojistné",
+    naklady: "Náklady",
+    prijem: "Příjem",
+    planPrijemLower: "plán. příjem",
+    prijemLower: "příjem",
+    vydajeLower: "výdaje",
+    planovanyNajem: "Plánovaný nájem",
+    splatkaHypoteky: "Splátka hypotéky",
   },
   en: {
     dashboard: "Dashboard",
@@ -181,6 +198,23 @@ const translations = {
     konecFixaceX: (d: string) => `Fixation ends ${d}`,
     konecFixaceZaDni: (d: number, date: string) => `⚠ Fixation ends in ${d} days (${date})`,
     dluhHodnota: (dluh: string, hodnota: string) => `Loan ${dluh}M · Value ${hodnota}M`,
+    prijmy: "Income",
+    vydaje: "Expenses",
+    cistyCashflow: "Net cashflow",
+    zTohoPlanovane: (kc: string) => `of which +${kc} Kč planned`,
+    mesicne: "monthly",
+    planZkr: "plan.",
+    planNajemZkr: "Planned rent",
+    najem: "Rent",
+    splatka: "Payment",
+    pojistne: "Insurance",
+    naklady: "Costs",
+    prijem: "Income",
+    planPrijemLower: "planned income",
+    prijemLower: "income",
+    vydajeLower: "expenses",
+    planovanyNajem: "Planned rent",
+    splatkaHypoteky: "Mortgage payment",
   },
 } as const;
 
@@ -2077,34 +2111,34 @@ export default function EquityDashboard() {
                     {/* Příjmy */}
                     <div style={panelStyle("income")} onClick={() => toggleCf("income")}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>Příjmy</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>{t("prijmy")}</div>
                         <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "income" ? "▴" : "▾"}</span>
                       </div>
                       <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#1f3d2e", marginTop: 4 }}>+{fmt(totalRent)} Kč</div>
                       {showPlanned && plannedRent > 0
-                        ? <div style={{ fontSize: 11, color: "#4a7c59", marginTop: 2 }}>z toho +{fmt(plannedRent)} Kč plánované</div>
-                        : <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
+                        ? <div style={{ fontSize: 11, color: "#4a7c59", marginTop: 2 }}>{t("zTohoPlanovane")(fmt(plannedRent))}</div>
+                        : <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>{t("mesicne")}</div>
                       }
                     </div>
                     {/* Výdaje */}
                     <div style={panelStyle("expenses")} onClick={() => toggleCf("expenses")}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>Výdaje</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>{t("vydaje")}</div>
                         <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "expenses" ? "▴" : "▾"}</span>
                       </div>
                       <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#c0392b", marginTop: 4 }}>−{fmt(totalOut)} Kč</div>
-                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
+                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>{t("mesicne")}</div>
                     </div>
                     {/* Čistý cashflow */}
                     <div style={panelStyle("net")} onClick={() => toggleCf("net")}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>Čistý cashflow</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>{t("cistyCashflow")}</div>
                         <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "net" ? "▴" : "▾"}</span>
                       </div>
                       <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: net >= 0 ? "#1f3d2e" : "#c0392b", marginTop: 4 }}>
                         {net >= 0 ? "+" : ""}{fmt(net)} Kč
                       </div>
-                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>měsíčně</div>
+                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>{t("mesicne")}</div>
                     </div>
                   </div>
 
@@ -2125,12 +2159,12 @@ export default function EquityDashboard() {
                           <div key={p.id} style={{ background: isPlanned ? "#eef5ee" : "#ede9dd", borderRadius: 8, padding: "12px 14px", border: "none" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: "#5c6359", textTransform: "uppercase", letterSpacing: "0.06em" }}>{p.name}</div>
-                              {isPlanned && <span style={{ fontSize: 9, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 8, padding: "1px 5px" }}>plán.</span>}
+                              {isPlanned && <span style={{ fontSize: 9, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 8, padding: "1px 5px" }}>{t("planZkr")}</span>}
                             </div>
 
                             {cfExpanded === "income" || cfExpanded === "net" ? (
                               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                                <span style={{ fontSize: 12, color: "#5c6359" }}>{isPlanned ? "Plán. nájem" : "Nájem"}</span>
+                                <span style={{ fontSize: 12, color: "#5c6359" }}>{isPlanned ? t("planNajemZkr") : t("najem")}</span>
                                 <span style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(income)} Kč</span>
                               </div>
                             ) : null}
@@ -2139,19 +2173,19 @@ export default function EquityDashboard() {
                               <>
                                 {mortgage_payment > 0 && (
                                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                    <span style={{ fontSize: 12, color: "#5c6359" }}>Splátka</span>
+                                    <span style={{ fontSize: 12, color: "#5c6359" }}>{t("splatka")}</span>
                                     <span style={{ fontSize: 12, color: "#c0392b" }}>−{fmt(mortgage_payment)} Kč</span>
                                   </div>
                                 )}
                                 {insurance > 0 && (
                                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                    <span style={{ fontSize: 12, color: "#5c6359" }}>Pojistné</span>
+                                    <span style={{ fontSize: 12, color: "#5c6359" }}>{t("pojistne")}</span>
                                     <span style={{ fontSize: 12, color: "#c0392b" }}>−{fmt(insurance)} Kč</span>
                                   </div>
                                 )}
                                 {costs > 0 && (
                                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                    <span style={{ fontSize: 12, color: "#5c6359" }}>Náklady</span>
+                                    <span style={{ fontSize: 12, color: "#5c6359" }}>{t("naklady")}</span>
                                     <span style={{ fontSize: 12, color: "#c0392b" }}>−{fmt(costs)} Kč</span>
                                   </div>
                                 )}
@@ -2160,7 +2194,7 @@ export default function EquityDashboard() {
 
                             <div style={{ borderTop: "1px solid #d2cab4", paddingTop: 6, marginTop: 4, display: "flex", justifyContent: "space-between" }}>
                               <span style={{ fontSize: 12, fontWeight: 700, color: "#1c2b22" }}>
-                                {cfExpanded === "income" ? "Příjem" : cfExpanded === "expenses" ? "Výdaje" : "Cashflow"}
+                                {cfExpanded === "income" ? t("prijem") : cfExpanded === "expenses" ? t("vydaje") : "Cashflow"}
                               </span>
                               <span style={{ fontSize: 12, fontWeight: 700, color: cfExpanded === "income" ? "#1f3d2e" : cfExpanded === "expenses" ? "#c0392b" : net >= 0 ? "#1f3d2e" : "#c0392b" }}>
                                 {cfExpanded === "income" ? `+${fmt(income)}` : cfExpanded === "expenses" ? `−${fmt(totalOut)}` : `${net >= 0 ? "+" : ""}${fmt(net)}`} Kč
@@ -2179,10 +2213,10 @@ export default function EquityDashboard() {
                     const isOpen = cfPropExpanded === p.id;
                     const mortgage = mortgages.find(m => m.property_id === p.id);
                     const expItems: { label: string; amount: number }[] = [];
-                    if (mortgage?.monthly_payment) expItems.push({ label: "Splátka hypotéky", amount: mortgage.monthly_payment });
+                    if (mortgage?.monthly_payment) expItems.push({ label: t("splatkaHypoteky"), amount: mortgage.monthly_payment });
                     const prop = properties.find(pr => pr.id === p.id);
-                    if (prop?.insurance_amount) expItems.push({ label: "Pojistné", amount: prop.insurance_amount / 12 });
-                    if (prop?.monthly_costs) expItems.push({ label: "Náklady", amount: prop.monthly_costs });
+                    if (prop?.insurance_amount) expItems.push({ label: t("pojistne"), amount: prop.insurance_amount / 12 });
+                    if (prop?.monthly_costs) expItems.push({ label: t("naklady"), amount: prop.monthly_costs });
                     return (
                       <div key={p.id}
                         onClick={() => setCfPropExpanded(prev => prev === p.id ? null : p.id)}
@@ -2198,7 +2232,7 @@ export default function EquityDashboard() {
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <div style={{ fontSize: 12, fontWeight: 700, color: "#5c6359" }}>{p.name}</div>
-                            {p.planned && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "1px 7px" }}>plánovaná</span>}
+                            {p.planned && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "1px 7px" }}>{t("planovanaBadge")}</span>}
                           </div>
                           <span style={{ fontSize: 11, color: "#9a9483" }}>{isOpen ? "▴" : "▾"}</span>
                         </div>
@@ -2206,13 +2240,13 @@ export default function EquityDashboard() {
                           {p.net >= 0 ? "+" : ""}{fmt(p.net)} Kč
                         </div>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9a9483" }}>
-                          <span>{p.planned ? "plán. příjem" : "příjem"} +{fmt(p.income)} Kč</span>
-                          <span>−{fmt(p.out)} výdaje</span>
+                          <span>{p.planned ? t("planPrijemLower") : t("prijemLower")} +{fmt(p.income)} Kč</span>
+                          <span>−{fmt(p.out)} {t("vydajeLower")}</span>
                         </div>
                         {isOpen && (
                           <div style={{ borderTop: "1px solid #d2cab4", marginTop: 12, paddingTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                              <span style={{ fontSize: 12, color: "#5c6359" }}>{p.planned ? "Plánovaný nájem" : "Nájem"}</span>
+                              <span style={{ fontSize: 12, color: "#5c6359" }}>{p.planned ? t("planovanyNajem") : t("najem")}</span>
                               <span style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(p.income)} Kč</span>
                             </div>
                             {expItems.map(item => (
@@ -2222,7 +2256,7 @@ export default function EquityDashboard() {
                               </div>
                             ))}
                             <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #d2cab4", paddingTop: 4, marginTop: 2 }}>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: "#1c2b22" }}>Čistý cashflow</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#1c2b22" }}>{t("cistyCashflow")}</span>
                               <span style={{ fontSize: 12, fontWeight: 700, color: p.net >= 0 ? "#1f3d2e" : "#c0392b" }}>{p.net >= 0 ? "+" : ""}{fmt(p.net)} Kč</span>
                             </div>
                           </div>
