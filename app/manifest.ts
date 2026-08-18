@@ -1,0 +1,20 @@
+import type { MetadataRoute } from "next";
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "Equity Dashboard",
+    short_name: "Equity",
+    description: "Přehled portfolia nemovitostí, hypoték a cashflow",
+    start_url: "/",
+    display: "standalone",
+    orientation: "portrait",
+    background_color: "#ece6d8",
+    theme_color: "#1f3d2e",
+    lang: "cs",
+    icons: [
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
+  };
+}

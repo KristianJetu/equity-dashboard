@@ -15,3 +15,45 @@ body {
   background: #ece6d8;
   font-family: 'Hanken Grotesk', sans-serif;
 }
+
+/* --- Mobile layout (telefony do 640px) ---
+   Levý navigační pruh (.eq-sidebar) se na mobilu překlopí na spodní
+   tab bar, aby šel ovládat palcem a nezabíral šířku obsahu.
+   .eq-main dostane menší padding a místo pro spodní bar. */
+@media (max-width: 640px) {
+  .eq-sidebar {
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 60px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 6px 10px !important;
+  }
+
+  .eq-sidebar-logo {
+    display: none !important;
+  }
+
+  .eq-nav-items {
+    flex-direction: row !important;
+    gap: 2px !important;
+  }
+
+  .eq-sidebar-badge {
+    margin-top: 0 !important;
+    margin-left: 2px !important;
+  }
+
+  .eq-sidebar-logout {
+    margin-top: 0 !important;
+    margin-left: auto !important;
+  }
+
+  .eq-main {
+    margin-left: 0 !important;
+    padding: 20px 16px 88px !important;
+  }
+}

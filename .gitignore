@@ -5,3 +5,6 @@ node_modules/
 
 .vercel
 .env*
+.claude/settings.local.json
+tsconfig.tsbuildinfo
+components/EquityDashboard_prev.tsx

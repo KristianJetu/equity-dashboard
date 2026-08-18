@@ -260,7 +260,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)" }} onClick={onClose}>
-      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "32px 32px 28px", width: 640, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
+      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "clamp(18px, 5vw, 32px) clamp(18px, 5vw, 32px) clamp(16px, 4vw, 28px)", width: "min(640px, 92vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
         onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-start mb-6">
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 20, color: "#1c2b22" }}>Detail nemovitosti</div>
@@ -392,7 +392,7 @@ function PaymentModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)" }} onClick={onClose}>
-      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "32px 32px 28px", width: 560, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
+      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "clamp(18px, 5vw, 32px) clamp(18px, 5vw, 32px) clamp(16px, 4vw, 28px)", width: "min(560px, 92vw)", maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
         onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex justify-between items-start mb-6">
@@ -1599,12 +1599,12 @@ export default function EquityDashboard() {
         />
       )}
 
-      {/* SIDEBAR */}
-      <aside className="fixed top-0 left-0 bottom-0 flex flex-col items-center py-[22px] z-50" style={{ width: 78, background: "#1f3d2e" }}>
-        <div className="flex items-center justify-center mb-[30px] flex-none" style={{ width: 34, height: 34, borderRadius: 9, background: "#c9a24b" }}>
+      {/* SIDEBAR (na mobilu se přes globals.css mění na spodní tab bar) */}
+      <aside className="eq-sidebar fixed top-0 left-0 bottom-0 flex flex-col items-center py-[22px] z-50" style={{ width: 78, background: "#1f3d2e" }}>
+        <div className="eq-sidebar-logo flex items-center justify-center mb-[30px] flex-none" style={{ width: 34, height: 34, borderRadius: 9, background: "#c9a24b" }}>
           <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#1f3d2e" }} />
         </div>
-        <div className="flex flex-col gap-2 items-center">
+        <div className="eq-nav-items flex flex-col gap-2 items-center">
           {NAV_ITEMS.map((item) => {
             const on = activeSection === item.id;
             return (
@@ -1618,14 +1618,14 @@ export default function EquityDashboard() {
         </div>
         {/* Badge na nespárované */}
         {unmatchedPayments.length > 0 && (
-          <a href="#platby" style={{ marginTop: 8, textDecoration: "none" }}>
+          <a href="#platby" className="eq-sidebar-badge" style={{ marginTop: 8, textDecoration: "none" }}>
             <span style={{ background: "#c0392b", color: "#fff", borderRadius: "50%", width: 20, height: 20, fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
               {unmatchedPayments.length}
             </span>
           </a>
         )}
         <button title={userEmail ?? "Odhlásit"} onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
-          className="mt-auto flex items-center justify-center rounded-[12px]"
+          className="eq-sidebar-logout mt-auto flex items-center justify-center rounded-[12px]"
           style={{ width: 46, height: 46, background: "transparent", border: "none", cursor: "pointer" }}>
           <span style={{ color: "#86a191", display: "flex" }}>
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -1638,7 +1638,7 @@ export default function EquityDashboard() {
       </aside>
 
       {/* MAIN */}
-      <main style={{ marginLeft: 78, padding: "40px 48px 160px", maxWidth: 1140 }}>
+      <main className="eq-main" style={{ marginLeft: 78, padding: "40px 48px 160px", maxWidth: 1140 }}>
 
         {/* Topbar */}
         <div className="flex justify-between items-center mb-[30px]">
@@ -1924,7 +1924,7 @@ export default function EquityDashboard() {
 
                   {/* Rozbalený detail — grid karet per nemovitost */}
                   {cfExpanded && (
-                    <div style={{ borderTop: "1px solid #d2cab4", marginTop: 14, paddingTop: 14, display: "grid", gridTemplateColumns: `repeat(${Math.min(properties.filter(p => showPlanned || p.status !== "planned").length, 3)}, 1fr)`, gap: 10 }}>
+                    <div style={{ borderTop: "1px solid #d2cab4", marginTop: 14, paddingTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))", gap: 10 }}>
                       {properties.filter(p => showPlanned || p.status !== "planned").map(p => {
                         const isPlanned = p.status === "planned";
                         const mortgage = mortgages.find(m => m.property_id === p.id);
