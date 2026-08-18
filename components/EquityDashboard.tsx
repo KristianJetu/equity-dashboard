@@ -87,6 +87,47 @@ type Debt = {
   due_date?: string | null;
 };
 
+const translations = {
+  cs: {
+    dashboard: "Dashboard",
+    nemovitosti: "Nemovitosti",
+    platby: "Platby",
+    najemnici: "Nájemníci",
+    komunikace: "Komunikace",
+    asistent: "Asistent",
+    dluhy: "Dluhy",
+    nastaveni: "Nastavení",
+    majetek: "Majetek",
+    tveNemovitosti: "Tvé nemovitosti",
+    mesicniCashflow: "Měsíční cashflow",
+    komunikaceSNajemniky: "Komunikace s nájemníky",
+    jazykAplikace: "Jazyk aplikace",
+    jazykPopis: "Rozhraní je zatím jen v češtině — přepínač si uloží tvou preferenci pro budoucí anglickou verzi.",
+    cestina: "Čeština",
+    anglictina: "English",
+    zavrit: "Zavřít",
+  },
+  en: {
+    dashboard: "Dashboard",
+    nemovitosti: "Properties",
+    platby: "Payments",
+    najemnici: "Tenants",
+    komunikace: "Communication",
+    asistent: "Assistant",
+    dluhy: "Debts",
+    nastaveni: "Settings",
+    majetek: "Net worth",
+    tveNemovitosti: "Your properties",
+    mesicniCashflow: "Monthly cashflow",
+    komunikaceSNajemniky: "Tenant communication",
+    jazykAplikace: "App language",
+    jazykPopis: "The interface is currently Czech-only — this toggle saves your preference for the upcoming English version.",
+    cestina: "Czech",
+    anglictina: "English",
+    zavrit: "Close",
+  },
+} as const;
+
 const NAV_ITEMS = [
   {
     id: "dashboard", title: "Dashboard",
@@ -1287,6 +1328,7 @@ export default function EquityDashboard() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState("··");
   const [language, setLanguage] = useState<"cs" | "en">("cs");
+  const t = (key: keyof typeof translations["cs"]) => translations[language][key];
   const [savingLanguage, setSavingLanguage] = useState(false);
 
   useEffect(() => {
@@ -1627,26 +1669,26 @@ export default function EquityDashboard() {
           onClick={() => setSettingsOpen(false)}>
           <div style={{ background: "#faf8f3", borderRadius: 16, padding: "28px 28px 24px", width: 420, maxWidth: "95vw", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 18, color: "#1c2b22", marginBottom: 20 }}>Nastavení</div>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 18, color: "#1c2b22", marginBottom: 20 }}>{t("nastaveni")}</div>
             <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "18px 20px" }}>
-              <div style={{ fontWeight: 600, fontSize: 14, color: "#1c2b22", marginBottom: 4 }}>Jazyk aplikace</div>
+              <div style={{ fontWeight: 600, fontSize: 14, color: "#1c2b22", marginBottom: 4 }}>{t("jazykAplikace")}</div>
               <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 12 }}>
-                Rozhraní je zatím jen v češtině — přepínač si uloží tvou preferenci pro budoucí anglickou verzi.
+                {t("jazykPopis")}
               </div>
               <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3, width: "fit-content" }}>
                 <button onClick={() => saveLanguage("cs")} disabled={savingLanguage}
                   style={{ padding: "6px 16px", borderRadius: 18, border: "none", background: language === "cs" ? "#1f3d2e" : "transparent", color: language === "cs" ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: savingLanguage ? "default" : "pointer" }}>
-                  Čeština
+                  {t("cestina")}
                 </button>
                 <button onClick={() => saveLanguage("en")} disabled={savingLanguage}
                   style={{ padding: "6px 16px", borderRadius: 18, border: "none", background: language === "en" ? "#1f3d2e" : "transparent", color: language === "en" ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: savingLanguage ? "default" : "pointer" }}>
-                  English
+                  {t("anglictina")}
                 </button>
               </div>
             </div>
             <button onClick={() => setSettingsOpen(false)}
               style={{ marginTop: 20, width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-              Zavřít
+              {t("zavrit")}
             </button>
           </div>
         </div>
@@ -1659,9 +1701,10 @@ export default function EquityDashboard() {
         </div>
         <div className="eq-nav-items flex flex-col gap-2 items-center">
           {NAV_ITEMS.map((item) => {
+            const label = t(item.id as keyof typeof translations["cs"]);
             if (item.id === "nastaveni") {
               return (
-                <button key={item.id} title={item.title} onClick={() => setSettingsOpen(true)}
+                <button key={item.id} title={label} onClick={() => setSettingsOpen(true)}
                   className="flex items-center justify-center transition-colors duration-150 rounded-[12px]"
                   style={{ width: 46, height: 46, background: settingsOpen ? "rgba(255,255,255,.12)" : "transparent", border: "none", cursor: "pointer" }}>
                   <span style={{ color: settingsOpen ? "#f5f1e6" : "#86a191", display: "flex" }}>{item.icon}</span>
@@ -1670,7 +1713,7 @@ export default function EquityDashboard() {
             }
             const on = activeSection === item.id;
             return (
-              <a key={item.id} href={`#${item.id}`} title={item.title}
+              <a key={item.id} href={`#${item.id}`} title={label}
                 className="flex items-center justify-center transition-colors duration-150 rounded-[12px]"
                 style={{ width: 46, height: 46, background: on ? "rgba(255,255,255,.12)" : "transparent", textDecoration: "none" }}>
                 <span style={{ color: on ? "#f5f1e6" : "#86a191", display: "flex" }}>{item.icon}</span>
@@ -1706,7 +1749,7 @@ export default function EquityDashboard() {
         <div className="eq-topbar flex justify-between items-center mb-[30px]">
           <div className="flex items-center gap-[11px]">
             <div style={{ width: 11, height: 11, borderRadius: "50%", background: "#c39a3f" }} />
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 23, fontWeight: 700, letterSpacing: "-0.01em", color: "#1c2b22" }}>{"Majetek"}</div>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 23, fontWeight: 700, letterSpacing: "-0.01em", color: "#1c2b22" }}>{t("majetek")}</div>
           </div>
           <div className="flex items-center gap-3">
             <span style={{ fontSize: 13, color: "#7c8378" }}>
@@ -1816,7 +1859,7 @@ export default function EquityDashboard() {
         {/* NEMOVITOSTI */}
         <section id="nemovitosti" style={{ marginTop: 38, scrollMarginTop: 28 }}>
           <div className="eq-section-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Tvé nemovitosti</div>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>{t("tveNemovitosti")}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <button onClick={() => setShowAddProperty(true)}
                 style={{ fontSize: 12, padding: "6px 14px", borderRadius: 20, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 600 }}>
@@ -1914,7 +1957,7 @@ export default function EquityDashboard() {
         {/* PLATBY */}
         <section id="platby" style={{ marginTop: 38, scrollMarginTop: 28 }}>
           <div className="eq-section-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Měsíční cashflow</div>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>{t("mesicniCashflow")}</div>
             <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3 }}>
               <button onClick={() => setShowPlanned(false)}
                 style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: !showPlanned ? "#1f3d2e" : "transparent", color: !showPlanned ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
@@ -2230,7 +2273,7 @@ export default function EquityDashboard() {
         {/* NÁJEMNÍCI */}
         <section id="najemnici" style={{ marginTop: 38, scrollMarginTop: 28 }}>
           <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Nájemníci</div>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>{t("najemnici")}</div>
             <button onClick={() => setShowAddTenant(true)}
               style={{ fontSize: 13, fontWeight: 600, padding: "7px 16px", borderRadius: 8, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer" }}>
               + Přidat nájemníka
@@ -2256,7 +2299,7 @@ export default function EquityDashboard() {
 
         {/* KOMUNIKACE */}
         <section id="komunikace" style={{ marginTop: 38, scrollMarginTop: 28 }}>
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Komunikace s nájemníky</div>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>{t("komunikaceSNajemniky")}</div>
 
           {/* Výběr nemovitosti */}
           <div className="flex gap-[7px] flex-wrap mb-4">
@@ -2392,7 +2435,7 @@ export default function EquityDashboard() {
 
         {/* ASISTENT */}
         <section id="asistent" style={{ marginTop: 38, scrollMarginTop: 28 }}>
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Asistent</div>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>{t("asistent")}</div>
           {chatMessages.length === 0 ? (
             <div style={{ fontSize: 14, color: "#7c8378", lineHeight: 1.6 }}>
               Zeptej se na cokoli o svém portfoliu — výnosy, cash-flow, vývoj equity nebo srovnání nemovitostí.
@@ -2418,7 +2461,7 @@ export default function EquityDashboard() {
 
         {/* DLUHY */}
         <section id="dluhy" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 100 }}>
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Dluhy</div>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>{t("dluhy")}</div>
 
           {(() => {
             const iOwe = debts.filter(d => d.direction === "i_owe");
