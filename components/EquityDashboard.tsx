@@ -593,7 +593,7 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
           <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 16, padding: 2 }}>
             {(["5", "10", "all"] as const).map(r => (
               <button key={r} onClick={() => setRange(r)}
-                style={{ padding: "3px 10px", borderRadius: 14, border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                style={{ padding: "8px 14px", borderRadius: 14, border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer",
                   background: range === r ? "#1f3d2e" : "transparent",
                   color: range === r ? "#f5f1e6" : "#5c6359" }}>
                 {r === "all" ? "Vše" : `${r} let`}
@@ -1749,7 +1749,7 @@ export default function EquityDashboard() {
               </button>
               <button onClick={() => setShowPlannedProps(true)}
                 style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: showPlannedProps ? "#4a7c59" : "transparent", color: showPlannedProps ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                Vč. plánovaných
+                Plánované
               </button>
             </div>
             </div>
@@ -1783,7 +1783,7 @@ export default function EquityDashboard() {
                           <span style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{p.name}</span>
                           {p.status === "planned" && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>plánovaná</span>}
                           {p.type && p.type !== "apartment" && (
-                            <span style={{ fontSize: 10, fontWeight: 600, color: "#7c8378", background: "#e6e0d0", borderRadius: 10, padding: "2px 8px" }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: "#7c8378", background: "#e6e0d0", borderRadius: 10, padding: "2px 8px" }}>
                               {{ house: "Dům", garage: "Garáž", land: "Pozemek", commercial: "Komerční", other: "Ostatní" }[p.type] ?? p.type}
                             </span>
                           )}
@@ -1842,7 +1842,7 @@ export default function EquityDashboard() {
               </button>
               <button onClick={() => setShowPlanned(true)}
                 style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: showPlanned ? "#4a7c59" : "transparent", color: showPlanned ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                Vč. plánovaných
+                Plánované
               </button>
             </div>
           </div>
