@@ -1989,7 +1989,7 @@ export default function EquityDashboard() {
                 </div>
 
                 {/* Per-nemovitost cashflow */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
+                <div className="eq-cf-prop-grid" style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
                   {propCf.map(p => {
                     const isOpen = cfPropExpanded === p.id;
                     const mortgage = mortgages.find(m => m.property_id === p.id);
@@ -2361,7 +2361,12 @@ export default function EquityDashboard() {
                       {d.interest_rate ? `Úrok ${d.interest_rate} %` : ""}
                       {d.due_date ? `${d.monthly_payment || d.interest_rate ? " · " : ""}Splatnost ${d.due_date}` : ""}
                     </div>
-                    {d.note && <div style={{ fontSize: 12, color: "#9a9483", marginTop: 4 }}>{d.note}</div>}
+                    {d.note && (
+                      <div style={{
+                        fontSize: 12, color: "#9a9483", marginTop: 4,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 380
+                      }}>{d.note}</div>
+                    )}
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 16, color: d.direction === "i_owe" ? "#c0392b" : "#1f3d2e" }}>

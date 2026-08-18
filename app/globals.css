@@ -154,6 +154,11 @@ body {
     white-space: nowrap !important;
   }
 
+  /* Cashflow per-property cards — 1 per row on mobile */
+  .eq-cf-prop-grid > div {
+    flex: 0 0 100% !important;
+  }
+
   /* Cashflow stat panels — stack vertically instead of side by side */
   .eq-cf-panels {
     flex-direction: column !important;
