@@ -119,6 +119,21 @@ const translations = {
     dnes: "dnes!",
     zitra: "zítra",
     zaDni: (n: number) => `za ${n} dní`,
+    pridat: "+ Přidat",
+    realne: "Reálné",
+    planovane: "Plánované",
+    spravovano: "Spravováno",
+    planovanaBadge: "plánovaná",
+    typDum: "Dům",
+    typGaraz: "Garáž",
+    typPozemek: "Pozemek",
+    typKomercni: "Komerční",
+    typOstatni: "Ostatní",
+    najemMesicne: (kc: string) => `Nájem ${kc} Kč / měs`,
+    splatkaX: (kc: string) => `Splátka ${kc} Kč`,
+    konecFixaceX: (d: string) => `Konec fixace ${d}`,
+    konecFixaceZaDni: (d: number, date: string) => `⚠ Konec fixace za ${d} dní (${date})`,
+    dluhHodnota: (dluh: string, hodnota: string) => `Dluh ${dluh} mil · Hodnota ${hodnota} mil`,
   },
   en: {
     dashboard: "Dashboard",
@@ -151,6 +166,21 @@ const translations = {
     dnes: "today!",
     zitra: "tomorrow",
     zaDni: (n: number) => `in ${n} days`,
+    pridat: "+ Add",
+    realne: "Active",
+    planovane: "Planned",
+    spravovano: "Managed",
+    planovanaBadge: "planned",
+    typDum: "House",
+    typGaraz: "Garage",
+    typPozemek: "Land",
+    typKomercni: "Commercial",
+    typOstatni: "Other",
+    najemMesicne: (kc: string) => `Rent ${kc} Kč / mo`,
+    splatkaX: (kc: string) => `Payment ${kc} Kč`,
+    konecFixaceX: (d: string) => `Fixation ends ${d}`,
+    konecFixaceZaDni: (d: number, date: string) => `⚠ Fixation ends in ${d} days (${date})`,
+    dluhHodnota: (dluh: string, hodnota: string) => `Loan ${dluh}M · Value ${hodnota}M`,
   },
 } as const;
 
@@ -189,10 +219,10 @@ const NAV_ITEMS = [
   },
 ];
 
-function statusBadge(status: string) {
-  if (status === "rented") return { label: "Pronajato", cls: "text-[#1f3d2e] bg-[#d6e4d6]" };
-  if (status === "vacant") return { label: "Volné", cls: "text-[#a07b2f] bg-[#efe3c6]" };
-  return { label: "Plánováno", cls: "text-[#7c8378] bg-[#e6e0d0]" };
+function statusBadge(status: string, lang: "cs" | "en" = "cs") {
+  if (status === "rented") return { label: lang === "cs" ? "Pronajato" : "Rented", cls: "text-[#1f3d2e] bg-[#d6e4d6]" };
+  if (status === "vacant") return { label: lang === "cs" ? "Volné" : "Vacant", cls: "text-[#a07b2f] bg-[#efe3c6]" };
+  return { label: lang === "cs" ? "Plánováno" : "Planned", cls: "text-[#7c8378] bg-[#e6e0d0]" };
 }
 
 function daysUntil(dateStr: string): number {
@@ -1895,16 +1925,16 @@ export default function EquityDashboard() {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <button onClick={() => setShowAddProperty(true)}
                 style={{ fontSize: 12, padding: "6px 14px", borderRadius: 20, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 600 }}>
-                + Přidat
+                {t("pridat")}
               </button>
             <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3 }}>
               <button onClick={() => setShowPlannedProps(false)}
                 style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: !showPlannedProps ? "#1f3d2e" : "transparent", color: !showPlannedProps ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                Reálné
+                {t("realne")}
               </button>
               <button onClick={() => setShowPlannedProps(true)}
                 style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: showPlannedProps ? "#4a7c59" : "transparent", color: showPlannedProps ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                Plánované
+                {t("planovane")}
               </button>
             </div>
             </div>
@@ -1914,8 +1944,8 @@ export default function EquityDashboard() {
               {(showPlannedProps ? properties : activeProperties).map((p) => {
                 const isManaged = p.ownership_type === "manager";
                 const { label, cls } = isManaged
-                  ? { label: "Spravováno", cls: "text-[#2255aa] bg-[#dce8f8]" }
-                  : statusBadge(p.status);
+                  ? { label: t("spravovano"), cls: "text-[#2255aa] bg-[#dce8f8]" }
+                  : statusBadge(p.status, language);
                 const mortgage = isManaged ? undefined : mortgages.find((m) => m.property_id === p.id);
                 return (
                   <div key={p.id} onClick={() => setSelectedProperty(p)} style={{ background: p.status === "planned" ? "#eef5ee" : "#f5f1e6", borderRadius: 10, padding: "15px 18px", border: "1px solid transparent", cursor: "pointer", transition: "box-shadow 0.15s" }}
@@ -1936,17 +1966,17 @@ export default function EquityDashboard() {
                             return icons[p.type ?? "apartment"] ?? icons.apartment;
                           })()}
                           <span className="eq-prop-name" style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{p.name}</span>
-                          {p.status === "planned" && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>plánovaná</span>}
+                          {p.status === "planned" && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{t("planovanaBadge")}</span>}
                           {p.type && p.type !== "apartment" && (
                             <span style={{ fontSize: 11, fontWeight: 600, color: "#7c8378", background: "#e6e0d0", borderRadius: 10, padding: "2px 8px" }}>
-                              {{ house: "Dům", garage: "Garáž", land: "Pozemek", commercial: "Komerční", other: "Ostatní" }[p.type] ?? p.type}
+                              {{ house: t("typDum"), garage: t("typGaraz"), land: t("typPozemek"), commercial: t("typKomercni"), other: t("typOstatni") }[p.type] ?? p.type}
                             </span>
                           )}
                         </div>
                         <div className="eq-prop-info" style={{ fontSize: 12, color: "#7c8378", marginTop: 2 }}>
-                          {p.status === "rented" ? `Nájem ${fmt(p.rent_amount)} Kč / měs` : p.address ?? ""}
-                          {mortgage ? ` · Splátka ${fmt(mortgage.monthly_payment)} Kč` : ""}
-                          {mortgage?.refix_date ? ` · Konec fixace ${mortgage.refix_date}` : ""}
+                          {p.status === "rented" ? t("najemMesicne")(fmt(p.rent_amount)) : p.address ?? ""}
+                          {mortgage ? ` · ${t("splatkaX")(fmt(mortgage.monthly_payment))}` : ""}
+                          {mortgage?.refix_date ? ` · ${t("konecFixaceX")(mortgage.refix_date)}` : ""}
                         </div>
                         {mortgage?.refix_date && (() => {
                           const days = daysUntil(mortgage.refix_date);
@@ -1954,7 +1984,7 @@ export default function EquityDashboard() {
                           const urgent = days <= 30;
                           return (
                             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6, padding: "4px 10px", borderRadius: 20, background: urgent ? "#fde8e8" : "#efe3c6", color: urgent ? "#c0392b" : "#a07b2f", fontSize: 12, fontWeight: 700 }}>
-                              ⚠ Konec fixace za {days} dní ({mortgage.refix_date})
+                              {t("konecFixaceZaDni")(days, mortgage.refix_date)}
                             </div>
                           );
                         })()}
@@ -1975,7 +2005,7 @@ export default function EquityDashboard() {
                           <div style={{ height: 5, borderRadius: 3, background: "#e3ddcb", overflow: "hidden" }}>
                             <div style={{ width: `${Math.min(ltv, 100)}%`, height: "100%", background: color, transition: "width .4s" }} />
                           </div>
-                          <div style={{ fontSize: 11, color: "#9a9483", marginTop: 3 }}>Dluh {fmtMil(mortgage.outstanding_balance)} mil · Hodnota {fmtMil(p.estimated_value)} mil</div>
+                          <div style={{ fontSize: 11, color: "#9a9483", marginTop: 3 }}>{t("dluhHodnota")(fmtMil(mortgage.outstanding_balance), fmtMil(p.estimated_value))}</div>
                         </div>
                       );
                     })()}
@@ -1993,11 +2023,11 @@ export default function EquityDashboard() {
             <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3 }}>
               <button onClick={() => setShowPlanned(false)}
                 style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: !showPlanned ? "#1f3d2e" : "transparent", color: !showPlanned ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                Reálné
+                {t("realne")}
               </button>
               <button onClick={() => setShowPlanned(true)}
                 style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: showPlanned ? "#4a7c59" : "transparent", color: showPlanned ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                Plánované
+                {t("planovane")}
               </button>
             </div>
           </div>
