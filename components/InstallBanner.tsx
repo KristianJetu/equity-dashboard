@@ -10,6 +10,7 @@ interface BeforeInstallPromptEvent extends Event {
 export default function InstallBanner() {
   const [visible, setVisible] = useState(false);
   const [isIos, setIsIos] = useState(false);
+  const [showManual, setShowManual] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
@@ -53,6 +54,9 @@ export default function InstallBanner() {
         localStorage.setItem("pwa-install-dismissed", "1");
         setVisible(false);
       }
+    } else {
+      // Chrome nevyvolal event — ukáž manuální instrukci
+      setShowManual(true);
     }
   };
 
@@ -81,9 +85,12 @@ export default function InstallBanner() {
         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
           Mobilní aplikace
         </div>
-        {isIos ? (
+        {isIos || showManual ? (
           <div style={{ fontSize: 12, opacity: 0.8 }}>
-            Klepni na <strong>Sdílet ↑</strong> → <strong>Přidat na plochu</strong>
+            {isIos
+              ? <>Klepni na <strong>Sdílet ↑</strong> → <strong>Přidat na plochu</strong></>
+              : <>Klepni na <strong>⋮</strong> vpravo nahoře → <strong>Přidat na plochu</strong></>
+            }
           </div>
         ) : (
           <div style={{ fontSize: 12, opacity: 0.8 }}>
