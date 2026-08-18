@@ -10,7 +10,6 @@ interface BeforeInstallPromptEvent extends Event {
 export default function InstallBanner() {
   const [visible, setVisible] = useState(false);
   const [isIos, setIsIos] = useState(false);
-  const [showManual, setShowManual] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
@@ -19,24 +18,20 @@ export default function InstallBanner() {
     const standalone =
       ("standalone" in navigator && (navigator as { standalone?: boolean }).standalone) ||
       window.matchMedia("(display-mode: standalone)").matches;
-    if (standalone) return; // už nainstalováno
-
-    if (window.innerWidth > 768) return; // desktop
+    if (standalone) return;
+    if (window.innerWidth > 768) return;
 
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
     setIsIos(ios);
 
-    // Přečti zachycený prompt (z inline scriptu v <head>)
     const existing = (window as { __pwaPrompt?: BeforeInstallPromptEvent }).__pwaPrompt;
     if (existing) setDeferredPrompt(existing);
 
-    // Fallback listener
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
     window.addEventListener("beforeinstallprompt", handler);
-
     setVisible(true);
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
@@ -47,16 +42,12 @@ export default function InstallBanner() {
   };
 
   const install = async () => {
-    if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") {
-        localStorage.setItem("pwa-install-dismissed", "1");
-        setVisible(false);
-      }
-    } else {
-      // Chrome nevyvolal event — ukáž manuální instrukci
-      setShowManual(true);
+    if (!deferredPrompt) return;
+    await deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      localStorage.setItem("pwa-install-dismissed", "1");
+      setVisible(false);
     }
   };
 
@@ -82,55 +73,46 @@ export default function InstallBanner() {
       <div style={{ fontSize: 28, flexShrink: 0 }}>🏠</div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
           Mobilní aplikace
         </div>
-        {isIos || showManual ? (
-          <div style={{ fontSize: 12, opacity: 0.8 }}>
-            {isIos
-              ? <>Klepni na <strong>Sdílet ↑</strong> → <strong>Přidat na plochu</strong></>
-              : <>Klepni na <strong>⋮</strong> vpravo nahoře → <strong>Přidat na plochu</strong></>
-            }
+        {isIos ? (
+          <div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.4 }}>
+            V Safari klepni na <strong>Sdílet</strong> a vyber <strong>Přidat na plochu</strong>
           </div>
         ) : (
-          <div style={{ fontSize: 12, opacity: 0.8 }}>
-            Otevírej dashboard jako appku bez prohlížeče.
+          <div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.4 }}>
+            V menu prohlížeče vyber <strong>Přidat na plochu</strong> nebo <strong>Nainstalovat aplikaci</strong>
           </div>
         )}
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
-        {!isIos && (
-          <button
-            onClick={install}
-            style={{
-              background: "#c8a84b",
-              color: "#1f3d2e",
-              border: "none",
-              borderRadius: 8,
-              padding: "6px 14px",
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
+        {deferredPrompt && (
+          <button onClick={install} style={{
+            background: "#c8a84b",
+            color: "#1f3d2e",
+            border: "none",
+            borderRadius: 8,
+            padding: "6px 14px",
+            fontWeight: 700,
+            fontSize: 13,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}>
             Přidat
           </button>
         )}
-        <button
-          onClick={dismiss}
-          style={{
-            background: "transparent",
-            color: "#f5efe0",
-            border: "1px solid rgba(245,239,224,0.3)",
-            borderRadius: 8,
-            padding: "4px 10px",
-            fontSize: 12,
-            cursor: "pointer",
-            fontFamily: "inherit",
-          }}
-        >
+        <button onClick={dismiss} style={{
+          background: "transparent",
+          color: "#f5efe0",
+          border: "1px solid rgba(245,239,224,0.3)",
+          borderRadius: 8,
+          padding: "4px 10px",
+          fontSize: 12,
+          cursor: "pointer",
+          fontFamily: "inherit",
+        }}>
           Zavřít
         </button>
       </div>
