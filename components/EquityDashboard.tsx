@@ -610,7 +610,7 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
           </div>
         </div>
       </div>
-      <div style={{ position: "relative" }}>
+      <div className="eq-chart-wrap" style={{ position: "relative" }}>
         <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width="100%" height="250"
           style={{ display: "block", overflow: "visible", cursor: "crosshair" }}
           onMouseMove={handleMouseMove} onMouseLeave={() => setHoverIdx(null)}>
@@ -1663,10 +1663,10 @@ export default function EquityDashboard() {
               <div className="eq-header-card flex justify-between items-start gap-10">
                 <div className="flex-1">
                   <div style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9db8a6" }}>Tvůj vlastní kapitál</div>
-                  <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontVariantNumeric: "tabular-nums", fontSize: 90, lineHeight: 0.94, letterSpacing: "-0.02em", color: "#f5f1e6", marginTop: 14 }}>
+                  <div className="eq-equity-number" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontVariantNumeric: "tabular-nums", fontSize: 90, lineHeight: 0.94, letterSpacing: "-0.02em", color: "#f5f1e6", marginTop: 14 }}>
                     {fmtMil(equity)}<span style={{ fontSize: 36, color: "#9db8a6", fontWeight: 600 }}> mil Kč</span>
                   </div>
-                  <div className="flex items-center gap-[14px] mt-[22px]">
+                  <div className="eq-equity-row flex items-center gap-[14px] mt-[22px]">
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#1f3d2e", background: "#c9a24b", borderRadius: 30, padding: "8px 15px", fontSize: 14, fontWeight: 700 }}>
                       {ownedProperties.length} {ownedProperties.length === 1 ? "nemovitost" : ownedProperties.length < 5 ? "nemovitosti" : "nemovitostí"}
                     </span>
@@ -2437,7 +2437,7 @@ export default function EquityDashboard() {
       </main>
 
       {/* FLOATING CHAT */}
-      <div className="fixed bottom-0 right-0 z-[60]"
+      <div className="eq-chatbar fixed bottom-0 right-0 z-[60]"
         style={{ left: 78, padding: "18px 48px 22px", background: "linear-gradient(to top, #ece6d8 60%, rgba(236,230,216,0))", pointerEvents: "none" }}>
         <div style={{ maxWidth: 1044, pointerEvents: "auto" }}>
           <div className="flex items-center gap-3"

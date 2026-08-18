@@ -91,4 +91,26 @@ body {
   .eq-topbar {
     margin-bottom: 16px !important;
   }
+
+  /* AI chat bar — na mobilu od levého kraje, padding menší */
+  .eq-chatbar {
+    left: 0 !important;
+    padding: 12px 12px 80px !important;
+  }
+
+  /* SVG chart — oříznutí přetečení */
+  .eq-chart-wrap {
+    overflow: hidden !important;
+  }
+
+  /* Velké číslo vlastního kapitálu — menší na mobilu */
+  .eq-equity-number {
+    font-size: clamp(52px, 14vw, 90px) !important;
+  }
+
+  /* Odznak + hodnota portfolia row — wrap */
+  .eq-equity-row {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
 }
