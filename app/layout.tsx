@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import InstallBanner from "@/components/InstallBanner";
 
 export const metadata: Metadata = {
   title: "Equity Dashboard",
@@ -27,7 +28,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="cs">
-      <body>{children}</body>
+      <body>
+        {children}
+        <InstallBanner />
+      </body>
     </html>
   );
 }
