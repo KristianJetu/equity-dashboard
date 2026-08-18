@@ -1669,13 +1669,13 @@ export default function EquityDashboard() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                     <div style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9db8a6" }}>Tvůj vlastní kapitál</div>
                     {debts.length > 0 && (
-                      <div style={{ display: "flex", background: "rgba(255,255,255,.10)", borderRadius: 20, padding: 3 }}>
+                      <div style={{ display: "flex", background: "rgba(255,255,255,.10)", borderRadius: 14, padding: 2 }}>
                         <button onClick={() => setShowDebtsBalance(false)}
-                          style={{ padding: "5px 12px", borderRadius: 18, border: "none", background: !showDebtsBalance ? "#c9a24b" : "transparent", color: !showDebtsBalance ? "#1f3d2e" : "#9db8a6", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                          style={{ padding: "3px 8px", borderRadius: 12, border: "none", background: !showDebtsBalance ? "#c9a24b" : "transparent", color: !showDebtsBalance ? "#1f3d2e" : "#9db8a6", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
                           Bez dluhů
                         </button>
                         <button onClick={() => setShowDebtsBalance(true)}
-                          style={{ padding: "5px 12px", borderRadius: 18, border: "none", background: showDebtsBalance ? "#c9a24b" : "transparent", color: showDebtsBalance ? "#1f3d2e" : "#9db8a6", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                          style={{ padding: "3px 8px", borderRadius: 12, border: "none", background: showDebtsBalance ? "#c9a24b" : "transparent", color: showDebtsBalance ? "#1f3d2e" : "#9db8a6", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
                           Vč. bilance z Dluhy
                         </button>
                       </div>
@@ -1685,7 +1685,7 @@ export default function EquityDashboard() {
                     {fmtMil(displayEquity)}<span style={{ fontSize: 36, color: "#9db8a6", fontWeight: 600 }}> mil Kč</span>
                   </div>
                   {showDebtsBalance && debtsBalance !== 0 && (
-                    <div style={{ fontSize: 13, color: "#cfe0d4", marginTop: -8, marginBottom: 4 }}>
+                    <div style={{ fontSize: 13, color: "#cfe0d4", marginTop: 6 }}>
                       {debtsBalance >= 0 ? "+" : "−"}{fmtMil(Math.abs(debtsBalance))} mil Kč bilance z Dluhy
                     </div>
                   )}
