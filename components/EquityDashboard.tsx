@@ -1767,7 +1767,7 @@ export default function EquityDashboard() {
                     onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 2px 12px rgba(31,61,46,0.10)")}
                     onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="eq-prop-name-row" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           {(() => {
                             const icons: Record<string, React.ReactElement> = {
@@ -1788,7 +1788,7 @@ export default function EquityDashboard() {
                             </span>
                           )}
                         </div>
-                        <div style={{ fontSize: 12, color: "#7c8378", marginTop: 2 }}>
+                        <div className="eq-prop-info" style={{ fontSize: 12, color: "#7c8378", marginTop: 2 }}>
                           {p.status === "rented" ? `Nájem ${fmt(p.rent_amount)} Kč / měs` : p.address ?? ""}
                           {mortgage ? ` · Splátka ${fmt(mortgage.monthly_payment)} Kč` : ""}
                           {mortgage?.refix_date ? ` · Konec fixace ${mortgage.refix_date}` : ""}
@@ -1804,7 +1804,7 @@ export default function EquityDashboard() {
                           );
                         })()}
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3" style={{ flexShrink: 0, paddingLeft: 8 }}>
                         {!isManaged && <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{fmtMil(p.estimated_value)} mil</span>}
                         <button onClick={e => { e.stopPropagation(); if (!isManaged) handleToggleStatus(p.id, p.status); }} className={`inline-flex items-center rounded-[20px] ${cls}`} style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 11px", border: "none", cursor: isManaged ? "default" : "pointer" }}>{label}</button>
                       </div>

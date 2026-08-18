@@ -135,16 +135,23 @@ body {
     width: 72px !important;
   }
 
-  /* Property name — truncate with ellipsis if too long */
+  /* Property name row — allow shrinking so ellipsis works */
   .eq-prop-name-row {
     overflow: hidden !important;
     min-width: 0 !important;
   }
+  /* Property name — truncate with ellipsis */
   .eq-prop-name {
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
     min-width: 0 !important;
+  }
+  /* Property info line — single line with ellipsis on mobile */
+  .eq-prop-info {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
 
   /* Cashflow stat panels — stack vertically instead of side by side */
