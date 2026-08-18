@@ -154,6 +154,11 @@ body {
     white-space: nowrap !important;
   }
 
+  /* Debt stat boxes — reduce font on mobile so 3 fit in a row */
+  .eq-debt-stats > div > div:last-child {
+    font-size: 16px !important;
+  }
+
   /* Cashflow per-property cards — 1 per row on mobile */
   .eq-cf-prop-grid > div {
     flex: 0 0 100% !important;

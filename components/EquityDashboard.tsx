@@ -2376,8 +2376,8 @@ export default function EquityDashboard() {
                 onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div>
-                    <div style={{ fontSize: 12, color: "#7c8378", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <div style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 4 }}>{d.name}</div>
+                    <div style={{ fontSize: 12, color: "#7c8378", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 4 }}>
                       {d.monthly_payment ? `Splátka ${fmt(d.monthly_payment)} Kč/měs` : ""}
                       {d.monthly_payment && d.interest_rate ? " · " : ""}
                       {d.interest_rate ? `Úrok ${d.interest_rate} %` : ""}
@@ -2416,13 +2416,13 @@ export default function EquityDashboard() {
             return (
               <div>
                 {/* Souhrn */}
-                <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+                <div className="eq-debt-stats" style={{ display: "flex", gap: 12, marginBottom: 24 }}>
                   {[
                     { label: "Já dlužím", value: totalIOwe, color: "#c0392b", bg: "#fde8e8" },
                     { label: "Mně dluží", value: totalTheyOwe, color: "#1f3d2e", bg: "#d6e4d6" },
                     { label: "Bilance", value: Math.abs(balance), color: balance >= 0 ? "#1f3d2e" : "#c0392b", bg: "#f5f1e6", prefix: balance >= 0 ? "+" : "−" },
                   ].map(({ label, value, color, bg, prefix }) => (
-                    <div key={label} style={{ flex: 1, background: bg, borderRadius: 10, padding: "14px 18px" }}>
+                    <div key={label} style={{ flex: 1, minWidth: 0, background: bg, borderRadius: 10, padding: "14px 18px" }}>
                       <div style={{ fontSize: 11, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
                       <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 22, color }}>{prefix ?? ""}{fmt(value)} Kč</div>
                     </div>
