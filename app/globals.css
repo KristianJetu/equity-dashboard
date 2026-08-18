@@ -14,6 +14,7 @@ body {
   margin: 0;
   background: #ece6d8;
   font-family: 'Hanken Grotesk', sans-serif;
+  overflow-x: hidden;
 }
 
 /* --- Mobile layout (telefony do 640px) ---
@@ -55,5 +56,39 @@ body {
   .eq-main {
     margin-left: 0 !important;
     padding: 20px 16px 88px !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Header karta — stack na mobilu */
+  .eq-header-card {
+    flex-direction: column !important;
+    gap: 20px !important;
+    padding: 24px 20px !important;
+  }
+
+  .eq-header-stats {
+    display: none !important;
+  }
+
+  .eq-header-progress {
+    max-width: 100% !important;
+  }
+
+  /* Graf header — wrap na mobilu */
+  .eq-chart-header {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .eq-chart-title {
+    font-size: 16px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Topbar */
+  .eq-topbar {
+    margin-bottom: 16px !important;
   }
 }

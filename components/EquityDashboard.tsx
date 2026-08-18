@@ -586,9 +586,9 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
 
   return (
     <div style={{ padding: "34px 4px 8px" }}>
-      <div className="flex justify-between items-center mb-3">
-        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>{"Jak rosteš v čase"}</div>
-        <div className="flex items-center gap-4">
+      <div className="eq-chart-header flex justify-between items-center mb-3">
+        <div className="eq-chart-title" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>{"Jak rosteš v čase"}</div>
+        <div className="flex items-center gap-4" style={{ flexWrap: "wrap", justifyContent: "flex-end" }}>
           {/* Range switcher */}
           <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 16, padding: 2 }}>
             {(["5", "10", "all"] as const).map(r => (
@@ -1641,7 +1641,7 @@ export default function EquityDashboard() {
       <main className="eq-main" style={{ marginLeft: 78, padding: "40px 48px 160px", maxWidth: 1140 }}>
 
         {/* Topbar */}
-        <div className="flex justify-between items-center mb-[30px]">
+        <div className="eq-topbar flex justify-between items-center mb-[30px]">
           <div className="flex items-center gap-[11px]">
             <div style={{ width: 11, height: 11, borderRadius: "50%", background: "#c39a3f" }} />
             <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 23, fontWeight: 700, letterSpacing: "-0.01em", color: "#1c2b22" }}>{"Majetek"}</div>
@@ -1656,11 +1656,11 @@ export default function EquityDashboard() {
 
         {/* DASHBOARD */}
         <section id="dashboard" style={{ scrollMarginTop: 28 }}>
-          <div style={{ background: "#1f3d2e", borderRadius: 14, padding: "38px 42px" }}>
+          <div className="eq-header-card" style={{ background: "#1f3d2e", borderRadius: 14, padding: "38px 42px" }}>
             {loading ? (
               <div style={{ color: "#9db8a6", fontSize: 15 }}>Načítám data…</div>
             ) : (
-              <div className="flex justify-between items-start gap-10">
+              <div className="eq-header-card flex justify-between items-start gap-10">
                 <div className="flex-1">
                   <div style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9db8a6" }}>Tvůj vlastní kapitál</div>
                   <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontVariantNumeric: "tabular-nums", fontSize: 90, lineHeight: 0.94, letterSpacing: "-0.02em", color: "#f5f1e6", marginTop: 14 }}>
@@ -1673,7 +1673,7 @@ export default function EquityDashboard() {
                     <span style={{ fontSize: 15, color: "#cfe0d4", fontWeight: 500 }}>Hodnota portfolia {fmtMil(totalValue)} mil Kč</span>
                   </div>
                   {totalDebt > 0 && (
-                    <div style={{ marginTop: 26, maxWidth: 440 }}>
+                    <div className="eq-header-progress" style={{ marginTop: 26, maxWidth: 440 }}>
                       <div className="flex justify-between items-baseline mb-[9px]" style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9db8a6" }}>
                         <span>Vlastní kapitál / Hodnota portfolia</span>
                         <span style={{ color: "#e7c773" }}>{Math.round((equity / totalValue) * 100)} %</span>
@@ -1684,7 +1684,7 @@ export default function EquityDashboard() {
                     </div>
                   )}
                 </div>
-                <div className="text-right flex flex-col gap-[22px]" style={{ paddingTop: 6 }}>
+                <div className="eq-header-stats text-right flex flex-col gap-[22px]" style={{ paddingTop: 6 }}>
                   <div>
                     <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>Hodnota portfolia</div>
                     <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{fmtMil(totalValue)} mil Kč</div>
