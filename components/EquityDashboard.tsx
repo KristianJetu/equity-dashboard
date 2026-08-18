@@ -116,6 +116,10 @@ const NAV_ITEMS = [
     id: "dluhy", title: "Dluhy",
     icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
   },
+  {
+    id: "nastaveni", title: "Nastavení",
+    icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  },
 ];
 
 function statusBadge(status: string) {
@@ -1282,6 +1286,8 @@ export default function EquityDashboard() {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState("··");
+  const [language, setLanguage] = useState<"cs" | "en">("cs");
+  const [savingLanguage, setSavingLanguage] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -1298,8 +1304,19 @@ export default function EquityDashboard() {
       } else if (user.email) {
         setUserInitials(user.email.slice(0, 2).toUpperCase());
       }
+      supabase.from("profiles").select("language").eq("id", user.id).single().then(({ data: profile }) => {
+        if (profile?.language === "en" || profile?.language === "cs") setLanguage(profile.language);
+      });
     });
   }, []);
+
+  async function saveLanguage(lang: "cs" | "en") {
+    setLanguage(lang);
+    setSavingLanguage(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) await supabase.from("profiles").upsert({ id: user.id, language: lang });
+    setSavingLanguage(false);
+  }
 
   type ChatMessage = { role: "user" | "assistant"; content: string };
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -2461,6 +2478,27 @@ export default function EquityDashboard() {
               </div>
             );
           })()}
+        </section>
+
+        {/* NASTAVENÍ */}
+        <section id="nastaveni" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 100 }}>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Nastavení</div>
+          <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "18px 20px", maxWidth: 420 }}>
+            <div style={{ fontWeight: 600, fontSize: 14, color: "#1c2b22", marginBottom: 4 }}>Jazyk aplikace</div>
+            <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 12 }}>
+              Rozhraní je zatím jen v češtině — přepínač si uloží tvou preferenci pro budoucí anglickou verzi.
+            </div>
+            <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3, width: "fit-content" }}>
+              <button onClick={() => saveLanguage("cs")} disabled={savingLanguage}
+                style={{ padding: "6px 16px", borderRadius: 18, border: "none", background: language === "cs" ? "#1f3d2e" : "transparent", color: language === "cs" ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: savingLanguage ? "default" : "pointer" }}>
+                Čeština
+              </button>
+              <button onClick={() => saveLanguage("en")} disabled={savingLanguage}
+                style={{ padding: "6px 16px", borderRadius: 18, border: "none", background: language === "en" ? "#1f3d2e" : "transparent", color: language === "en" ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: savingLanguage ? "default" : "pointer" }}>
+                English
+              </button>
+            </div>
+          </div>
         </section>
 
       </main>
