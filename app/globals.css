@@ -123,4 +123,10 @@ body {
     flex-wrap: wrap !important;
     gap: 8px !important;
   }
+
+  /* Section headers (Tvé nemovitosti, Měsíční cashflow) — wrap buttons below title */
+  .eq-section-header {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
 }

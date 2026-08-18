@@ -1735,7 +1735,7 @@ export default function EquityDashboard() {
 
         {/* NEMOVITOSTI */}
         <section id="nemovitosti" style={{ marginTop: 38, scrollMarginTop: 28 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <div className="eq-section-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Tvé nemovitosti</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <button onClick={() => setShowAddProperty(true)}
@@ -1833,7 +1833,7 @@ export default function EquityDashboard() {
 
         {/* PLATBY */}
         <section id="platby" style={{ marginTop: 38, scrollMarginTop: 28 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <div className="eq-section-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>Měsíční cashflow</div>
             <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3 }}>
               <button onClick={() => setShowPlanned(false)}
