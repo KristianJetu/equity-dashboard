@@ -1714,7 +1714,7 @@ export default function EquityDashboard() {
                   </div>
                   {totalDebt > 0 && (
                     <div>
-                      <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>Celkový dluh</div>
+                      <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>Úvěry na nemovitosti</div>
                       <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{fmtMil(totalDebt)} mil Kč</div>
                     </div>
                   )}
