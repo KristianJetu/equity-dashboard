@@ -106,6 +106,19 @@ const translations = {
     cestina: "Čeština",
     anglictina: "English",
     zavrit: "Zavřít",
+    tvujVlastniKapital: "Tvůj vlastní kapitál",
+    bezDluhu: "Bez dluhů",
+    vcBilanceZDluhy: "Vč. bilance z Dluhy",
+    bilanceZDluhy: "bilance z Dluhy",
+    hodnotaPortfolia: "Hodnota portfolia",
+    vlastniKapital: "Vlastní kapitál",
+    uveryNaNemovitosti: "Úvěry na nemovitosti",
+    konecFixaceHypoteky: "Konec fixace hypotéky",
+    konecPojistky: "Konec pojistky",
+    konecNajemniSmlouvy: "Konec nájemní smlouvy",
+    dnes: "dnes!",
+    zitra: "zítra",
+    zaDni: (n: number) => `za ${n} dní`,
   },
   en: {
     dashboard: "Dashboard",
@@ -125,6 +138,19 @@ const translations = {
     cestina: "Czech",
     anglictina: "English",
     zavrit: "Close",
+    tvujVlastniKapital: "Your net worth",
+    bezDluhu: "Excl. debts",
+    vcBilanceZDluhy: "Incl. debts balance",
+    bilanceZDluhy: "debts balance",
+    hodnotaPortfolia: "Portfolio value",
+    vlastniKapital: "Net worth",
+    uveryNaNemovitosti: "Property loans",
+    konecFixaceHypoteky: "Mortgage fixation ending",
+    konecPojistky: "Insurance ending",
+    konecNajemniSmlouvy: "Lease ending",
+    dnes: "today!",
+    zitra: "tomorrow",
+    zaDni: (n: number) => `in ${n} days`,
   },
 } as const;
 
@@ -1328,7 +1354,9 @@ export default function EquityDashboard() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState("··");
   const [language, setLanguage] = useState<"cs" | "en">("cs");
-  const t = (key: keyof typeof translations["cs"]) => translations[language][key];
+  function t<K extends keyof typeof translations["cs"]>(key: K): typeof translations["cs"][K] {
+    return translations[language][key] as typeof translations["cs"][K];
+  }
   const [savingLanguage, setSavingLanguage] = useState(false);
 
   useEffect(() => {
@@ -1598,15 +1626,15 @@ export default function EquityDashboard() {
     const mort = mortgages.find(m => m.property_id === p.id);
     if (mort?.refix_date) {
       const d = Math.round((new Date(mort.refix_date).getTime() - today) / 86400000);
-      if (d <= 90) alerts.push({ type: d <= 30 ? "danger" : "warning", label: "Konec fixace hypotéky", property: p.name, daysLeft: d });
+      if (d <= 90) alerts.push({ type: d <= 30 ? "danger" : "warning", label: t("konecFixaceHypoteky"), property: p.name, daysLeft: d });
     }
     if (p.insurance_to) {
       const d = Math.round((new Date(p.insurance_to).getTime() - today) / 86400000);
-      if (d <= 60) alerts.push({ type: d <= 14 ? "danger" : "warning", label: "Konec pojistky", property: p.name, daysLeft: d });
+      if (d <= 60) alerts.push({ type: d <= 14 ? "danger" : "warning", label: t("konecPojistky"), property: p.name, daysLeft: d });
     }
     if (p.lease_end) {
       const d = Math.round((new Date(p.lease_end).getTime() - today) / 86400000);
-      if (d <= 60) alerts.push({ type: d <= 14 ? "danger" : "warning", label: "Konec nájemní smlouvy", property: p.name, daysLeft: d });
+      if (d <= 60) alerts.push({ type: d <= 14 ? "danger" : "warning", label: t("konecNajemniSmlouvy"), property: p.name, daysLeft: d });
     }
   }
   alerts.sort((a, b) => a.daysLeft - b.daysLeft);
@@ -1701,7 +1729,7 @@ export default function EquityDashboard() {
         </div>
         <div className="eq-nav-items flex flex-col gap-2 items-center">
           {NAV_ITEMS.map((item) => {
-            const label = t(item.id as keyof typeof translations["cs"]);
+            const label = (translations[language] as unknown as Record<string, string>)[item.id] ?? item.title;
             if (item.id === "nastaveni") {
               return (
                 <button key={item.id} title={label} onClick={() => setSettingsOpen(true)}
@@ -1768,16 +1796,16 @@ export default function EquityDashboard() {
               <div className="eq-header-card flex justify-between items-start gap-10">
                 <div className="flex-1">
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <div style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9db8a6" }}>Tvůj vlastní kapitál</div>
+                    <div style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9db8a6" }}>{t("tvujVlastniKapital")}</div>
                     {debts.length > 0 && (
                       <div style={{ display: "flex", background: "rgba(255,255,255,.10)", borderRadius: 14, padding: 2 }}>
                         <button onClick={() => setShowDebtsBalance(false)}
                           style={{ padding: "3px 8px", borderRadius: 12, border: "none", background: !showDebtsBalance ? "#c9a24b" : "transparent", color: !showDebtsBalance ? "#1f3d2e" : "#9db8a6", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
-                          Bez dluhů
+                          {t("bezDluhu")}
                         </button>
                         <button onClick={() => setShowDebtsBalance(true)}
                           style={{ padding: "3px 8px", borderRadius: 12, border: "none", background: showDebtsBalance ? "#c9a24b" : "transparent", color: showDebtsBalance ? "#1f3d2e" : "#9db8a6", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
-                          Vč. bilance z Dluhy
+                          {t("vcBilanceZDluhy")}
                         </button>
                       </div>
                     )}
@@ -1787,19 +1815,21 @@ export default function EquityDashboard() {
                   </div>
                   {showDebtsBalance && debtsBalance !== 0 && (
                     <div style={{ fontSize: 13, color: "#cfe0d4", marginTop: 6 }}>
-                      {debtsBalance >= 0 ? "+" : "−"}{fmtMil(Math.abs(debtsBalance))} mil Kč bilance z Dluhy
+                      {debtsBalance >= 0 ? "+" : "−"}{fmtMil(Math.abs(debtsBalance))} mil Kč {t("bilanceZDluhy")}
                     </div>
                   )}
                   <div className="eq-equity-row flex items-center gap-[14px] mt-[22px]">
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#1f3d2e", background: "#c9a24b", borderRadius: 30, padding: "8px 15px", fontSize: 14, fontWeight: 700 }}>
-                      {ownedProperties.length} {ownedProperties.length === 1 ? "nemovitost" : ownedProperties.length < 5 ? "nemovitosti" : "nemovitostí"}
+                      {ownedProperties.length} {language === "cs"
+                        ? (ownedProperties.length === 1 ? "nemovitost" : ownedProperties.length < 5 ? "nemovitosti" : "nemovitostí")
+                        : (ownedProperties.length === 1 ? "property" : "properties")}
                     </span>
-                    <span style={{ fontSize: 15, color: "#cfe0d4", fontWeight: 500 }}>Hodnota portfolia {fmtMil(totalValue)} mil Kč</span>
+                    <span style={{ fontSize: 15, color: "#cfe0d4", fontWeight: 500 }}>{t("hodnotaPortfolia")} {fmtMil(totalValue)} mil Kč</span>
                   </div>
                   {totalDebt > 0 && (
                     <div className="eq-header-progress" style={{ marginTop: 26, maxWidth: 440 }}>
                       <div className="flex justify-between items-baseline mb-[9px]" style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9db8a6" }}>
-                        <span>Vlastní kapitál</span>
+                        <span>{t("vlastniKapital")}</span>
                         <span style={{ color: "#e7c773" }}>{Math.round((equity / totalValue) * 100)} %</span>
                       </div>
                       <div style={{ height: 9, borderRadius: 6, background: "rgba(255,255,255,.14)", overflow: "hidden" }}>
@@ -1810,18 +1840,20 @@ export default function EquityDashboard() {
                 </div>
                 <div className="eq-header-stats text-right flex flex-col gap-[22px]" style={{ paddingTop: 6 }}>
                   <div>
-                    <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>Hodnota portfolia</div>
+                    <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>{t("hodnotaPortfolia")}</div>
                     <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{fmtMil(totalValue)} mil Kč</div>
                   </div>
                   {totalDebt > 0 && (
                     <div>
-                      <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>Úvěry na nemovitosti</div>
+                      <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>{t("uveryNaNemovitosti")}</div>
                       <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{fmtMil(totalDebt)} mil Kč</div>
                     </div>
                   )}
                   <div>
-                    <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>Nemovitosti</div>
-                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{ownedProperties.length} {ownedProperties.length === 1 ? "objekt" : ownedProperties.length < 5 ? "objekty" : "objektů"}</div>
+                    <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>{t("nemovitosti")}</div>
+                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{ownedProperties.length} {language === "cs"
+                      ? (ownedProperties.length === 1 ? "objekt" : ownedProperties.length < 5 ? "objekty" : "objektů")
+                      : (ownedProperties.length === 1 ? "unit" : "units")}</div>
                   </div>
                 </div>
               </div>
@@ -1835,7 +1867,7 @@ export default function EquityDashboard() {
                 const bg = a.type === "danger" ? "#fde8e8" : "#fef6e4";
                 const color = a.type === "danger" ? "#c0392b" : "#a07b2f";
                 const icon = a.type === "danger" ? "⚠️" : "🔔";
-                const daysText = a.daysLeft <= 0 ? "dnes!" : a.daysLeft === 1 ? "zítra" : `za ${a.daysLeft} dní`;
+                const daysText = a.daysLeft <= 0 ? t("dnes") : a.daysLeft === 1 ? t("zitra") : t("zaDni")(a.daysLeft);
                 return (
                   <div key={i} style={{ background: bg, borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
