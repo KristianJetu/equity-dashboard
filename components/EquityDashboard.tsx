@@ -1341,6 +1341,7 @@ export default function EquityDashboard() {
   const [showPlanned, setShowPlanned] = useState(false);
   const [showPlannedProps, setShowPlannedProps] = useState(false);
   const [showDebtsBalance, setShowDebtsBalance] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [debtModal, setDebtModal] = useState<{ open: boolean; debt: Debt | null }>({ open: false, debt: null });
@@ -1620,6 +1621,37 @@ export default function EquityDashboard() {
         />
       )}
 
+      {/* Settings Modal */}
+      {settingsOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(28,43,34,0.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={() => setSettingsOpen(false)}>
+          <div style={{ background: "#faf8f3", borderRadius: 16, padding: "28px 28px 24px", width: 420, maxWidth: "95vw", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 18, color: "#1c2b22", marginBottom: 20 }}>Nastavení</div>
+            <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "18px 20px" }}>
+              <div style={{ fontWeight: 600, fontSize: 14, color: "#1c2b22", marginBottom: 4 }}>Jazyk aplikace</div>
+              <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 12 }}>
+                Rozhraní je zatím jen v češtině — přepínač si uloží tvou preferenci pro budoucí anglickou verzi.
+              </div>
+              <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3, width: "fit-content" }}>
+                <button onClick={() => saveLanguage("cs")} disabled={savingLanguage}
+                  style={{ padding: "6px 16px", borderRadius: 18, border: "none", background: language === "cs" ? "#1f3d2e" : "transparent", color: language === "cs" ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: savingLanguage ? "default" : "pointer" }}>
+                  Čeština
+                </button>
+                <button onClick={() => saveLanguage("en")} disabled={savingLanguage}
+                  style={{ padding: "6px 16px", borderRadius: 18, border: "none", background: language === "en" ? "#1f3d2e" : "transparent", color: language === "en" ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: savingLanguage ? "default" : "pointer" }}>
+                  English
+                </button>
+              </div>
+            </div>
+            <button onClick={() => setSettingsOpen(false)}
+              style={{ marginTop: 20, width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+              Zavřít
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* SIDEBAR (na mobilu se přes globals.css mění na spodní tab bar) */}
       <aside className="eq-sidebar fixed top-0 left-0 bottom-0 flex flex-col items-center py-[22px] z-50" style={{ width: 78, background: "#1f3d2e" }}>
         <div className="eq-sidebar-logo flex items-center justify-center mb-[30px] flex-none" style={{ width: 34, height: 34, borderRadius: 9, background: "#c9a24b" }}>
@@ -1627,6 +1659,15 @@ export default function EquityDashboard() {
         </div>
         <div className="eq-nav-items flex flex-col gap-2 items-center">
           {NAV_ITEMS.map((item) => {
+            if (item.id === "nastaveni") {
+              return (
+                <button key={item.id} title={item.title} onClick={() => setSettingsOpen(true)}
+                  className="flex items-center justify-center transition-colors duration-150 rounded-[12px]"
+                  style={{ width: 46, height: 46, background: settingsOpen ? "rgba(255,255,255,.12)" : "transparent", border: "none", cursor: "pointer" }}>
+                  <span style={{ color: settingsOpen ? "#f5f1e6" : "#86a191", display: "flex" }}>{item.icon}</span>
+                </button>
+              );
+            }
             const on = activeSection === item.id;
             return (
               <a key={item.id} href={`#${item.id}`} title={item.title}
@@ -1659,7 +1700,7 @@ export default function EquityDashboard() {
       </aside>
 
       {/* MAIN */}
-      <main className="eq-main" style={{ marginLeft: 78, padding: "40px 48px 220px", maxWidth: 1140 }}>
+      <main className="eq-main" style={{ marginLeft: 78, padding: "40px 48px 160px", maxWidth: 1140 }}>
 
         {/* Topbar */}
         <div className="eq-topbar flex justify-between items-center mb-[30px]">
@@ -2478,27 +2519,6 @@ export default function EquityDashboard() {
               </div>
             );
           })()}
-        </section>
-
-        {/* NASTAVENÍ */}
-        <section id="nastaveni" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 100 }}>
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Nastavení</div>
-          <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "18px 20px", maxWidth: 420 }}>
-            <div style={{ fontWeight: 600, fontSize: 14, color: "#1c2b22", marginBottom: 4 }}>Jazyk aplikace</div>
-            <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 12 }}>
-              Rozhraní je zatím jen v češtině — přepínač si uloží tvou preferenci pro budoucí anglickou verzi.
-            </div>
-            <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3, width: "fit-content" }}>
-              <button onClick={() => saveLanguage("cs")} disabled={savingLanguage}
-                style={{ padding: "6px 16px", borderRadius: 18, border: "none", background: language === "cs" ? "#1f3d2e" : "transparent", color: language === "cs" ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: savingLanguage ? "default" : "pointer" }}>
-                Čeština
-              </button>
-              <button onClick={() => saveLanguage("en")} disabled={savingLanguage}
-                style={{ padding: "6px 16px", borderRadius: 18, border: "none", background: language === "en" ? "#1f3d2e" : "transparent", color: language === "en" ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: savingLanguage ? "default" : "pointer" }}>
-                English
-              </button>
-            </div>
-          </div>
         </section>
 
       </main>
