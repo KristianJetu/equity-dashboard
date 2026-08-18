@@ -1768,7 +1768,7 @@ export default function EquityDashboard() {
                     onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div className="eq-prop-name-row" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           {(() => {
                             const icons: Record<string, React.ReactElement> = {
                               apartment: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c8378" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="1"/><rect x="8" y="5" width="2" height="2"/><rect x="14" y="5" width="2" height="2"/><rect x="8" y="9" width="2" height="2"/><rect x="14" y="9" width="2" height="2"/><rect x="8" y="13" width="2" height="2"/><rect x="14" y="13" width="2" height="2"/><path d="M10 22v-4h4v4"/></svg>,
@@ -1780,7 +1780,7 @@ export default function EquityDashboard() {
                             };
                             return icons[p.type ?? "apartment"] ?? icons.apartment;
                           })()}
-                          <span style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{p.name}</span>
+                          <span className="eq-prop-name" style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{p.name}</span>
                           {p.status === "planned" && <span style={{ fontSize: 10, fontWeight: 700, color: "#4a7c59", background: "#d6ead6", borderRadius: 10, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>plánovaná</span>}
                           {p.type && p.type !== "apartment" && (
                             <span style={{ fontSize: 11, fontWeight: 600, color: "#7c8378", background: "#e6e0d0", borderRadius: 10, padding: "2px 8px" }}>

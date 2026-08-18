@@ -135,6 +135,18 @@ body {
     width: 72px !important;
   }
 
+  /* Property name — truncate with ellipsis if too long */
+  .eq-prop-name-row {
+    overflow: hidden !important;
+    min-width: 0 !important;
+  }
+  .eq-prop-name {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    min-width: 0 !important;
+  }
+
   /* Cashflow stat panels — stack vertically instead of side by side */
   .eq-cf-panels {
     flex-direction: column !important;
