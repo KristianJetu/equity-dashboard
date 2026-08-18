@@ -1323,6 +1323,7 @@ export default function EquityDashboard() {
   const [cfPropExpanded, setCfPropExpanded] = useState<string | null>(null);
   const [showPlanned, setShowPlanned] = useState(false);
   const [showPlannedProps, setShowPlannedProps] = useState(false);
+  const [showDebtsBalance, setShowDebtsBalance] = useState(false);
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [debtModal, setDebtModal] = useState<{ open: boolean; debt: Debt | null }>({ open: false, debt: null });
@@ -1525,6 +1526,8 @@ export default function EquityDashboard() {
   const totalValue = ownedProperties.reduce((s, p) => s + p.estimated_value, 0);
   const totalDebt = mortgages.filter(m => ownedProperties.some(p => p.id === m.property_id)).reduce((s, m) => s + m.outstanding_balance, 0);
   const equity = totalValue - totalDebt;
+  const debtsBalance = debts.reduce((s, d) => s + (d.direction === "they_owe" ? d.amount_remaining : -d.amount_remaining), 0);
+  const displayEquity = showDebtsBalance ? equity + debtsBalance : equity;
   const filteredPayments = activeFilter ? payments.filter((p) => p.property_id === activeFilter) : payments;
   const activeProperty = properties.find((p) => p.id === activeFilter);
 
@@ -1663,10 +1666,29 @@ export default function EquityDashboard() {
             ) : (
               <div className="eq-header-card flex justify-between items-start gap-10">
                 <div className="flex-1">
-                  <div style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9db8a6" }}>Tvůj vlastní kapitál</div>
-                  <div className="eq-equity-number" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontVariantNumeric: "tabular-nums", fontSize: 90, lineHeight: 0.94, letterSpacing: "-0.02em", color: "#f5f1e6", marginTop: 14 }}>
-                    {fmtMil(equity)}<span style={{ fontSize: 36, color: "#9db8a6", fontWeight: 600 }}> mil Kč</span>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                    <div style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9db8a6" }}>Tvůj vlastní kapitál</div>
+                    {debts.length > 0 && (
+                      <div style={{ display: "flex", background: "rgba(255,255,255,.10)", borderRadius: 20, padding: 3 }}>
+                        <button onClick={() => setShowDebtsBalance(false)}
+                          style={{ padding: "5px 12px", borderRadius: 18, border: "none", background: !showDebtsBalance ? "#c9a24b" : "transparent", color: !showDebtsBalance ? "#1f3d2e" : "#9db8a6", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                          Bez dluhů
+                        </button>
+                        <button onClick={() => setShowDebtsBalance(true)}
+                          style={{ padding: "5px 12px", borderRadius: 18, border: "none", background: showDebtsBalance ? "#c9a24b" : "transparent", color: showDebtsBalance ? "#1f3d2e" : "#9db8a6", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                          Vč. bilance z Dluhy
+                        </button>
+                      </div>
+                    )}
                   </div>
+                  <div className="eq-equity-number" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontVariantNumeric: "tabular-nums", fontSize: 90, lineHeight: 0.94, letterSpacing: "-0.02em", color: "#f5f1e6", marginTop: 14 }}>
+                    {fmtMil(displayEquity)}<span style={{ fontSize: 36, color: "#9db8a6", fontWeight: 600 }}> mil Kč</span>
+                  </div>
+                  {showDebtsBalance && debtsBalance !== 0 && (
+                    <div style={{ fontSize: 13, color: "#cfe0d4", marginTop: -8, marginBottom: 4 }}>
+                      {debtsBalance >= 0 ? "+" : "−"}{fmtMil(Math.abs(debtsBalance))} mil Kč bilance z Dluhy
+                    </div>
+                  )}
                   <div className="eq-equity-row flex items-center gap-[14px] mt-[22px]">
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#1f3d2e", background: "#c9a24b", borderRadius: 30, padding: "8px 15px", fontSize: 14, fontWeight: 700 }}>
                       {ownedProperties.length} {ownedProperties.length === 1 ? "nemovitost" : ownedProperties.length < 5 ? "nemovitosti" : "nemovitostí"}
