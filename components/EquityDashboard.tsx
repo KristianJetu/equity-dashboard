@@ -2498,14 +2498,23 @@ export default function EquityDashboard() {
         {/* ASISTENT */}
         <section id="asistent" style={{ marginTop: 38, scrollMarginTop: 28 }}>
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>{t("asistent")}</div>
+
+          {/* Historie konverzací */}
           {chatMessages.length === 0 ? (
-            <div style={{ fontSize: 14, color: "#7c8378", lineHeight: 1.6 }}>
+            <div style={{ fontSize: 14, color: "#7c8378", lineHeight: 1.6, marginBottom: 16 }}>
               Zeptej se na cokoli o svém portfoliu — výnosy, cash-flow, vývoj equity nebo srovnání nemovitostí.
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3" style={{ marginBottom: 16 }}>
               {chatMessages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div key={i} className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                  {m.role === "assistant" && (
+                    <button onClick={() => setChatMessages(prev => prev.filter((_, j) => j !== i))}
+                      title="Smazat"
+                      style={{ flexShrink: 0, width: 20, height: 20, borderRadius: "50%", border: "none", background: "transparent", color: "#b0a898", cursor: "pointer", fontSize: 14, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.6 }}>
+                      ×
+                    </button>
+                  )}
                   <div style={{
                     maxWidth: "80%", padding: "12px 16px", borderRadius: m.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                     background: m.role === "user" ? "#1f3d2e" : "#f5f1e6",
@@ -2514,11 +2523,38 @@ export default function EquityDashboard() {
                   }}>
                     {m.content || <span style={{ opacity: 0.5 }}>…</span>}
                   </div>
+                  {m.role === "user" && (
+                    <button onClick={() => setChatMessages(prev => prev.filter((_, j) => j !== i))}
+                      title="Smazat"
+                      style={{ flexShrink: 0, width: 20, height: 20, borderRadius: "50%", border: "none", background: "transparent", color: "#b0a898", cursor: "pointer", fontSize: 14, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.6 }}>
+                      ×
+                    </button>
+                  )}
                 </div>
               ))}
               <div ref={chatEndRef} />
             </div>
           )}
+
+          {/* Chat input přímo v sekci */}
+          <div style={{ display: "flex", gap: 10, alignItems: "center", background: "#f5f1e6", borderRadius: 14, padding: "10px 14px" }}>
+            <input
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendChat(); } }}
+              placeholder="Zeptej se na své portfolio…"
+              style={{ flex: 1, border: "none", background: "transparent", fontSize: 14, color: "#1c2b22", outline: "none", fontFamily: "inherit" }}
+            />
+            <button
+              onClick={handleSendChat}
+              disabled={chatLoading || !chatInput.trim()}
+              style={{ flexShrink: 0, width: 34, height: 34, borderRadius: "50%", background: chatLoading || !chatInput.trim() ? "#9db8a6" : "#1f3d2e", border: "none", cursor: chatLoading || !chatInput.trim() ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s" }}>
+              {chatLoading
+                ? <svg width="15" height="15" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="#f5f1e6" strokeWidth="1.8" strokeDasharray="20 10"><animateTransform attributeName="transform" type="rotate" from="0 8 8" to="360 8 8" dur="0.8s" repeatCount="indefinite"/></circle></svg>
+                : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              }
+            </button>
+          </div>
         </section>
 
         {/* DLUHY */}
