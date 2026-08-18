@@ -1888,7 +1888,7 @@ export default function EquityDashboard() {
               <>
                 {/* Souhrnný box */}
                 <div style={{ background: "#f5f1e6", borderRadius: 12, padding: "14px 12px", marginBottom: 4 }}>
-                  <div style={{ display: "flex", gap: 0, alignItems: "center" }}>
+                  <div className="eq-cf-panels" style={{ display: "flex", gap: 0, alignItems: "center" }}>
                     {/* Příjmy */}
                     <div style={panelStyle("income")} onClick={() => toggleCf("income")}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
