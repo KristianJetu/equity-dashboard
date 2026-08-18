@@ -79,7 +79,7 @@ export default function InstallBanner() {
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
-          Přidat na plochu
+          Mobilní aplikace
         </div>
         {isIos ? (
           <div style={{ fontSize: 12, opacity: 0.8 }}>
