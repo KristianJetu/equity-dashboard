@@ -8,59 +8,55 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export default function InstallBanner() {
-  const [show, setShow] = useState<"android" | "ios" | null>(null);
+  const [visible, setVisible] = useState(false);
+  const [isIos, setIsIos] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     if (localStorage.getItem("pwa-install-dismissed")) return;
 
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isInStandaloneMode =
+    const standalone =
       ("standalone" in navigator && (navigator as { standalone?: boolean }).standalone) ||
       window.matchMedia("(display-mode: standalone)").matches;
+    if (standalone) return; // už nainstalováno
 
-    if (isInStandaloneMode) return; // already installed
+    if (window.innerWidth > 768) return; // desktop
 
-    const isMobile = window.innerWidth <= 768;
-    if (!isMobile) return; // desktop — nezobrazovat
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    setIsIos(ios);
 
-    if (isIos) {
-      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-      if (isSafari) setShow("ios");
-      return;
-    }
-
-    // Event mohl přijít před React hydratací — čteme z globální proměnné
+    // Přečti zachycený prompt (z inline scriptu v <head>)
     const existing = (window as { __pwaPrompt?: BeforeInstallPromptEvent }).__pwaPrompt;
-    if (existing) {
-      setDeferredPrompt(existing);
-      setShow("android");
-      return;
-    }
-    // Fallback: pokud ještě nepřišel, počkáme
+    if (existing) setDeferredPrompt(existing);
+
+    // Fallback listener
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setShow("android");
     };
     window.addEventListener("beforeinstallprompt", handler);
+
+    setVisible(true);
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
   const dismiss = () => {
     localStorage.setItem("pwa-install-dismissed", "1");
-    setShow(null);
+    setVisible(false);
   };
 
   const install = async () => {
-    if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") localStorage.setItem("pwa-install-dismissed", "1");
-    setShow(null);
+    if (deferredPrompt) {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        localStorage.setItem("pwa-install-dismissed", "1");
+        setVisible(false);
+      }
+    }
   };
 
-  if (!show) return null;
+  if (!visible) return null;
 
   return (
     <div style={{
@@ -79,28 +75,25 @@ export default function InstallBanner() {
       boxShadow: "0 4px 24px rgba(0,0,0,0.25)",
       fontFamily: "'Hanken Grotesk', sans-serif",
     }}>
-      {/* Ikona */}
-      <div style={{ fontSize: 32, flexShrink: 0 }}>🏠</div>
+      <div style={{ fontSize: 28, flexShrink: 0 }}>🏠</div>
 
-      {/* Text */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
           Přidat na plochu
         </div>
-        {show === "android" ? (
+        {isIos ? (
           <div style={{ fontSize: 12, opacity: 0.8 }}>
-            Otevírej dashboard jako appku — bez prohlížeče.
+            Klepni na <strong>Sdílet ↑</strong> → <strong>Přidat na plochu</strong>
           </div>
         ) : (
           <div style={{ fontSize: 12, opacity: 0.8 }}>
-            Klepni na <strong>Sdílet</strong> → <strong>Přidat na plochu</strong>
+            Otevírej dashboard jako appku bez prohlížeče.
           </div>
         )}
       </div>
 
-      {/* Tlačítka */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
-        {show === "android" && (
+        {!isIos && (
           <button
             onClick={install}
             style={{
@@ -108,7 +101,7 @@ export default function InstallBanner() {
               color: "#1f3d2e",
               border: "none",
               borderRadius: 8,
-              padding: "6px 12px",
+              padding: "6px 14px",
               fontWeight: 700,
               fontSize: 13,
               cursor: "pointer",
