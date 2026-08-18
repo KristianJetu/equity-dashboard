@@ -30,6 +30,14 @@ export default function InstallBanner() {
       return;
     }
 
+    // Event mohl přijít před React hydratací — čteme z globální proměnné
+    const existing = (window as { __pwaPrompt?: BeforeInstallPromptEvent }).__pwaPrompt;
+    if (existing) {
+      setDeferredPrompt(existing);
+      setShow("android");
+      return;
+    }
+    // Fallback: pokud ještě nepřišel, počkáme
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);

@@ -29,6 +29,15 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="cs">
+      <head>
+        {/* Zachytí beforeinstallprompt před React hydratací */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            window.__pwaPrompt = e;
+          });
+        `}} />
+      </head>
       <body>
         {children}
         <InstallBanner />
