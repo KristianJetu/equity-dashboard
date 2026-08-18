@@ -1127,7 +1127,7 @@ function DebtModal({ debt, supabase, onClose, onSaved, onDeleted }: {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(28,43,34,0.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
       onClick={onClose}>
-      <div style={{ background: "#faf8f3", borderRadius: 16, padding: "28px 28px 24px", width: 420, maxWidth: "95vw", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
+      <div style={{ background: "#faf8f3", borderRadius: 16, padding: "28px 28px 24px", width: 420, maxWidth: "95vw", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
         onClick={e => e.stopPropagation()}>
         <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 18, color: "#1c2b22", marginBottom: 20 }}>
           {debt ? "Upravit záznam" : "Nový záznam"}
@@ -2102,9 +2102,9 @@ export default function EquityDashboard() {
               <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "6px 20px" }}>
                 <div className="flex" style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9a9483", padding: "13px 0 10px" }}>
                   <span className="flex-1">Měsíc</span>
-                  <span style={{ width: 120, textAlign: "right" }}>Nájem</span>
-                  <span style={{ width: 120, textAlign: "right" }}>Výdaje</span>
-                  <span style={{ width: 120, textAlign: "right" }}>Čistý zisk</span>
+                  <span className="eq-pay-col" style={{ width: 120, textAlign: "right" }}>Nájem</span>
+                  <span className="eq-pay-col" style={{ width: 120, textAlign: "right" }}>Výdaje</span>
+                  <span className="eq-pay-col" style={{ width: 120, textAlign: "right" }}>Čistý zisk</span>
                 </div>
                 {filteredPayments.map((p) => {
                   const prop = properties.find(pr => pr.id === p.property_id);
@@ -2135,9 +2135,9 @@ export default function EquityDashboard() {
                           )}
                         </span>
                       </span>
-                      <span style={{ width: 120, textAlign: "right", color: "#1f3d2e", fontWeight: 600 }}>+{fmt(p.rent_received)}</span>
-                      <span style={{ width: 120, textAlign: "right", color: "#a07b2f" }}>−{fmt(p.mortgage_payment)}</span>
-                      <span style={{ width: 120, textAlign: "right", fontWeight: 700, color: p.net_cashflow >= 0 ? undefined : "#c0392b" }}>
+                      <span className="eq-pay-col" style={{ width: 120, textAlign: "right", color: "#1f3d2e", fontWeight: 600 }}>+{fmt(p.rent_received)}</span>
+                      <span className="eq-pay-col" style={{ width: 120, textAlign: "right", color: "#a07b2f" }}>−{fmt(p.mortgage_payment)}</span>
+                      <span className="eq-pay-col" style={{ width: 120, textAlign: "right", fontWeight: 700, color: p.net_cashflow >= 0 ? undefined : "#c0392b" }}>
                         {p.net_cashflow >= 0 ? "+" : ""}{fmt(p.net_cashflow)}
                       </span>
                     </div>

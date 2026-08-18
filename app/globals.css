@@ -129,4 +129,9 @@ body {
     flex-wrap: wrap !important;
     gap: 8px !important;
   }
+
+  /* Payment history columns — narrower on mobile (120px → 72px) */
+  .eq-pay-col {
+    width: 72px !important;
+  }
 }
