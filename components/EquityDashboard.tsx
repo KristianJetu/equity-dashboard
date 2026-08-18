@@ -2353,9 +2353,9 @@ export default function EquityDashboard() {
                 onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 2px 12px rgba(31,61,46,0.10)")}
                 onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{d.name}</div>
-                    <div style={{ fontSize: 12, color: "#7c8378", marginTop: 2 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 15, color: "#1c2b22", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div>
+                    <div style={{ fontSize: 12, color: "#7c8378", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {d.monthly_payment ? `Splátka ${fmt(d.monthly_payment)} Kč/měs` : ""}
                       {d.monthly_payment && d.interest_rate ? " · " : ""}
                       {d.interest_rate ? `Úrok ${d.interest_rate} %` : ""}
@@ -2364,11 +2364,12 @@ export default function EquityDashboard() {
                     {d.note && (
                       <div style={{
                         fontSize: 12, color: "#9a9483", marginTop: 4,
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 380
+                        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                        overflow: "hidden"
                       }}>{d.note}</div>
                     )}
                   </div>
-                  <div style={{ textAlign: "right" }}>
+                  <div style={{ textAlign: "right", flexShrink: 0, paddingLeft: 8 }}>
                     <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 16, color: d.direction === "i_owe" ? "#c0392b" : "#1f3d2e" }}>
                       {d.direction === "i_owe" ? "−" : "+"}{fmt(d.amount_remaining)} Kč
                     </div>
