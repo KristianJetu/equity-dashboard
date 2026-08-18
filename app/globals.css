@@ -17,6 +17,17 @@ body {
   overflow-x: hidden;
 }
 
+/* Floating chat button — jen na mobilu */
+.eq-chat-fab {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .eq-chat-fab {
+    display: block;
+  }
+}
+
 /* --- Mobile layout (telefony do 640px) ---
    Levý navigační pruh (.eq-sidebar) se na mobilu překlopí na spodní
    tab bar, aby šel ovládat palcem a nezabíral šířku obsahu.
@@ -92,10 +103,9 @@ body {
     margin-bottom: 16px !important;
   }
 
-  /* AI chat bar — na mobilu od levého kraje, padding menší */
+  /* AI chat bar — na mobilu schovaný (nahrazuje ho FAB) */
   .eq-chatbar {
-    left: 0 !important;
-    padding: 12px 12px 80px !important;
+    display: none !important;
   }
 
   /* SVG chart — oříznutí přetečení */

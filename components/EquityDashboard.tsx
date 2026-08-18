@@ -1305,6 +1305,7 @@ export default function EquityDashboard() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
 
@@ -2437,6 +2438,7 @@ export default function EquityDashboard() {
       </main>
 
       {/* FLOATING CHAT */}
+      {/* Chat bar — desktop: vždy viditelný, mobil: tlačítko → otevře input */}
       <div className="eq-chatbar fixed bottom-0 right-0 z-[60]"
         style={{ left: 78, padding: "18px 48px 22px", background: "linear-gradient(to top, #ece6d8 60%, rgba(236,230,216,0))", pointerEvents: "none" }}>
         <div style={{ maxWidth: 1044, pointerEvents: "auto" }}>
@@ -2471,6 +2473,38 @@ export default function EquityDashboard() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Mobil: floating chat tlačítko (skryté na desktopu přes CSS) */}
+      <div className="eq-chat-fab">
+        {mobileChatOpen ? (
+          <div style={{ position: "fixed", bottom: 72, left: 12, right: 12, zIndex: 70, background: "#f7f3e9", borderRadius: 20, border: "1px solid #d2cab4", boxShadow: "0 8px 32px rgba(31,61,46,.18)", padding: "10px 10px 10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+            <input
+              autoFocus
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendChat(); setMobileChatOpen(false); } }}
+              placeholder="Zeptej se na portfolio…"
+              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 15, color: "#1c2b22" }}
+            />
+            <button onClick={() => { handleSendChat(); setMobileChatOpen(false); }}
+              disabled={chatLoading || !chatInput.trim()}
+              style={{ width: 36, height: 36, borderRadius: "50%", background: chatLoading || !chatInput.trim() ? "#9db8a6" : "#1f3d2e", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="15" height="15" viewBox="0 0 16 16"><line x1="8" y1="13" x2="8" y2="3" stroke="#f5f1e6" strokeWidth="1.9"/><polyline points="4,7 8,3 12,7" fill="none" stroke="#f5f1e6" strokeWidth="1.9"/></svg>
+            </button>
+            <button onClick={() => setMobileChatOpen(false)}
+              style={{ width: 36, height: 36, borderRadius: "50%", background: "transparent", border: "1px solid #cfc6af", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 14 14"><line x1="2" y1="2" x2="12" y2="12" stroke="#5c6359" strokeWidth="1.7"/><line x1="12" y1="2" x2="2" y2="12" stroke="#5c6359" strokeWidth="1.7"/></svg>
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setMobileChatOpen(true)}
+            style={{ position: "fixed", bottom: 72, right: 16, zIndex: 70, width: 48, height: 48, borderRadius: "50%", background: "#1f3d2e", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(31,61,46,.3)" }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );
