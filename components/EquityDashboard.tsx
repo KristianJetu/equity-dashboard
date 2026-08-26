@@ -2829,7 +2829,7 @@ export default function EquityDashboard() {
         {/* DLUHY */}
         <section id="dluhy" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 100 }}>
           {/* Odhlásit — jen na mobilu, na konci stránky */}
-          <div className="eq-mobile-logout" style={{ display: "none", marginBottom: 24 }}>
+          <div className="eq-mobile-logout" style={{ display: "none", marginBottom: 24, marginTop: 32 }}>
             <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
               style={{ width: "100%", padding: "14px", background: "#f5f1e6", border: "none", borderRadius: 12, color: "#7c8378", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "inherit" }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
