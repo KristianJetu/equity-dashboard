@@ -87,7 +87,7 @@ async function savePayment(
   mortgagePayment: number,
   matchType: "auto" | "unmatched",
   rawEmailText: string
-): Promise<string | null> {
+): Promise<{ id: string | null; error: string | null }> {
   const month = parsed.date ? parsed.date.slice(0, 7) + "-01" : new Date().toISOString().slice(0, 7) + "-01";
   const netCashflow = propertyId ? parsed.amount - mortgagePayment : 0;
 
@@ -113,11 +113,12 @@ async function savePayment(
     );
     const existing = await checkRes.json();
     if (existing.length > 0) {
-      await fetch(
+      const patchRes = await fetch(
         `${SUPABASE_URL}/rest/v1/payments?property_id=eq.${propertyId}&month=eq.${month}`,
         { method: "PATCH", headers: supabaseHeaders, body: JSON.stringify(paymentData) }
       );
-      return existing[0].id;
+      if (!patchRes.ok) return { id: null, error: await patchRes.text() };
+      return { id: existing[0].id, error: null };
     }
   }
 
@@ -126,9 +127,9 @@ async function savePayment(
     headers: { ...supabaseHeaders, Prefer: "return=representation" },
     body: JSON.stringify(paymentData),
   });
-  if (!insertRes.ok) return null;
+  if (!insertRes.ok) return { id: null, error: await insertRes.text() };
   const inserted = await insertRes.json();
-  return inserted[0]?.id ?? null;
+  return { id: inserted[0]?.id ?? null, error: null };
 }
 
 export async function POST(req: NextRequest) {
@@ -155,10 +156,18 @@ export async function POST(req: NextRequest) {
     const tenant = await findTenantByAccount(parsed.sender_account);
     if (tenant) {
       const mortgagePayment = await getMortgagePayment(tenant.property_id);
-      await savePayment(tenant.property_id, parsed, mortgagePayment, "auto", emailText);
+      const result = await savePayment(tenant.property_id, parsed, mortgagePayment, "auto", emailText);
+      if (result.error) {
+        console.error("parse-email save error (auto):", result.error);
+        return NextResponse.json({ ok: false, error: "save failed", detail: result.error }, { status: 500 });
+      }
       return NextResponse.json({ ok: true, match: "auto", amount: parsed.amount, propertyId: tenant.property_id });
     } else {
-      await savePayment(null, parsed, 0, "unmatched", emailText);
+      const result = await savePayment(null, parsed, 0, "unmatched", emailText);
+      if (result.error) {
+        console.error("parse-email save error (unmatched):", result.error);
+        return NextResponse.json({ ok: false, error: "save failed", detail: result.error }, { status: 500 });
+      }
       return NextResponse.json({ ok: true, match: "unmatched", amount: parsed.amount, sender: parsed.sender_name });
     }
   } catch (err) {
