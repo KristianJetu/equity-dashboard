@@ -2935,7 +2935,7 @@ export default function EquityDashboard() {
         <section id="nastaveni" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 120 }}>
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 20 }}>{t("nastaveni")}</div>
 
-          <div style={{ background: "#f5f1e6", borderRadius: 14, overflow: "hidden" }}>
+          <div style={{ background: "#f5f1e6", borderRadius: 14, overflow: "hidden", marginBottom: 16 }}>
             {/* Přihlášený účet */}
             <div style={{ padding: "16px 20px", borderBottom: "1px solid #e8e0d0", display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#1f3d2e", display: "flex", alignItems: "center", justifyContent: "center", color: "#c8a84b", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
@@ -2944,6 +2944,21 @@ export default function EquityDashboard() {
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#1c2b22" }}>{userEmail}</div>
                 <div style={{ fontSize: 12, color: "#9a9483" }}>Přihlášený účet</div>
+              </div>
+            </div>
+
+            {/* Jazyk */}
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #e8e0d0" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#1c2b22", marginBottom: 10 }}>{t("jazykAplikace")}</div>
+              <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3, width: "fit-content" }}>
+                <button onClick={() => saveLanguage("cs")} disabled={savingLanguage}
+                  style={{ padding: "6px 16px", borderRadius: 18, border: "none", background: language === "cs" ? "#1f3d2e" : "transparent", color: language === "cs" ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: savingLanguage ? "default" : "pointer", fontFamily: "inherit" }}>
+                  {t("cestina")}
+                </button>
+                <button onClick={() => saveLanguage("en")} disabled={savingLanguage}
+                  style={{ padding: "6px 16px", borderRadius: 18, border: "none", background: language === "en" ? "#1f3d2e" : "transparent", color: language === "en" ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: savingLanguage ? "default" : "pointer", fontFamily: "inherit" }}>
+                  {t("anglictina")}
+                </button>
               </div>
             </div>
 
