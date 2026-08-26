@@ -1972,8 +1972,8 @@ export default function EquityDashboard() {
           </a>
         )}
         <button title={userEmail ?? "Odhlásit"} onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
-          className="eq-sidebar-logout mt-auto flex items-center justify-center rounded-[12px]"
-          style={{ width: 46, height: 46, background: "transparent", border: "none", cursor: "pointer" }}>
+          className="eq-sidebar-logout mt-auto flex items-center gap-2 rounded-[12px]"
+          style={{ padding: "10px 12px", background: "transparent", border: "none", cursor: "pointer" }}>
           <span style={{ color: "#86a191", display: "flex" }}>
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -1981,6 +1981,7 @@ export default function EquityDashboard() {
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
           </span>
+          <span className="eq-sidebar-logout-label" style={{ color: "#86a191", fontSize: 13, fontWeight: 500 }}>Odhlásit</span>
         </button>
       </aside>
 
