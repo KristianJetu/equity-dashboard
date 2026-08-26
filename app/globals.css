@@ -22,10 +22,6 @@ body {
   display: none;
 }
 
-/* Odhlásit tlačítko — jen na mobilu */
-.eq-mobile-logout {
-  display: none;
-}
 
 @media (max-width: 640px) {
   .eq-chat-fab {
@@ -73,10 +69,6 @@ body {
     display: none !important;
   }
 
-  .eq-mobile-logout {
-    display: block !important;
-    margin-top: 32px;
-  }
 
   .eq-main {
     margin-left: 0 !important;

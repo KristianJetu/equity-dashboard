@@ -1534,7 +1534,7 @@ function AddTenantModal({ properties, supabase, onClose, onSaved }: {
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function EquityDashboard() {
-  const SECTION_IDS = ["dashboard", "nemovitosti", "platby", "najemnici", "komunikace", "asistent", "dluhy"];
+  const SECTION_IDS = ["dashboard", "nemovitosti", "platby", "najemnici", "komunikace", "asistent", "dluhy", "nastaveni"];
 
   const supabase = createClient();
   const [properties, setProperties] = useState<Property[]>([]);
@@ -2931,18 +2931,34 @@ export default function EquityDashboard() {
           })()}
         </section>
 
-        {/* Odhlásit — jen na mobilu, úplně dole */}
-        <div className="eq-mobile-logout" style={{ display: "none", padding: "0 0 32px" }}>
-          <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
-            style={{ width: "100%", padding: "14px", background: "#f5f1e6", border: "none", borderRadius: 12, color: "#7c8378", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "inherit" }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            Odhlásit
-          </button>
-        </div>
+        {/* NASTAVENÍ */}
+        <section id="nastaveni" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 120 }}>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 20 }}>{t("nastaveni")}</div>
+
+          <div style={{ background: "#f5f1e6", borderRadius: 14, overflow: "hidden" }}>
+            {/* Přihlášený účet */}
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #e8e0d0", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#1f3d2e", display: "flex", alignItems: "center", justifyContent: "center", color: "#c8a84b", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
+                {userEmail?.[0]?.toUpperCase() ?? "?"}
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1c2b22" }}>{userEmail}</div>
+                <div style={{ fontSize: 12, color: "#9a9483" }}>Přihlášený účet</div>
+              </div>
+            </div>
+
+            {/* Odhlásit */}
+            <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
+              style={{ width: "100%", padding: "16px 20px", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "inherit", textAlign: "left" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c0392b" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#c0392b" }}>Odhlásit se</span>
+            </button>
+          </div>
+        </section>
 
       </main>
 
