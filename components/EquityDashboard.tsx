@@ -2828,6 +2828,18 @@ export default function EquityDashboard() {
 
         {/* DLUHY */}
         <section id="dluhy" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 100 }}>
+          {/* Odhlásit — jen na mobilu, na konci stránky */}
+          <div className="eq-mobile-logout" style={{ display: "none", marginBottom: 24 }}>
+            <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
+              style={{ width: "100%", padding: "14px", background: "#f5f1e6", border: "none", borderRadius: 12, color: "#7c8378", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "inherit" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              Odhlásit
+            </button>
+          </div>
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>{t("dluhy")}</div>
 
           {(() => {

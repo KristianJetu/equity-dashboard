@@ -68,6 +68,10 @@ body {
     display: none !important;
   }
 
+  .eq-mobile-logout {
+    display: block !important;
+  }
+
   .eq-main {
     margin-left: 0 !important;
     padding: 20px 16px 88px !important;
