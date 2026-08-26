@@ -151,6 +151,13 @@ const translations = {
     vydajeLower: "výdaje",
     planovanyNajem: "Plánovaný nájem",
     splatkaHypoteky: "Splátka hypotéky",
+    pridatPlatbu: "+ Přidat platbu",
+    najemPoSplatnosti: (n: number) => `Nájem po splatnosti o ${n} ${n === 1 ? "den" : n < 5 ? "dny" : "dní"}`,
+    historiePlateb: "Historie plateb",
+    kalendarPlateb: "Kalendář plateb",
+    zaplacenoLabel: "Zaplaceno",
+    nezaplacenoLabel: "Nezaplaceno",
+    nadchaziLabel: "Nadchází",
   },
   en: {
     dashboard: "Dashboard",
@@ -215,6 +222,13 @@ const translations = {
     vydajeLower: "expenses",
     planovanyNajem: "Planned rent",
     splatkaHypoteky: "Mortgage payment",
+    pridatPlatbu: "+ Add payment",
+    najemPoSplatnosti: (n: number) => `Rent overdue by ${n} day${n === 1 ? "" : "s"}`,
+    historiePlateb: "Payment history",
+    kalendarPlateb: "Payment calendar",
+    zaplacenoLabel: "Paid",
+    nezaplacenoLabel: "Unpaid",
+    nadchaziLabel: "Upcoming",
   },
 } as const;
 
@@ -1196,6 +1210,106 @@ function AddPropertyModal({ supabase, onClose, onSaved }: {
   );
 }
 
+// ── Add Payment Modal (ruční přidání platby) ───────────────────────────────────
+function AddPaymentModal({
+  properties, mortgages, supabase, onClose, onSaved, defaultPropertyId, defaultMonth,
+}: {
+  properties: Property[];
+  mortgages: Mortgage[];
+  supabase: ReturnType<typeof createClient>;
+  onClose: () => void;
+  onSaved: (p: Payment) => void;
+  defaultPropertyId?: string;
+  defaultMonth?: string;
+}) {
+  const [propertyId, setPropertyId] = useState(defaultPropertyId ?? "");
+  const [month, setMonth] = useState((defaultMonth ?? new Date().toISOString().slice(0, 7) + "-01").slice(0, 7));
+  const [amount, setAmount] = useState("");
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (propertyId && !amount) {
+      const prop = properties.find(p => p.id === propertyId);
+      if (prop?.rent_amount) setAmount(String(prop.rent_amount));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propertyId]);
+
+  async function handleSave() {
+    if (!propertyId || !amount) return;
+    setSaving(true);
+    const monthFull = month + "-01";
+    const mortgage = mortgages.find(m => m.property_id === propertyId);
+    const mortgagePayment = mortgage?.monthly_payment ?? 0;
+    const rentReceived = Number(amount);
+    const netCashflow = rentReceived - mortgagePayment;
+
+    const { data: existing } = await supabase.from("payments").select("id").eq("property_id", propertyId).eq("month", monthFull);
+    let saved: Payment | null = null;
+    if (existing && existing.length > 0) {
+      const { data } = await supabase.from("payments").update({
+        rent_received: rentReceived, mortgage_payment: mortgagePayment, net_cashflow: netCashflow,
+        status: "paid", match_type: "manual", payment_type: "rent", payment_date: paymentDate,
+      }).eq("id", existing[0].id).select().single();
+      saved = data;
+    } else {
+      const { data } = await supabase.from("payments").insert({
+        property_id: propertyId, month: monthFull, rent_received: rentReceived, mortgage_payment: mortgagePayment,
+        net_cashflow: netCashflow, status: "paid", match_type: "manual", payment_type: "rent", payment_date: paymentDate,
+      }).select().single();
+      saved = data;
+    }
+    setSaving(false);
+    if (saved) onSaved(saved);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)" }} onClick={onClose}>
+      <div style={{ background: "#faf8f3", borderRadius: 16, padding: "28px 28px 24px", width: 420, maxWidth: "95vw", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 18, color: "#1c2b22", marginBottom: 20 }}>Přidat platbu</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Nemovitost</div>
+            <select value={propertyId} onChange={e => setPropertyId(e.target.value)}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", boxSizing: "border-box" }}>
+              <option value="">— Vyber —</option>
+              {properties.filter(p => p.status !== "planned").map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Měsíc</div>
+            <input type="month" value={month} onChange={e => setMonth(e.target.value)}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", boxSizing: "border-box" }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Částka (Kč)</div>
+            <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", boxSizing: "border-box" }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Datum platby</div>
+            <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", boxSizing: "border-box" }} />
+          </div>
+        </div>
+        <div className="flex gap-3 justify-end" style={{ marginTop: 20 }}>
+          <button onClick={onClose}
+            style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>
+            Zrušit
+          </button>
+          <button onClick={handleSave} disabled={!propertyId || !amount || saving}
+            style={{ padding: "9px 18px", borderRadius: 8, border: "none", background: (!propertyId || !amount) ? "#c5bfb0" : "#1f3d2e", fontSize: 14, fontWeight: 600, color: "#f5f1e6", cursor: (!propertyId || !amount) ? "not-allowed" : "pointer" }}>
+            {saving ? "Ukládám…" : "Uložit platbu"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Debt Modal ────────────────────────────────────────────────────────────────
 function DebtModal({ debt, supabase, onClose, onSaved, onDeleted }: {
   debt: Debt | null;
@@ -1479,6 +1593,7 @@ export default function EquityDashboard() {
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [debtModal, setDebtModal] = useState<{ open: boolean; debt: Debt | null }>({ open: false, debt: null });
+  const [addPaymentModal, setAddPaymentModal] = useState<{ open: boolean; propertyId?: string; month?: string }>({ open: false });
   const [copied, setCopied] = useState(false);
 
   async function loadMessages(propertyId: string) {
@@ -1755,6 +1870,22 @@ export default function EquityDashboard() {
         />
       )}
 
+      {/* Add Payment Modal */}
+      {addPaymentModal.open && (
+        <AddPaymentModal
+          properties={properties}
+          mortgages={mortgages}
+          supabase={supabase}
+          defaultPropertyId={addPaymentModal.propertyId}
+          defaultMonth={addPaymentModal.month}
+          onClose={() => setAddPaymentModal({ open: false })}
+          onSaved={p => setPayments(prev => {
+            const exists = prev.some(x => x.id === p.id);
+            return exists ? prev.map(x => x.id === p.id ? p : x) : [p, ...prev];
+          })}
+        />
+      )}
+
       {/* Settings Modal */}
       {settingsOpen && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(28,43,34,0.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
@@ -2022,6 +2153,24 @@ export default function EquityDashboard() {
                             </div>
                           );
                         })()}
+                        {p.status === "rented" && !isManaged && (() => {
+                          const now = new Date();
+                          const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+                          const hasPaid = payments.some(pay => pay.property_id === p.id && pay.month === monthStr && pay.rent_received > 0);
+                          if (hasPaid) return null;
+                          const dueDay = p.rent_due_day ?? 15;
+                          const overdueDays = now.getDate() - dueDay;
+                          if (overdueDays <= 0) return null;
+                          return (
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 6, padding: "4px 6px 4px 10px", borderRadius: 20, background: "#fde8e8", color: "#c0392b", fontSize: 12, fontWeight: 700 }}>
+                              <span>{t("najemPoSplatnosti")(overdueDays)}</span>
+                              <button onClick={e => { e.stopPropagation(); setAddPaymentModal({ open: true, propertyId: p.id, month: monthStr }); }}
+                                style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 12, border: "none", background: "#c0392b", color: "#fff", cursor: "pointer" }}>
+                                {t("pridatPlatbu")}
+                              </button>
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div className="flex items-center gap-3" style={{ flexShrink: 0, paddingLeft: 8 }}>
                         {!isManaged && <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{fmtMil(p.estimated_value)} mil</span>}
@@ -2271,7 +2420,73 @@ export default function EquityDashboard() {
 
           <CashflowExtra properties={properties} mortgages={mortgages} showPlanned={showPlanned} />
 
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Historie plateb</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>{t("historiePlateb")}</div>
+            <button onClick={() => setAddPaymentModal({ open: true })}
+              style={{ fontSize: 12, padding: "6px 14px", borderRadius: 20, border: "none", background: "#1f3d2e", color: "#f5f1e6", cursor: "pointer", fontWeight: 600 }}>
+              {t("pridatPlatbu")}
+            </button>
+          </div>
+
+          {/* Kalendář plateb — matice nemovitosti × měsíce */}
+          {(() => {
+            const year = new Date().getFullYear();
+            const currentMonthNum = new Date().getMonth() + 1;
+            const today = new Date().getDate();
+            const monthNamesCs = ["Led", "Úno", "Bře", "Dub", "Kvě", "Čvn", "Čvc", "Srp", "Zář", "Říj", "Lis", "Pro"];
+            const monthNamesEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const monthNames = language === "cs" ? monthNamesCs : monthNamesEn;
+            const calProps = properties.filter(p => p.status !== "planned");
+            if (calProps.length === 0) return null;
+            return (
+              <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "16px 18px", marginBottom: 18, overflowX: "auto" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#1c2b22", marginBottom: 12 }}>{t("kalendarPlateb")} {year}</div>
+                <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 640 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: "left", fontSize: 11, color: "#9a9483", fontWeight: 600, padding: "0 8px 6px 0" }}></th>
+                      {monthNames.map((m, i) => (
+                        <th key={i} style={{ fontSize: 11, color: "#9a9483", fontWeight: 600, padding: "0 4px 6px", textAlign: "center" }}>{m}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {calProps.map(p => (
+                      <tr key={p.id}>
+                        <td style={{ fontSize: 12, fontWeight: 600, color: "#1c2b22", padding: "4px 8px 4px 0", whiteSpace: "nowrap" }}>{p.name}</td>
+                        {monthNames.map((_, i) => {
+                          const m = i + 1;
+                          const monthStr = `${year}-${String(m).padStart(2, "0")}-01`;
+                          const payment = payments.find(pay => pay.property_id === p.id && pay.month === monthStr && pay.rent_received > 0);
+                          const dueDay = p.rent_due_day ?? 15;
+                          const isNotYetDue = m === currentMonthNum && today <= dueDay;
+                          const isFuture = m > currentMonthNum;
+                          let bg = "#e6e0d0", color = "#9a9483", content = "";
+                          if (payment) { bg = "#d6e4d6"; color = "#1f3d2e"; content = "✓"; }
+                          else if (!isFuture && !isNotYetDue) { bg = "#fde8e8"; color = "#c0392b"; content = "!"; }
+                          return (
+                            <td key={m} style={{ textAlign: "center", padding: 3 }}>
+                              <div
+                                onClick={() => payment ? setSelectedPayment(payment) : setAddPaymentModal({ open: true, propertyId: p.id, month: monthStr })}
+                                title={payment ? `+${fmt(payment.rent_received)} Kč` : ""}
+                                style={{ width: 26, height: 22, borderRadius: 5, background: bg, color, fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", margin: "0 auto" }}>
+                                {content}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 11, color: "#7c8378", flexWrap: "wrap" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#d6e4d6", display: "inline-block" }} />{t("zaplacenoLabel")}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#fde8e8", display: "inline-block" }} />{t("nezaplacenoLabel")}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#e6e0d0", display: "inline-block" }} />{t("nadchaziLabel")}</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Nespárované platby */}
           {unmatchedPayments.length > 0 && (
