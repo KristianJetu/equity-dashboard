@@ -1227,6 +1227,7 @@ function AddPaymentModal({
   const [amount, setAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (propertyId && !amount) {
@@ -1239,29 +1240,42 @@ function AddPaymentModal({
   async function handleSave() {
     if (!propertyId || !amount) return;
     setSaving(true);
+    setError("");
     const monthFull = month + "-01";
     const mortgage = mortgages.find(m => m.property_id === propertyId);
     const mortgagePayment = mortgage?.monthly_payment ?? 0;
     const rentReceived = Number(amount);
     const netCashflow = rentReceived - mortgagePayment;
 
-    const { data: existing } = await supabase.from("payments").select("id").eq("property_id", propertyId).eq("month", monthFull);
+    const { data: existing, error: selectErr } = await supabase.from("payments").select("id").eq("property_id", propertyId).eq("month", monthFull);
+    if (selectErr) {
+      setSaving(false);
+      setError(selectErr.message);
+      return;
+    }
     let saved: Payment | null = null;
+    let saveErr: { message: string } | null = null;
     if (existing && existing.length > 0) {
-      const { data } = await supabase.from("payments").update({
+      const { data, error: updErr } = await supabase.from("payments").update({
         rent_received: rentReceived, mortgage_payment: mortgagePayment, net_cashflow: netCashflow,
         status: "paid", match_type: "manual", payment_type: "rent", payment_date: paymentDate,
       }).eq("id", existing[0].id).select().single();
       saved = data;
+      saveErr = updErr;
     } else {
-      const { data } = await supabase.from("payments").insert({
+      const { data, error: insErr } = await supabase.from("payments").insert({
         property_id: propertyId, month: monthFull, rent_received: rentReceived, mortgage_payment: mortgagePayment,
         net_cashflow: netCashflow, status: "paid", match_type: "manual", payment_type: "rent", payment_date: paymentDate,
       }).select().single();
       saved = data;
+      saveErr = insErr;
     }
     setSaving(false);
-    if (saved) onSaved(saved);
+    if (saveErr || !saved) {
+      setError(saveErr?.message || "Uložení se nezdařilo (žádná data se nevrátila).");
+      return;
+    }
+    onSaved(saved);
     onClose();
   }
 
@@ -1295,6 +1309,11 @@ function AddPaymentModal({
               style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", boxSizing: "border-box" }} />
           </div>
         </div>
+        {error && (
+          <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 8, background: "#fde8e8", color: "#c0392b", fontSize: 13 }}>
+            {error}
+          </div>
+        )}
         <div className="flex gap-3 justify-end" style={{ marginTop: 20 }}>
           <button onClick={onClose}
             style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>
