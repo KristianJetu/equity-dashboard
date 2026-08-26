@@ -1928,8 +1928,13 @@ export default function EquityDashboard() {
                 </button>
               </div>
             </div>
+            <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
+              style={{ marginTop: 12, width: "100%", padding: "10px 0", borderRadius: 10, border: "none", background: "transparent", color: "#c0392b", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c0392b" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Odhlásit se
+            </button>
             <button onClick={() => setSettingsOpen(false)}
-              style={{ marginTop: 20, width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+              style={{ marginTop: 8, width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
               {t("zavrit")}
             </button>
           </div>
@@ -2931,8 +2936,17 @@ export default function EquityDashboard() {
           })()}
         </section>
 
-        {/* NASTAVENÍ */}
-        <section id="nastaveni" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 120 }}>
+        {/* Odhlásit — jen na mobilu, dole po scrollu */}
+        <div className="eq-mobile-logout" style={{ display: "none", padding: "8px 0 24px" }}>
+          <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
+            style={{ width: "100%", padding: "14px", background: "#f0ebe0", border: "none", borderRadius: 12, color: "#7c8378", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "inherit" }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Odhlásit
+          </button>
+        </div>
+
+        {/* NASTAVENÍ — na mobilu skryté, přístupné přes modal */}
+        <section id="nastaveni" className="eq-settings-section" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 120 }}>
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 20 }}>{t("nastaveni")}</div>
 
           <div style={{ background: "#f5f1e6", borderRadius: 14, overflow: "hidden", marginBottom: 16 }}>

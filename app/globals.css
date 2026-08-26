@@ -184,6 +184,14 @@ body {
   .eq-cf-panels > div:last-child {
     border-bottom: none !important;
   }
+
+  .eq-settings-section {
+    display: none !important;
+  }
+
+  .eq-mobile-logout {
+    display: block !important;
+  }
 }
 
 /* --- Vertikální sidebar na nižších monitorech ---
