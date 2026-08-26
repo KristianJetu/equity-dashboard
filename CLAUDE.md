@@ -56,6 +56,14 @@ Aplikace pro správu portfolia nemovitostí. Majitel vidí přehled nemovitostí
 - **Trigger:** každou hodinu, time-driven
 - **Env var:** `PARSE_EMAIL_SECRET=mbank-secret-2026` (Vercel Production)
 - **Klíčový soubor:** `app/api/parse-email/route.ts`
+- **Stav (2026-08-26):** automatické párování mBank emailů zatím nepotvrzeno jako funkční — zatím žádný nepřečtený email od `kontakt@mbank.cz` v inboxu (buď skript maily po zpracování označuje jako přečtené, nebo je nikdy nedostane jako nepřečtené). Zatím nedořešeno, odloženo jako pokročilá funkce.
+
+## Ruční evidence plateb (doplňkové řešení k email parsingu)
+- Tlačítko **"+ Přidat platbu"** v sekci Platby (`AddPaymentModal`) — nemovitost, měsíc, částka, datum; upsert do `payments` (stejný property_id+month přepíše existující záznam)
+- Na kartě nemovitosti (sekce Nemovitosti) badge **"Nájem po splatnosti o X dní"**, pokud aktuální měsíc nemá zaplacenou platbu a je po `rent_due_day` — obsahuje rovnou tlačítko na přidání platby
+- **Kalendář plateb** v sekci Platby — matice nemovitosti × měsíce aktuálního roku, zelená/červená/šedá podle stavu, klik na buňku otevře přidání nebo detail platby
+- Zatím chybí v UI: **editace částky/data u již zapsané platby** a **mazání platby** — jen přes SQL v Supabase
+- **RLS na tabulce `payments`:** stejný vzorec chyby jako u `tenants` — politiky existovaly jen pro roli `anon` (kvůli parse-email webhooku), chyběly pro `authenticated`, takže ruční přidání platby z appky se tiše neuložilo. Oprava: `supabase-migration-payments-rls.sql`
 
 ## Přidání nového uživatele
 1. Supabase Dashboard → Authentication → Users → Invite user
