@@ -963,7 +963,8 @@ function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Pro
   const circ = 2 * Math.PI * R;
   const slices = [
     { label: "Splátky hypoték", value: totalMortgage, color: "#b85c5c" },
-    { label: "Pojistky a náklady", value: Math.round(totalInsurance) + totalCosts, color: "#c4a882" },
+    { label: "Pojistky", value: Math.round(totalInsurance), color: "#c4a882" },
+    { label: "Náklady", value: totalCosts, color: "#a89070" },
     { label: "Čistý příjem", value: Math.max(net, 0), color: "#1f3d2e" },
   ].filter(s => s.value > 0);
   const total = slices.reduce((s, sl) => s + sl.value, 0) || 1;
