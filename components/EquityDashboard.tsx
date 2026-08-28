@@ -945,10 +945,9 @@ function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Pro
 
   const cx = 80, cy = 80, R = 60, sw = 20;
   const circ = 2 * Math.PI * R;
+  const totalOut = totalMortgage + Math.round(totalInsurance) + totalCosts;
   const slices = [
-    { label: "Splátky", value: totalMortgage, color: "#b85c5c" },
-    { label: "Pojistky", value: Math.round(totalInsurance), color: "#c4a882" },
-    { label: "Náklady", value: totalCosts, color: "#9a9483" },
+    { label: "Výdaje", value: totalOut, color: "#b85c5c" },
     { label: "Čistý příjem", value: Math.max(net, 0), color: "#1f3d2e" },
   ].filter(s => s.value > 0);
   const total = slices.reduce((s, sl) => s + sl.value, 0) || 1;
@@ -986,12 +985,17 @@ function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Pro
           </svg>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Struktura výdajů</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Cashflow přehled</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#1f3d2e", flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: "#5c6359", flex: 1 }}>Příjmy</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#1f3d2e" }}>+{fmt(totalRent)} Kč</span>
+          </div>
           {slices.map(sl => (
             <div key={sl.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: sl.color, flexShrink: 0 }} />
               <span style={{ fontSize: 13, color: "#5c6359", flex: 1 }}>{sl.label}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: sl.label === "Čistý příjem" ? "#1f3d2e" : "#c0392b" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: sl.label === "Čistý příjem" ? "#1f3d2e" : "#b85c5c" }}>
                 {sl.label === "Čistý příjem" ? "+" : "−"}{fmt(sl.value)} Kč
               </span>
             </div>
