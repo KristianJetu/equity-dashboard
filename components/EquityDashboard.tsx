@@ -518,25 +518,49 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
 
 // ── Payment Detail Modal ──────────────────────────────────────────────────────
 function PaymentModal({
-  payment, properties, supabase, onClose, onSave,
+  payment, properties, supabase, onClose, onSave, onDelete,
 }: {
   payment: Payment;
   properties: Property[];
   supabase: ReturnType<typeof createClient>;
   onClose: () => void;
-  onSave: (paymentId: string, propertyId: string) => Promise<void>;
+  onSave: (paymentId: string, propertyId: string, rentReceived: number, paymentDate: string) => Promise<void>;
+  onDelete: (paymentId: string) => Promise<void>;
 }) {
   const [selectedProperty, setSelectedProperty] = useState(payment.property_id ?? "");
+  const [rentReceived, setRentReceived] = useState(String(payment.rent_received));
+  const [paymentDate, setPaymentDate] = useState(payment.payment_date ?? "");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState("");
   const match = matchTypeLabel(payment.match_type);
 
 
   async function handleSave() {
-    if (!selectedProperty) return;
+    if (!selectedProperty || !rentReceived) return;
     setSaving(true);
-    await onSave(payment.id, selectedProperty);
-    setSaving(false);
-    onClose();
+    setError("");
+    try {
+      await onSave(payment.id, selectedProperty, Number(rentReceived), paymentDate);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Uložení se nezdařilo.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    setError("");
+    try {
+      await onDelete(payment.id);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Smazání se nezdařilo.");
+      setDeleting(false);
+    }
   }
 
   return (
@@ -556,16 +580,28 @@ function PaymentModal({
 
         {/* Částky */}
         <div className="flex gap-3 mb-6">
-          {[
-            { label: "Nájem", value: `+${fmt(payment.rent_received)} Kč`, color: "#1f3d2e" },
-            { label: "Výdaje", value: `−${fmt(payment.mortgage_payment)} Kč`, color: "#a07b2f" },
-            { label: "Čistý zisk", value: `${payment.net_cashflow >= 0 ? "+" : ""}${fmt(payment.net_cashflow)} Kč`, color: payment.net_cashflow >= 0 ? "#1f3d2e" : "#c0392b" },
-          ].map(({ label, value, color }) => (
-            <div key={label} style={{ flex: 1, background: "#ece6d8", borderRadius: 10, padding: "12px 14px" }}>
-              <div style={{ fontSize: 11, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{label}</div>
-              <div style={{ fontWeight: 700, fontSize: 16, color }}>{value}</div>
+          <div style={{ flex: 1, background: "#ece6d8", borderRadius: 10, padding: "10px 14px" }}>
+            <div style={{ fontSize: 11, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Nájem (Kč)</div>
+            <input type="number" value={rentReceived} onChange={e => setRentReceived(e.target.value)}
+              style={{ width: "100%", border: "none", background: "transparent", fontWeight: 700, fontSize: 16, color: "#1f3d2e", padding: 0, outline: "none" }} />
+          </div>
+          <div style={{ flex: 1, background: "#ece6d8", borderRadius: 10, padding: "12px 14px" }}>
+            <div style={{ fontSize: 11, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Výdaje</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "#a07b2f" }}>−{fmt(payment.mortgage_payment)} Kč</div>
+          </div>
+          <div style={{ flex: 1, background: "#ece6d8", borderRadius: 10, padding: "12px 14px" }}>
+            <div style={{ fontSize: 11, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Čistý zisk</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: payment.net_cashflow >= 0 ? "#1f3d2e" : "#c0392b" }}>
+              {(Number(rentReceived || 0) - payment.mortgage_payment) >= 0 ? "+" : ""}{fmt(Number(rentReceived || 0) - payment.mortgage_payment)} Kč
             </div>
-          ))}
+          </div>
+        </div>
+
+        {/* Datum platby */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Datum platby</div>
+          <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)}
+            style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", boxSizing: "border-box" }} />
         </div>
 
         {/* Odesílatel + poznámky k nájemníkovi */}
@@ -605,16 +641,42 @@ function PaymentModal({
           </details>
         )}
 
+        {error && (
+          <div style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 8, background: "#fde8e8", color: "#c0392b", fontSize: 13 }}>
+            {error}
+          </div>
+        )}
+
         {/* Akce */}
-        <div className="flex gap-3 justify-end">
-          <button onClick={onClose}
-            style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>
-            Zavřít
-          </button>
-          <button onClick={handleSave} disabled={!selectedProperty || saving}
-            style={{ padding: "9px 18px", borderRadius: 8, border: "none", background: selectedProperty ? "#1f3d2e" : "#c5bfb0", fontSize: 14, fontWeight: 600, color: "#f5f1e6", cursor: selectedProperty ? "pointer" : "not-allowed" }}>
-            {saving ? "Ukládám…" : "Uložit přiřazení"}
-          </button>
+        <div className="flex gap-3 justify-between items-center">
+          {confirmDelete ? (
+            <div className="flex gap-2 items-center">
+              <span style={{ fontSize: 13, color: "#c0392b", fontWeight: 600 }}>Opravdu smazat?</span>
+              <button onClick={handleDelete} disabled={deleting}
+                style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: "#c0392b", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
+                {deleting ? "Mažu…" : "Ano, smazat"}
+              </button>
+              <button onClick={() => setConfirmDelete(false)}
+                style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 13, color: "#5c6359", cursor: "pointer" }}>
+                Zrušit
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmDelete(true)}
+              style={{ padding: "9px 14px", borderRadius: 8, border: "1px solid #f5c0c0", background: "transparent", fontSize: 14, color: "#c0392b", cursor: "pointer" }}>
+              Smazat platbu
+            </button>
+          )}
+          <div className="flex gap-3">
+            <button onClick={onClose}
+              style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>
+              Zavřít
+            </button>
+            <button onClick={handleSave} disabled={!selectedProperty || !rentReceived || saving}
+              style={{ padding: "9px 18px", borderRadius: 8, border: "none", background: (selectedProperty && rentReceived) ? "#1f3d2e" : "#c5bfb0", fontSize: 14, fontWeight: 600, color: "#f5f1e6", cursor: (selectedProperty && rentReceived) ? "pointer" : "not-allowed" }}>
+              {saving ? "Ukládám…" : "Uložit změny"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1777,22 +1839,25 @@ export default function EquityDashboard() {
     setProperties(prev => prev.map(p => p.id === propertyId ? { ...p, status: newStatus as Property["status"] } : p));
   }
 
-  async function handleAssignPayment(paymentId: string, propertyId: string) {
+  async function handleAssignPayment(paymentId: string, propertyId: string, rentReceived: number, paymentDate: string) {
     const property = properties.find(p => p.id === propertyId);
     const payment = [...payments, ...unmatchedPayments].find(p => p.id === paymentId);
     if (!property || !payment) return;
 
     const mortgage = mortgages.find(m => m.property_id === propertyId);
     const mortgagePayment = mortgage?.monthly_payment ?? 0;
-    const netCashflow = payment.rent_received - mortgagePayment;
+    const netCashflow = rentReceived - mortgagePayment;
 
-    await supabase.from("payments").update({
+    const { error } = await supabase.from("payments").update({
       property_id: propertyId,
+      rent_received: rentReceived,
+      payment_date: paymentDate || null,
       mortgage_payment: mortgagePayment,
       net_cashflow: netCashflow,
       status: "paid",
       match_type: "manual",
     }).eq("id", paymentId);
+    if (error) throw new Error(error.message);
 
     if (payment.sender_account) {
       const { data: { user: upsertUser } } = await supabase.auth.getUser();
@@ -1805,6 +1870,13 @@ export default function EquityDashboard() {
     }
 
     await loadPayments();
+  }
+
+  async function handleDeletePayment(paymentId: string) {
+    const { error } = await supabase.from("payments").delete().eq("id", paymentId);
+    if (error) throw new Error(error.message);
+    setPayments(prev => prev.filter(p => p.id !== paymentId));
+    setUnmatchedPayments(prev => prev.filter(p => p.id !== paymentId));
   }
 
   const activeProperties = properties.filter((p) => p.status !== "planned");
@@ -1886,6 +1958,7 @@ export default function EquityDashboard() {
           supabase={supabase}
           onClose={() => setSelectedPayment(null)}
           onSave={handleAssignPayment}
+          onDelete={handleDeletePayment}
         />
       )}
 
