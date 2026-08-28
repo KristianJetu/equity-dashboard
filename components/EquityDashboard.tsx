@@ -946,9 +946,9 @@ function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Pro
   const cx = 80, cy = 80, R = 60, sw = 20;
   const circ = 2 * Math.PI * R;
   const slices = [
-    { label: "Splátky", value: totalMortgage, color: "#c0392b" },
-    { label: "Pojistky", value: Math.round(totalInsurance), color: "#e07b39" },
-    { label: "Náklady", value: totalCosts, color: "#b8860b" },
+    { label: "Splátky", value: totalMortgage, color: "#b85c5c" },
+    { label: "Pojistky", value: Math.round(totalInsurance), color: "#c4a882" },
+    { label: "Náklady", value: totalCosts, color: "#9a9483" },
     { label: "Čistý příjem", value: Math.max(net, 0), color: "#1f3d2e" },
   ].filter(s => s.value > 0);
   const total = slices.reduce((s, sl) => s + sl.value, 0) || 1;
@@ -975,8 +975,8 @@ function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Pro
                 transform={`rotate(${sl.startAngle} ${cx} ${cy})`}
               />
             ))}
-            <text x={cx} y={cy - 7} textAnchor="middle" fill="#7c8378" fontSize="9" fontWeight="700">PŘÍJMY</text>
-            <text x={cx} y={cy + 9} textAnchor="middle" fill="#1f3d2e" fontSize="13" fontWeight="800">{fmt(totalRent)}</text>
+            <text x={cx} y={cy - 7} textAnchor="middle" fill="#7c8378" fontSize="9" fontWeight="700">ČISTÝ CF</text>
+            <text x={cx} y={cy + 9} textAnchor="middle" fill={net >= 0 ? "#1f3d2e" : "#c0392b"} fontSize="13" fontWeight="800">{net >= 0 ? "+" : ""}{fmt(net)}</text>
             <text x={cx} y={cy + 23} textAnchor="middle" fill="#9a9483" fontSize="9">Kč / měs</text>
             {showPlanned && (() => {
               const plannedRent = properties.filter(p => p.status === "planned").reduce((s, p) => s + p.rent_amount, 0);
