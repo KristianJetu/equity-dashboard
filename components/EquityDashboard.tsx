@@ -284,7 +284,8 @@ function daysUntil(dateStr: string): number {
 function fmt(n: number) { return new Intl.NumberFormat("cs-CZ").format(Math.round(n)); }
 function fmtMil(n: number) { return (n / 1_000_000).toFixed(1).replace(".", ","); }
 function monthLabel(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("cs-CZ", { month: "long", year: "numeric" });
+  const s = new Date(dateStr).toLocaleDateString("cs-CZ", { month: "long", year: "numeric" });
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 function fmtDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" });
