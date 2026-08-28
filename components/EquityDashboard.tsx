@@ -2403,10 +2403,10 @@ export default function EquityDashboard() {
 
             const panelStyle = (key: "income" | "expenses" | "net") => ({
               flex: 1, cursor: "pointer" as const,
-              borderRight: key !== "net" ? "1px solid #d2cab4" : undefined,
+              borderRight: key !== "net" ? "1px solid rgba(255,255,255,0.15)" : undefined,
               paddingRight: key !== "net" ? 24 : undefined,
               paddingLeft: key !== "income" ? 24 : undefined,
-              background: cfExpanded === key ? "rgba(31,61,46,0.04)" : undefined,
+              background: cfExpanded === key ? "rgba(255,255,255,0.07)" : undefined,
               borderRadius: 8,
               padding: "8px 12px",
             });
@@ -2414,39 +2414,39 @@ export default function EquityDashboard() {
             return (
               <>
                 {/* Souhrnný box */}
-                <div style={{ background: "#f5f1e6", borderRadius: 12, padding: "14px 12px", marginBottom: 4 }}>
+                <div style={{ background: "#1f3d2e", borderRadius: 12, padding: "14px 12px", marginBottom: 4 }}>
                   <div className="eq-cf-panels" style={{ display: "flex", gap: 0, alignItems: "center" }}>
                     {/* Příjmy */}
                     <div style={panelStyle("income")} onClick={() => toggleCf("income")}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>{t("prijmy")}</div>
-                        <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "income" ? "▴" : "▾"}</span>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#a8c4b0", textTransform: "uppercase", letterSpacing: "0.08em" }}>{t("prijmy")}</div>
+                        <span style={{ fontSize: 11, color: "#a8c4b0" }}>{cfExpanded === "income" ? "▴" : "▾"}</span>
                       </div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#1f3d2e", marginTop: 4 }}>+{fmt(totalRent)} Kč</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#f5f1e6", marginTop: 4 }}>+{fmt(totalRent)} Kč</div>
                       {showPlanned && plannedRent > 0
-                        ? <div style={{ fontSize: 11, color: "#4a7c59", marginTop: 2 }}>{t("zTohoPlanovane")(fmt(plannedRent))}</div>
-                        : <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>{t("mesicne")}</div>
+                        ? <div style={{ fontSize: 11, color: "#7db896", marginTop: 2 }}>{t("zTohoPlanovane")(fmt(plannedRent))}</div>
+                        : <div style={{ fontSize: 11, color: "#a8c4b0", marginTop: 2 }}>{t("mesicne")}</div>
                       }
                     </div>
                     {/* Výdaje */}
                     <div style={panelStyle("expenses")} onClick={() => toggleCf("expenses")}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>{t("vydaje")}</div>
-                        <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "expenses" ? "▴" : "▾"}</span>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#a8c4b0", textTransform: "uppercase", letterSpacing: "0.08em" }}>{t("vydaje")}</div>
+                        <span style={{ fontSize: 11, color: "#a8c4b0" }}>{cfExpanded === "expenses" ? "▴" : "▾"}</span>
                       </div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#c0392b", marginTop: 4 }}>−{fmt(totalOut)} Kč</div>
-                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>{t("mesicne")}</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#f5a0a0", marginTop: 4 }}>−{fmt(totalOut)} Kč</div>
+                      <div style={{ fontSize: 11, color: "#a8c4b0", marginTop: 2 }}>{t("mesicne")}</div>
                     </div>
                     {/* Čistý cashflow */}
                     <div style={panelStyle("net")} onClick={() => toggleCf("net")}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>{t("cistyCashflow")}</div>
-                        <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "net" ? "▴" : "▾"}</span>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#a8c4b0", textTransform: "uppercase", letterSpacing: "0.08em" }}>{t("cistyCashflow")}</div>
+                        <span style={{ fontSize: 11, color: "#a8c4b0" }}>{cfExpanded === "net" ? "▴" : "▾"}</span>
                       </div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: net >= 0 ? "#1f3d2e" : "#c0392b", marginTop: 4 }}>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: net >= 0 ? "#f5f1e6" : "#f5a0a0", marginTop: 4 }}>
                         {net >= 0 ? "+" : ""}{fmt(net)} Kč
                       </div>
-                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>{t("mesicne")}</div>
+                      <div style={{ fontSize: 11, color: "#a8c4b0", marginTop: 2 }}>{t("mesicne")}</div>
                     </div>
                   </div>
 
