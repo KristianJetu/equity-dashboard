@@ -7,6 +7,7 @@ export async function middleware(req: NextRequest) {
   // Vždy přístupné bez autentizace
   if (pathname.startsWith("/api/inbound-email")) return NextResponse.next();
   if (pathname.startsWith("/api/parse-email")) return NextResponse.next();
+  if (pathname.startsWith("/api/todoist-tasks")) return NextResponse.next();
   if (pathname === "/manifest.json") return NextResponse.next();
   if (pathname === "/manifest.webmanifest") return NextResponse.next();
   if (pathname.startsWith("/icon-")) return NextResponse.next();
