@@ -14,6 +14,7 @@ type Property = {
   rent_amount: number;
   estimated_value: number;
   rent_due_day?: number;
+  rent_timing?: "advance" | "current";
   purchase_date?: string | null;
   purchase_price?: number | null;
   annual_growth_pct?: number | null;
@@ -319,6 +320,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   const [estimatedValue, setEstimatedValue] = useState(String(property.estimated_value));
   const [rentAmount, setRentAmount] = useState(String(property.rent_amount));
   const [rentDueDay, setRentDueDay] = useState(String(property.rent_due_day ?? 15));
+  const [rentTiming, setRentTiming] = useState<"advance" | "current">(property.rent_timing ?? "advance");
   const [purchaseDate, setPurchaseDate] = useState(property.purchase_date ?? "");
   const [purchasePrice, setPurchasePrice] = useState(String(property.purchase_price ?? ""));
   const [annualGrowthPct, setAnnualGrowthPct] = useState(String(property.annual_growth_pct ?? 3));
@@ -349,6 +351,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
       estimated_value: Number(estimatedValue),
       rent_amount: Number(rentAmount),
       rent_due_day: Number(rentDueDay),
+      rent_timing: rentTiming,
       purchase_date: purchaseDate || null,
       purchase_price: purchasePrice ? Number(purchasePrice) : null,
       annual_growth_pct: annualGrowthPct ? Number(annualGrowthPct) : 3,
@@ -465,6 +468,20 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
         {field("Hodnota nemovitosti", estimatedValue, setEstimatedValue, "number", "Kč")}
         {field("Výše nájmu", rentAmount, setRentAmount, "number", "Kč / měs")}
         {field("Den splatnosti nájmu", rentDueDay, setRentDueDay, "number", "v měsíci")}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Způsob platby nájmu</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {(["advance", "current"] as const).map(opt => (
+              <button key={opt} onClick={() => { setRentTiming(opt); setSaved(false); }}
+                style={{ flex: 1, padding: "8px 12px", borderRadius: 9, border: `2px solid ${rentTiming === opt ? "#1f3d2e" : "#d2cab4"}`, background: rentTiming === opt ? "#1f3d2e" : "#fff", color: rentTiming === opt ? "#fff" : "#1c2b22", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}>
+                {opt === "advance" ? "Měsíc předem" : "V běžném měsíci"}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: 11, color: "#9a9483", marginTop: 5 }}>
+            {rentTiming === "advance" ? "Platba v srpnu = záříjový nájem" : "Platba 5. srpna = srpnový nájem"}
+          </div>
+        </div>
         {field("Datum koupě", purchaseDate, setPurchaseDate, "date")}
         {field("Kupní cena", purchasePrice, setPurchasePrice, "number", "Kč")}
         {field("Odhadovaný roční růst hodnoty", annualGrowthPct, setAnnualGrowthPct, "number", "% / rok")}
@@ -2258,9 +2275,11 @@ export default function EquityDashboard() {
                           const dueDay = p.rent_due_day ?? 15;
                           const overdueDays = now.getDate() - dueDay;
                           if (overdueDays <= 0) return null;
+                          const isAdvance = (p.rent_timing ?? "advance") === "advance";
+                          const nextMonthName = new Date(now.getFullYear(), now.getMonth() + 1, 1).toLocaleString("cs", { month: "long" });
                           return (
                             <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 6, padding: "4px 6px 4px 10px", borderRadius: 20, background: "#fde8e8", color: "#c0392b", fontSize: 12, fontWeight: 700 }}>
-                              <span>{t("najemPoSplatnosti")(overdueDays)}</span>
+                              <span>{t("najemPoSplatnosti")(overdueDays)}{isAdvance ? ` (za ${nextMonthName})` : ""}</span>
                               <button onClick={e => { e.stopPropagation(); setAddPaymentModal({ open: true, propertyId: p.id, month: monthStr }); }}
                                 style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 12, border: "none", background: "#c0392b", color: "#fff", cursor: "pointer" }}>
                                 {t("pridatPlatbu")}
