@@ -2614,7 +2614,7 @@ export default function EquityDashboard() {
                           const isFuture = m > currentMonthNum;
                           let bg = "#e6e0d0", color = "#9a9483", content = "";
                           if (payment) { bg = "#d6e4d6"; color = "#1f3d2e"; content = "✓"; }
-                          else if (!isFuture && !isNotYetDue) { bg = "#fde8e8"; color = "#c0392b"; content = "!"; }
+                          else if (p.status === "rented" && !isFuture && !isNotYetDue) { bg = "#fde8e8"; color = "#c0392b"; content = "!"; }
                           return (
                             <td key={m} style={{ textAlign: "center", padding: 3 }}>
                               <div
