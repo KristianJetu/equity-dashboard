@@ -2403,7 +2403,7 @@ export default function EquityDashboard() {
 
             const panelStyle = (key: "income" | "expenses" | "net") => ({
               flex: 1, cursor: "pointer" as const,
-              borderRight: key !== "net" ? "1px solid #cec8b6" : undefined,
+              borderRight: key !== "net" ? "1px solid #d2cab4" : undefined,
               paddingRight: key !== "net" ? 24 : undefined,
               paddingLeft: key !== "income" ? 24 : undefined,
               background: cfExpanded === key ? "rgba(31,61,46,0.04)" : undefined,
@@ -2414,7 +2414,7 @@ export default function EquityDashboard() {
             return (
               <>
                 {/* Souhrnný box */}
-                <div style={{ background: "#e0d9c8", borderRadius: 12, padding: "14px 12px", marginBottom: 4 }}>
+                <div style={{ paddingBottom: 16, marginBottom: 8, borderBottom: "1px solid #d2cab4" }}>
                   <div className="eq-cf-panels" style={{ display: "flex", gap: 0, alignItems: "center" }}>
                     {/* Příjmy */}
                     <div style={panelStyle("income")} onClick={() => toggleCf("income")}>
