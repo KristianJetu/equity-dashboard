@@ -2532,8 +2532,7 @@ export default function EquityDashboard() {
                           flex: "0 0 calc(33.333% - 8px)",
                           background: p.planned ? "#eef5ee" : "#f5f1e6",
                           borderRadius: 10, padding: "16px 18px",
-                          border: "none",
-                          borderLeft: `3px solid ${p.net >= 0 ? "#1f3d2e" : "#c0392b"}`,
+                          border: "1px solid #e3ddcb",
                           cursor: "pointer", opacity: p.planned ? 0.85 : 1,
                           boxSizing: "border-box",
                         }}>
