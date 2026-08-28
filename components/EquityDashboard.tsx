@@ -2293,7 +2293,7 @@ export default function EquityDashboard() {
                             </div>
                           );
                         })()}
-                        {p.status === "rented" && !isManaged && (() => {
+                        {p.status === "rented" && !isManaged && p.rent_amount > 0 && (() => {
                           const now = new Date();
                           const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
                           const hasPaid = payments.some(pay => pay.property_id === p.id && pay.month === monthStr && pay.rent_received > 0);
@@ -2618,7 +2618,7 @@ export default function EquityDashboard() {
                           const isFuture = m > currentMonthNum;
                           let bg = "#e6e0d0", color = "#9a9483", content = "";
                           if (payment) { bg = "#d6e4d6"; color = "#1f3d2e"; content = "✓"; }
-                          else if (p.status === "rented" && !isFuture && !isNotYetDue) { bg = "#fde8e8"; color = "#c0392b"; content = "!"; }
+                          else if (p.status === "rented" && p.rent_amount > 0 && !isFuture && !isNotYetDue) { bg = "#fde8e8"; color = "#c0392b"; content = "!"; }
                           return (
                             <td key={m} style={{ textAlign: "center", padding: 3 }}>
                               <div
