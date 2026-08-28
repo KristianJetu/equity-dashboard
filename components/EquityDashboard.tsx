@@ -2683,7 +2683,7 @@ export default function EquityDashboard() {
               <button key={p.id} onClick={() => setActiveFilter(p.id)}
                 className="cursor-pointer rounded-[20px] border-none"
                 style={{ fontWeight: 600, fontSize: 12, padding: "7px 13px", color: activeFilter === p.id ? "#f5f1e6" : "#5c6359", background: activeFilter === p.id ? "#1f3d2e" : "#e6e0d0" }}>
-                {p.name.split(" ")[0]}
+                {p.name}
               </button>
             ))}
           </div>
@@ -2779,7 +2779,7 @@ export default function EquityDashboard() {
               <button key={p.id} onClick={() => { setCommPropertyId(p.id); setIncomingText(""); setDraftText(""); }}
                 className="cursor-pointer rounded-[20px] border-none"
                 style={{ fontWeight: 600, fontSize: 12, padding: "7px 13px", color: commPropertyId === p.id ? "#f5f1e6" : "#5c6359", background: commPropertyId === p.id ? "#1f3d2e" : "#e6e0d0" }}>
-                {p.name.split(" ")[0]}
+                {p.name}
               </button>
             ))}
           </div>
