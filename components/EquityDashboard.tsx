@@ -13,6 +13,7 @@ type Property = {
   status: "rented" | "vacant" | "planned";
   rent_amount: number;
   estimated_value: number;
+  sort_order?: number | null;
   rent_due_day?: number;
   rent_timing?: "advance" | "current";
   purchase_date?: string | null;
@@ -1686,6 +1687,8 @@ export default function EquityDashboard() {
   const [cfPropExpanded, setCfPropExpanded] = useState<string | null>(null);
   const [showPlanned, setShowPlanned] = useState(false);
   const [showPlannedProps, setShowPlannedProps] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [showDebtsBalance, setShowDebtsBalance] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showAddProperty, setShowAddProperty] = useState(false);
@@ -1925,6 +1928,19 @@ export default function EquityDashboard() {
     }
   }
   alerts.sort((a, b) => a.daysLeft - b.daysLeft);
+
+  async function handleDrop(fromIndex: number, toIndex: number, list: Property[]) {
+    if (fromIndex === toIndex) return;
+    const reordered = [...list];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    const updated = reordered.map((p, i) => ({ ...p, sort_order: i }));
+    setProperties(prev => {
+      const ids = new Set(updated.map(p => p.id));
+      return [...updated, ...prev.filter(p => !ids.has(p.id))];
+    });
+    await Promise.all(updated.map(p => supabase.from("properties").update({ sort_order: p.sort_order }).eq("id", p.id)));
+  }
 
   return (
     <div className="min-h-screen" style={{ background: "#ece6d8", fontFamily: "'Hanken Grotesk', sans-serif" }}>
@@ -2220,14 +2236,22 @@ export default function EquityDashboard() {
           </div>
           {loading ? <div style={{ color: "#7c8378" }}>Načítám…</div> : (
             <div className="flex flex-col gap-[10px]">
-              {(showPlannedProps ? properties : activeProperties).map((p) => {
+              {(showPlannedProps ? properties : activeProperties).map((p, idx) => {
+                const displayList = showPlannedProps ? properties : activeProperties;
                 const isManaged = p.ownership_type === "manager";
                 const { label, cls } = isManaged
                   ? { label: t("spravovano"), cls: "text-[#2255aa] bg-[#dce8f8]" }
                   : statusBadge(p.status, language);
                 const mortgage = isManaged ? undefined : mortgages.find((m) => m.property_id === p.id);
+                const isDragOver = dragOverIndex === idx && dragIndex !== null && dragIndex !== idx;
                 return (
-                  <div key={p.id} onClick={() => setSelectedProperty(p)} style={{ background: p.status === "planned" ? "#eef5ee" : "#f5f1e6", borderRadius: 10, padding: "15px 18px", border: "1px solid transparent", cursor: "pointer", transition: "box-shadow 0.15s" }}
+                  <div key={p.id}
+                    draggable
+                    onDragStart={() => { setDragIndex(idx); }}
+                    onDragOver={e => { e.preventDefault(); setDragOverIndex(idx); }}
+                    onDragEnd={() => { if (dragIndex !== null && dragOverIndex !== null) handleDrop(dragIndex, dragOverIndex, displayList); setDragIndex(null); setDragOverIndex(null); }}
+                    onClick={() => setSelectedProperty(p)}
+                    style={{ background: p.status === "planned" ? "#eef5ee" : "#f5f1e6", borderRadius: 10, padding: "15px 18px", border: isDragOver ? "2px dashed #1f3d2e" : "1px solid transparent", cursor: "grab", transition: "box-shadow 0.15s", opacity: dragIndex === idx ? 0.5 : 1 }}
                     onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 2px 12px rgba(31,61,46,0.10)")}
                     onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
                     <div className="flex items-center justify-between">
