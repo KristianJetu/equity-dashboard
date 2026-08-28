@@ -1908,7 +1908,9 @@ export default function EquityDashboard() {
   const equity = totalValue - totalDebt;
   const debtsBalance = debts.reduce((s, d) => s + (d.direction === "they_owe" ? d.amount_remaining : -d.amount_remaining), 0);
   const displayEquity = showDebtsBalance ? equity + debtsBalance : equity;
-  const filteredPayments = activeFilter ? payments.filter((p) => p.property_id === activeFilter) : payments;
+  const filteredPayments = (activeFilter ? payments.filter((p) => p.property_id === activeFilter) : payments)
+    .slice()
+    .sort((a, b) => b.month.localeCompare(a.month));
   const activeProperty = properties.find((p) => p.id === activeFilter);
 
   type Alert = { type: "danger" | "warning" | "info"; label: string; property: string; daysLeft: number };
