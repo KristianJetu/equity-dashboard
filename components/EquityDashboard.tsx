@@ -2363,7 +2363,11 @@ export default function EquityDashboard() {
                           <div style={{ height: 5, borderRadius: 3, background: "#e3ddcb", overflow: "hidden" }}>
                             <div style={{ width: `${Math.min(ltv, 100)}%`, height: "100%", background: color, transition: "width .4s" }} />
                           </div>
-                          <div style={{ fontSize: 11, color: "#9a9483", marginTop: 3 }}>{t("dluhHodnota")(fmtMil(mortgage.outstanding_balance), fmtMil(p.estimated_value))}</div>
+                          <div style={{ fontSize: 11, color: "#9a9483", marginTop: 3 }}>
+                            {t("dluhHodnota")(fmtMil(mortgage.outstanding_balance), fmtMil(p.estimated_value))}
+                            {" · "}
+                            <span style={{ color: "#1f3d2e", fontWeight: 600 }}>Vlastní {fmtMil(p.estimated_value - mortgage.outstanding_balance)} mil</span>
+                          </div>
                         </div>
                       );
                     })()}
