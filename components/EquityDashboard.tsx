@@ -99,6 +99,7 @@ const translations = {
     komunikace: "Komunikace",
     asistent: "Asistent",
     dluhy: "Dluhy",
+    ukoly: "Úkoly",
     nastaveni: "Nastavení",
     majetek: "Majetek",
     tveNemovitosti: "Tvé nemovitosti",
@@ -171,6 +172,7 @@ const translations = {
     komunikace: "Communication",
     asistent: "Assistant",
     dluhy: "Debts",
+    ukoly: "Tasks",
     nastaveni: "Settings",
     majetek: "Net worth",
     tveNemovitosti: "Your properties",
@@ -265,6 +267,10 @@ const NAV_ITEMS = [
   {
     id: "dluhy", title: "Dluhy",
     icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+  },
+  {
+    id: "ukoly", title: "Úkoly",
+    icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
   },
   {
     id: "nastaveni", title: "Nastavení",
@@ -1641,6 +1647,101 @@ function AddTenantModal({ properties, supabase, onClose, onSaved }: {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Todoist Úkoly sekce ───────────────────────────────────────────────────────
+type TodoistTask = { id: string; content: string; priority: number; due?: { date: string } | null; labels: string[]; checked: boolean };
+
+const LABEL_GROUPS: { label: string; title: string; color: string }[] = [
+  { label: "akvizice", title: "Akvizice", color: "#c4a060" },
+  { label: "hostivice", title: "Hostivice", color: "#4a7c59" },
+  { label: "most", title: "Most", color: "#4a7c59" },
+  { label: "zahalka", title: "Zahálka", color: "#4a7c59" },
+];
+
+function priorityColor(p: number) {
+  if (p === 1) return "#c0392b";
+  if (p === 2) return "#e67e22";
+  if (p === 3) return "#3498db";
+  return "#9a9483";
+}
+
+function TodoistSection() {
+  const [tasks, setTasks] = React.useState<TodoistTask[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [completing, setCompleting] = React.useState<string | null>(null);
+
+  const fetchAll = React.useCallback(async () => {
+    setLoading(true);
+    const results: TodoistTask[] = [];
+    await Promise.all(LABEL_GROUPS.map(async g => {
+      try {
+        const res = await fetch(`/api/todoist-tasks?label=${g.label}`);
+        if (res.ok) { const data = await res.json(); results.push(...data); }
+      } catch {}
+    }));
+    const unique = Array.from(new Map(results.map(t => [t.id, t])).values());
+    setTasks(unique);
+    setLoading(false);
+  }, []);
+
+  React.useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const handleComplete = async (taskId: string) => {
+    setCompleting(taskId);
+    await fetch(`/api/todoist-tasks?complete=${taskId}`, { method: "POST" });
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+    setCompleting(null);
+  };
+
+  const grouped = LABEL_GROUPS.map(g => ({
+    ...g,
+    tasks: tasks.filter(t => t.labels.includes(g.label)),
+  })).filter(g => g.tasks.length > 0);
+
+  return (
+    <div>
+      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 700, color: "#1c2b22", marginBottom: 20 }}>Úkoly</div>
+      {loading ? (
+        <div style={{ color: "#9a9483", fontSize: 14 }}>Načítám úkoly…</div>
+      ) : grouped.length === 0 ? (
+        <div style={{ color: "#9a9483", fontSize: 14 }}>Žádné úkoly. Přidej label v Todoist.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          {grouped.map(g => (
+            <div key={g.label} style={{ background: "#f5f1e6", borderRadius: 12, padding: "18px 22px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: g.color }} />
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#1c2b22", textTransform: "uppercase", letterSpacing: "0.08em" }}>{g.title}</div>
+                <div style={{ fontSize: 12, color: "#9a9483" }}>({g.tasks.length})</div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {g.tasks.sort((a, b) => a.priority - b.priority).map(task => (
+                  <div key={task.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", background: "#fff", borderRadius: 8, border: "1px solid #e3ddcb" }}>
+                    <button
+                      onClick={() => handleComplete(task.id)}
+                      disabled={completing === task.id}
+                      style={{ flexShrink: 0, marginTop: 1, width: 18, height: 18, borderRadius: "50%", border: `2px solid ${priorityColor(task.priority)}`, background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {completing === task.id && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#9a9483" }} />}
+                    </button>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, color: "#1c2b22", lineHeight: 1.4 }}>{task.content}</div>
+                      {task.due && (
+                        <div style={{ fontSize: 11, color: "#9a9483", marginTop: 3 }}>
+                          {new Date(task.due.date).toLocaleDateString("cs-CZ", { day: "numeric", month: "long" })}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: priorityColor(task.priority), flexShrink: 0, marginTop: 5 }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -3127,6 +3228,11 @@ export default function EquityDashboard() {
             Odhlásit
           </button>
         </div>
+
+        {/* ÚKOLY */}
+        <section id="ukoly" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 100 }}>
+          <TodoistSection />
+        </section>
 
         {/* NASTAVENÍ — skryté, jen jako kotva pro navigaci */}
         <section id="nastaveni" className="eq-settings-section" style={{ display: "none" }}>
