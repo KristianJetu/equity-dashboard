@@ -1921,7 +1921,7 @@ export default function EquityDashboard() {
     }
     if (p.lease_end) {
       const d = Math.round((new Date(p.lease_end).getTime() - today) / 86400000);
-      if (d <= 60) alerts.push({ type: d <= 14 ? "danger" : "warning", label: t("konecNajemniSmlouvy"), property: p.name, daysLeft: d });
+      if (d <= 120) alerts.push({ type: d <= 14 ? "danger" : "warning", label: t("konecNajemniSmlouvy"), property: p.name, daysLeft: d });
     }
   }
   alerts.sort((a, b) => a.daysLeft - b.daysLeft);
@@ -2284,6 +2284,17 @@ export default function EquityDashboard() {
                                 style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 12, border: "none", background: "#c0392b", color: "#fff", cursor: "pointer" }}>
                                 {t("pridatPlatbu")}
                               </button>
+                            </div>
+                          );
+                        })()}
+                        {p.lease_end && (() => {
+                          const daysLeft = Math.round((new Date(p.lease_end).getTime() - Date.now()) / 86400000);
+                          if (daysLeft > 120 || daysLeft < 0) return null;
+                          const isDanger = daysLeft <= 30;
+                          const leaseEndFmt = new Date(p.lease_end).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" });
+                          return (
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6, padding: "4px 10px", borderRadius: 20, background: isDanger ? "#fde8e8" : "#fff8e1", color: isDanger ? "#c0392b" : "#a07b2f", fontSize: 12, fontWeight: 700 }}>
+                              ⏳ Konec smlouvy za {daysLeft} dní ({leaseEndFmt})
                             </div>
                           );
                         })()}
