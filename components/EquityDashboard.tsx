@@ -1690,6 +1690,7 @@ export default function EquityDashboard() {
   const [cfPropExpanded, setCfPropExpanded] = useState<string | null>(null);
   const [showPlanned, setShowPlanned] = useState(false);
   const [showPlannedProps, setShowPlannedProps] = useState(false);
+  const [showAllPayments, setShowAllPayments] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [showDebtsBalance, setShowDebtsBalance] = useState(false);
@@ -2678,13 +2679,13 @@ export default function EquityDashboard() {
 
           {/* Filtry nemovitostí */}
           <div className="flex gap-[7px] flex-wrap mb-4">
-            <button onClick={() => setActiveFilter(null)}
+            <button onClick={() => { setActiveFilter(null); setShowAllPayments(false); }}
               className="cursor-pointer rounded-[20px] border-none"
               style={{ fontWeight: 600, fontSize: 12, padding: "7px 13px", color: activeFilter === null ? "#f5f1e6" : "#5c6359", background: activeFilter === null ? "#1f3d2e" : "#e6e0d0" }}>
               Vše
             </button>
             {properties.filter((p) => p.status !== "planned").map((p) => (
-              <button key={p.id} onClick={() => setActiveFilter(p.id)}
+              <button key={p.id} onClick={() => { setActiveFilter(p.id); setShowAllPayments(false); }}
                 className="cursor-pointer rounded-[20px] border-none"
                 style={{ fontWeight: 600, fontSize: 12, padding: "7px 13px", color: activeFilter === p.id ? "#f5f1e6" : "#5c6359", background: activeFilter === p.id ? "#1f3d2e" : "#e6e0d0" }}>
                 {p.name}
@@ -2705,7 +2706,7 @@ export default function EquityDashboard() {
                   <span className="eq-pay-col" style={{ width: 120, textAlign: "right" }}>Výdaje</span>
                   <span className="eq-pay-col" style={{ width: 120, textAlign: "right" }}>Čistý zisk</span>
                 </div>
-                {filteredPayments.map((p) => {
+                {(activeFilter || showAllPayments ? filteredPayments : filteredPayments.slice(0, 6)).map((p) => {
                   const prop = properties.find(pr => pr.id === p.property_id);
                   const dueDay = prop?.rent_due_day ?? 15;
                   const late = p.payment_date ? daysLate(p.payment_date, p.month, dueDay) : null;
@@ -2742,6 +2743,14 @@ export default function EquityDashboard() {
                     </div>
                   );
                 })}
+                {!activeFilter && filteredPayments.length > 6 && (
+                  <div style={{ textAlign: "center", padding: "12px 0 4px" }}>
+                    <button onClick={() => setShowAllPayments(v => !v)}
+                      style={{ fontSize: 12, fontWeight: 600, padding: "6px 16px", borderRadius: 20, border: "1.5px solid #d2cab4", background: "transparent", color: "#5c6359", cursor: "pointer" }}>
+                      {showAllPayments ? "Zobrazit méně" : `Zobrazit vše (${filteredPayments.length})`}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
         </section>
