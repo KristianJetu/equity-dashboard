@@ -2616,9 +2616,13 @@ export default function EquityDashboard() {
                           const dueDay = p.rent_due_day ?? 15;
                           const isNotYetDue = m === currentMonthNum && today <= dueDay;
                           const isFuture = m > currentMonthNum;
+                          const monthDate = new Date(year, m - 1, 1);
+                          const leaseStartMonth = p.lease_start ? new Date(new Date(p.lease_start).getFullYear(), new Date(p.lease_start).getMonth(), 1) : null;
+                          const leaseEndMonth = p.lease_end ? new Date(new Date(p.lease_end).getFullYear(), new Date(p.lease_end).getMonth(), 1) : null;
+                          const notApplicable = (leaseStartMonth && monthDate < leaseStartMonth) || (leaseEndMonth && monthDate > leaseEndMonth) || p.rent_amount === 0;
                           let bg = "#e6e0d0", color = "#9a9483", content = "";
                           if (payment) { bg = "#d6e4d6"; color = "#1f3d2e"; content = "✓"; }
-                          else if (p.status === "rented" && p.rent_amount > 0 && !isFuture && !isNotYetDue) { bg = "#fde8e8"; color = "#c0392b"; content = "!"; }
+                          else if (!notApplicable && p.status === "rented" && p.rent_amount > 0 && !isFuture && !isNotYetDue) { bg = "#fde8e8"; color = "#c0392b"; content = "!"; }
                           return (
                             <td key={m} style={{ textAlign: "center", padding: 3 }}>
                               <div
