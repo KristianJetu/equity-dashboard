@@ -2622,8 +2622,10 @@ export default function EquityDashboard() {
                           const leaseStartMonth = p.lease_start ? new Date(new Date(p.lease_start).getFullYear(), new Date(p.lease_start).getMonth(), 1) : null;
                           const leaseEndMonth = p.lease_end ? new Date(new Date(p.lease_end).getFullYear(), new Date(p.lease_end).getMonth(), 1) : null;
                           const notApplicable = (leaseStartMonth && monthDate < leaseStartMonth) || (leaseEndMonth && monthDate > leaseEndMonth) || p.rent_amount === 0;
+                          const isVacant = !isFuture && !!notApplicable;
                           let bg = "#e6e0d0", color = "#9a9483", content = "";
                           if (payment) { bg = "#d6e4d6"; color = "#1f3d2e"; content = "✓"; }
+                          else if (isVacant) { bg = "#c8c2b0"; color = "#7c7668"; }
                           else if (!notApplicable && p.status === "rented" && p.rent_amount > 0 && !isFuture && !isNotYetDue) { bg = "#fde8e8"; color = "#c0392b"; content = "!"; }
                           return (
                             <td key={m} style={{ textAlign: "center", padding: 3 }}>
@@ -2643,6 +2645,7 @@ export default function EquityDashboard() {
                 <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 11, color: "#7c8378", flexWrap: "wrap" }}>
                   <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#d6e4d6", display: "inline-block" }} />{t("zaplacenoLabel")}</span>
                   <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#fde8e8", display: "inline-block" }} />{t("nezaplacenoLabel")}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#c8c2b0", display: "inline-block" }} />{language === "cs" ? "Volné" : "Vacant"}</span>
                   <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#e6e0d0", display: "inline-block" }} />{t("nadchaziLabel")}</span>
                 </div>
               </div>
