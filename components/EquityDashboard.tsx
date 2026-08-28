@@ -402,17 +402,33 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
     setTimeout(() => { onSaved(); onClose(); }, 800);
   }
 
-  const field = (label: string, value: string, onChange: (v: string) => void, type = "number", suffix = "") => (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{label}</div>
-      <div className="flex items-center gap-2">
-        <input type={type} value={value} onChange={e => { onChange(e.target.value); setSaved(false); }}
-          lang={type === "date" ? "cs" : undefined}
-          style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22" }} />
-        {suffix && <span style={{ fontSize: 13, color: "#9a9483" }}>{suffix}</span>}
+  const field = (label: string, value: string, onChange: (v: string) => void, type = "number", suffix = "") => {
+    const isMoney = type === "money";
+    const displayValue = isMoney && value !== "" ? Number(value).toLocaleString("cs-CZ") : value;
+    return (
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{label}</div>
+        <div className="flex items-center gap-2">
+          <input
+            type={isMoney ? "text" : type}
+            inputMode={isMoney ? "numeric" : undefined}
+            value={isMoney ? displayValue : value}
+            onChange={e => {
+              if (isMoney) {
+                const raw = e.target.value.replace(/\D/g, "");
+                onChange(raw);
+              } else {
+                onChange(e.target.value);
+              }
+              setSaved(false);
+            }}
+            lang={type === "date" ? "cs" : undefined}
+            style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22" }} />
+          {suffix && <span style={{ fontSize: 13, color: "#9a9483" }}>{suffix}</span>}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)" }} onClick={onClose}>
@@ -469,8 +485,8 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
         </div>
 
         <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Nemovitost</div>
-        {field("Hodnota nemovitosti", estimatedValue, setEstimatedValue, "number", "Kč")}
-        {field("Výše nájmu", rentAmount, setRentAmount, "number", "Kč / měs")}
+        {field("Hodnota nemovitosti", estimatedValue, setEstimatedValue, "money", "Kč")}
+        {field("Výše nájmu", rentAmount, setRentAmount, "money", "Kč / měs")}
         {field("Den splatnosti nájmu", rentDueDay, setRentDueDay, "number", "v měsíci")}
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Způsob platby nájmu</div>
@@ -487,7 +503,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
           </div>
         </div>
         {field("Datum koupě", purchaseDate, setPurchaseDate, "date")}
-        {field("Kupní cena", purchasePrice, setPurchasePrice, "number", "Kč")}
+        {field("Kupní cena", purchasePrice, setPurchasePrice, "money", "Kč")}
         {field("Odhadovaný roční růst hodnoty", annualGrowthPct, setAnnualGrowthPct, "number", "% / rok")}
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, marginTop: 8 }}>
@@ -500,11 +516,11 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
           )}
         </div>
         {(mortgage || addMortgage) && <>
-          {field("Výše úvěru", loanAmount, setLoanAmount, "number", "Kč")}
+          {field("Výše úvěru", loanAmount, setLoanAmount, "money", "Kč")}
           {field("Datum čerpání", loanStartDate, setLoanStartDate, "date")}
           {field("Úroková sazba", interestRate, setInterestRate, "number", "%")}
           {field("Splatnost", loanTermYears, setLoanTermYears, "number", "let")}
-          {field("Měsíční splátka", monthlyPayment, setMonthlyPayment, "number", "Kč / měs")}
+          {field("Měsíční splátka", monthlyPayment, setMonthlyPayment, "money", "Kč / měs")}
           {field("Konec fixace", refixDate, setRefixDate, "date")}
         </>}
 
@@ -516,14 +532,14 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
         {field("Pojišťovna", insuranceCompany, setInsuranceCompany, "text")}
         {field("Platnost od", insuranceFrom, setInsuranceFrom, "date")}
         {field("Platnost do", insuranceTo, setInsuranceTo, "date")}
-        {field("Roční pojistné", insuranceAmount, setInsuranceAmount, "number", "Kč / rok")}
+        {field("Roční pojistné", insuranceAmount, setInsuranceAmount, "money", "Kč / rok")}
         {field("Odkaz na smlouvu", insuranceUrl, setInsuranceUrl, "url")}
 
         <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Dokumenty</div>
         {field("Odkaz na dokument", documentUrl, setDocumentUrl, "url")}
 
         <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Náklady</div>
-        {field("Měsíční náklady (paušál)", monthlyCosts, setMonthlyCosts, "number", "Kč / měs")}
+        {field("Měsíční náklady (paušál)", monthlyCosts, setMonthlyCosts, "money", "Kč / měs")}
 
         <div className="flex gap-3 justify-end mt-4">
           <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>Zavřít</button>
