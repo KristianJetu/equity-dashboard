@@ -28,6 +28,7 @@ type Property = {
   insurance_url?: string | null;
   document_url?: string | null;
   monthly_costs?: number | null;
+  management_fee?: number | null;
   notes?: string | null;
 };
 
@@ -343,6 +344,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   const [insuranceUrl, setInsuranceUrl] = useState(property.insurance_url ?? "");
   const [documentUrl, setDocumentUrl] = useState(property.document_url ?? "");
   const [monthlyCosts, setMonthlyCosts] = useState(String(property.monthly_costs ?? ""));
+  const [managementFee, setManagementFee] = useState(String(property.management_fee ?? ""));
   const [notes, setNotes] = useState(property.notes ?? "");
   const [addMortgage, setAddMortgage] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -368,6 +370,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
       insurance_url: insuranceUrl || null,
       document_url: documentUrl || null,
       monthly_costs: monthlyCosts ? Number(monthlyCosts) : null,
+      management_fee: managementFee ? Number(managementFee) : null,
       notes: notes || null,
     }).eq("id", property.id);
     if (mortgage) {
@@ -540,6 +543,13 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
 
         <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Náklady</div>
         {field("Měsíční náklady (paušál)", monthlyCosts, setMonthlyCosts, "money", "Kč / měs")}
+        {ownershipType === "manager" && (
+          <>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>Správa</div>
+            {field("Provize za správu", managementFee, setManagementFee, "money", "Kč / měs")}
+            <div style={{ fontSize: 12, color: "#9a9483", marginTop: -8, marginBottom: 16 }}>Pouze tato částka se počítá do tvého cashflow. Nájem a náklady nemovitosti se nezahrnují.</div>
+          </>
+        )}
 
         <div className="flex gap-3 justify-end mt-4">
           <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", fontSize: 14, color: "#5c6359", cursor: "pointer" }}>Zavřít</button>
@@ -944,16 +954,20 @@ function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Pro
   if (properties.length === 0) return null;
 
   const visibleProps = showPlanned ? properties : properties.filter(p => p.status !== "planned");
-  const totalRent = visibleProps.reduce((s, p) => s + (p.status === "rented" || (showPlanned && p.status === "planned") ? p.rent_amount : 0), 0);
-  const totalMortgage = mortgages.filter(m => visibleProps.some(p => p.id === m.property_id)).reduce((s, m) => s + m.monthly_payment, 0);
-  const totalInsurance = visibleProps.reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0), 0);
-  const totalCosts = visibleProps.reduce((s, p) => s + (p.monthly_costs ?? 0), 0);
-  const net = totalRent - totalMortgage - totalInsurance - totalCosts;
+  const ownedProps = visibleProps.filter(p => p.ownership_type !== "manager");
+  const managedProps = visibleProps.filter(p => p.ownership_type === "manager");
+  const totalRent = ownedProps.reduce((s, p) => s + (p.status === "rented" || (showPlanned && p.status === "planned") ? p.rent_amount : 0), 0);
+  const totalMortgage = mortgages.filter(m => ownedProps.some(p => p.id === m.property_id)).reduce((s, m) => s + m.monthly_payment, 0);
+  const totalInsurance = ownedProps.reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0), 0);
+  const totalCosts = ownedProps.reduce((s, p) => s + (p.monthly_costs ?? 0), 0);
+  const totalMgmtFee = managedProps.reduce((s, p) => s + (p.management_fee ?? 0), 0);
+  const net = totalRent - totalMortgage - totalInsurance - totalCosts + totalMgmtFee;
 
   const propCashflow = visibleProps.map(p => {
+    const isManaged = p.ownership_type === "manager";
     const mortgage = mortgages.find(m => m.property_id === p.id);
-    const income = (p.status === "rented" || (showPlanned && p.status === "planned")) ? p.rent_amount : 0;
-    const out = (mortgage?.monthly_payment ?? 0) + (p.insurance_amount ? p.insurance_amount / 12 : 0) + (p.monthly_costs ?? 0);
+    const income = isManaged ? (p.management_fee ?? 0) : (p.status === "rented" || (showPlanned && p.status === "planned")) ? p.rent_amount : 0;
+    const out = isManaged ? 0 : (mortgage?.monthly_payment ?? 0) + (p.insurance_amount ? p.insurance_amount / 12 : 0) + (p.monthly_costs ?? 0);
     return { id: p.id, name: p.name, netCf: income - out };
   });
   const best = propCashflow.reduce((a, b) => b.netCf > a.netCf ? b : a);
@@ -2396,25 +2410,26 @@ export default function EquityDashboard() {
 
           {/* Cashflow přehled */}
           {(() => {
-            const rentedProps = properties.filter(p => p.status === "rented");
-            const plannedProps = properties.filter(p => p.status === "planned");
+            const visProps = properties.filter(p => showPlanned || p.status !== "planned");
+            const ownedCf = visProps.filter(p => p.ownership_type !== "manager");
+            const managedCf = visProps.filter(p => p.ownership_type === "manager");
 
-            const realRent = rentedProps.reduce((s, p) => s + p.rent_amount, 0);
-            const plannedRent = showPlanned ? plannedProps.reduce((s, p) => s + p.rent_amount, 0) : 0;
-            const totalRent = realRent + plannedRent;
+            const realRent = ownedCf.filter(p => p.status === "rented").reduce((s, p) => s + p.rent_amount, 0);
+            const plannedRent = showPlanned ? ownedCf.filter(p => p.status === "planned").reduce((s, p) => s + p.rent_amount, 0) : 0;
+            const totalMgmtFee = managedCf.reduce((s, p) => s + (p.management_fee ?? 0), 0);
+            const totalRent = realRent + plannedRent + totalMgmtFee;
 
-            const totalMortgage = mortgages.reduce((s, m) => s + m.monthly_payment, 0);
-            const totalInsurance = properties.filter(p => showPlanned || p.status !== "planned").reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0), 0);
-            const totalCosts = properties.filter(p => showPlanned || p.status !== "planned").reduce((s, p) => s + (p.monthly_costs ?? 0), 0);
+            const totalMortgage = mortgages.filter(m => ownedCf.some(p => p.id === m.property_id)).reduce((s, m) => s + m.monthly_payment, 0);
+            const totalInsurance = ownedCf.reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0), 0);
+            const totalCosts = ownedCf.reduce((s, p) => s + (p.monthly_costs ?? 0), 0);
             const totalOut = totalMortgage + totalInsurance + totalCosts;
             const net = totalRent - totalOut;
 
-            const propCf = properties
-              .filter(p => showPlanned || p.status !== "planned")
-              .map(p => {
+            const propCf = visProps.map(p => {
+                const isManaged = p.ownership_type === "manager";
                 const mortgage = mortgages.find(m => m.property_id === p.id);
-                const income = p.status === "rented" ? p.rent_amount : (p.status === "planned" ? p.rent_amount : 0);
-                const out = (mortgage?.monthly_payment ?? 0) + (p.insurance_amount ? p.insurance_amount / 12 : 0) + (p.monthly_costs ?? 0);
+                const income = isManaged ? (p.management_fee ?? 0) : (p.status === "rented" ? p.rent_amount : (p.status === "planned" ? p.rent_amount : 0));
+                const out = isManaged ? 0 : (mortgage?.monthly_payment ?? 0) + (p.insurance_amount ? p.insurance_amount / 12 : 0) + (p.monthly_costs ?? 0);
                 return { id: p.id, name: p.name, income, out, net: income - out, status: p.status, planned: p.status === "planned" };
               });
 
