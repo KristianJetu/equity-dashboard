@@ -155,6 +155,7 @@ const translations = {
     splatkaHypoteky: "Splátka hypotéky",
     pridatPlatbu: "+ Přidat platbu",
     najemPoSplatnosti: (n: number) => `Nájem po splatnosti o ${n} ${n === 1 ? "den" : n < 5 ? "dny" : "dní"}`,
+    platbaPrijdeZaDni: (n: number) => `Platba za nájem má přijít za ${n} ${n === 1 ? "den" : n < 5 ? "dny" : "dní"}`,
     historiePlateb: "Historie plateb",
     kalendarPlateb: "Kalendář plateb",
     zaplacenoLabel: "Zaplaceno",
@@ -226,6 +227,7 @@ const translations = {
     splatkaHypoteky: "Mortgage payment",
     pridatPlatbu: "+ Add payment",
     najemPoSplatnosti: (n: number) => `Rent overdue by ${n} day${n === 1 ? "" : "s"}`,
+    platbaPrijdeZaDni: (n: number) => `Rent payment expected in ${n} day${n === 1 ? "" : "s"}`,
     historiePlateb: "Payment history",
     kalendarPlateb: "Payment calendar",
     zaplacenoLabel: "Paid",
@@ -2298,14 +2300,16 @@ export default function EquityDashboard() {
                           if (hasPaid) return null;
                           const dueDay = p.rent_due_day ?? 15;
                           const overdueDays = now.getDate() - dueDay;
-                          if (overdueDays <= 0) return null;
+                          if (overdueDays < -5 || overdueDays === 0) return null;
                           const isAdvance = (p.rent_timing ?? "advance") === "advance";
                           const nextMonthName = new Date(now.getFullYear(), now.getMonth() + 1, 1).toLocaleString("cs", { month: "long" });
+                          const suffix = isAdvance ? ` (za ${nextMonthName})` : "";
+                          const isOverdue = overdueDays > 0;
                           return (
-                            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 6, padding: "4px 6px 4px 10px", borderRadius: 20, background: "#fde8e8", color: "#c0392b", fontSize: 12, fontWeight: 700 }}>
-                              <span>{t("najemPoSplatnosti")(overdueDays)}{isAdvance ? ` (za ${nextMonthName})` : ""}</span>
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 6, padding: "4px 6px 4px 10px", borderRadius: 20, background: isOverdue ? "#fde8e8" : "#efe3c6", color: isOverdue ? "#c0392b" : "#a07b2f", fontSize: 12, fontWeight: 700 }}>
+                              <span>{isOverdue ? t("najemPoSplatnosti")(overdueDays) : t("platbaPrijdeZaDni")(-overdueDays)}{suffix}</span>
                               <button onClick={e => { e.stopPropagation(); setAddPaymentModal({ open: true, propertyId: p.id, month: monthStr }); }}
-                                style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 12, border: "none", background: "#c0392b", color: "#fff", cursor: "pointer" }}>
+                                style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 12, border: "none", background: isOverdue ? "#c0392b" : "#a07b2f", color: "#fff", cursor: "pointer" }}>
                                 {t("pridatPlatbu")}
                               </button>
                             </div>
