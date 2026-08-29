@@ -331,6 +331,29 @@ function paymentTypeLabel(t?: string) {
 
 // ── Property Detail Modal ─────────────────────────────────────────────────────
 
+// ── File Image Preview ────────────────────────────────────────────────────────
+function FileImagePreview({ path, supabase, onClick }: {
+  path: string;
+  supabase: ReturnType<typeof createClient>;
+  onClick: () => void;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.storage.from("property-files").createSignedUrl(path, 3600)
+      .then(({ data }) => { if (data?.signedUrl) setUrl(data.signedUrl); });
+  }, [path]);
+
+  if (!url) return null;
+
+  return (
+    <div onClick={onClick} style={{ cursor: "pointer", width: "100%", height: 160, overflow: "hidden", background: "#f0ebe1" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    </div>
+  );
+}
+
 // ── Property Files Tab ────────────────────────────────────────────────────────
 const FILE_CATEGORIES = [
   { value: "contract", label: "Smlouva" },
@@ -457,11 +480,19 @@ function PropertyFilesTab({ propertyId, supabase }: {
         <div style={{ textAlign: "center", color: "#9a9483", fontSize: 13, padding: 24 }}>Žádné soubory</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {files.map(f => (
-            <div key={f.id} style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", padding: "11px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+          {files.map(f => {
+            const isImage = f.mime_type?.startsWith("image/");
+            return (
+            <div key={f.id} style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", overflow: "hidden" }}>
+              {isImage && (
+                <FileImagePreview path={f.path} supabase={supabase} onClick={() => handleOpen(f)} />
+              )}
+              <div style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+              {!isImage && (
               <div style={{ width: 34, height: 34, borderRadius: 8, background: "#eef4ee", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1f3d2e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               </div>
+              )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#1c2b22", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.name}</div>
                 <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>
@@ -480,8 +511,10 @@ function PropertyFilesTab({ propertyId, supabase }: {
                   ×
                 </button>
               </div>
+              </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
