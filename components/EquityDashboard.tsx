@@ -32,6 +32,20 @@ type Property = {
   notes?: string | null;
 };
 
+type PropertyFile = {
+  id: string;
+  user_id: string;
+  property_id: string | null;
+  bucket: string;
+  path: string;
+  name: string;
+  size: number | null;
+  mime_type: string | null;
+  category: "contract" | "insurance" | "photo" | "other";
+  note: string | null;
+  created_at: string;
+};
+
 type Mortgage = {
   id: string;
   property_id: string;
@@ -317,6 +331,159 @@ function paymentTypeLabel(t?: string) {
 
 // ── Property Detail Modal ─────────────────────────────────────────────────────
 
+// ── Property Files Tab ────────────────────────────────────────────────────────
+const FILE_CATEGORIES = [
+  { value: "contract", label: "Smlouva" },
+  { value: "insurance", label: "Pojistka" },
+  { value: "photo", label: "Fotka" },
+  { value: "other", label: "Ostatní" },
+] as const;
+
+function PropertyFilesTab({ propertyId, supabase }: {
+  propertyId: string;
+  supabase: ReturnType<typeof createClient>;
+}) {
+  const [files, setFiles] = useState<PropertyFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [category, setCategory] = useState<PropertyFile["category"]>("contract");
+  const [note, setNote] = useState("");
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function loadFiles() {
+    setLoading(true);
+    const { data } = await supabase
+      .from("property_files")
+      .select("*")
+      .eq("property_id", propertyId)
+      .order("created_at", { ascending: false });
+    setFiles(data ?? []);
+    setLoading(false);
+  }
+
+  async function getSignedUrl(path: string): Promise<string> {
+    if (signedUrls[path]) return signedUrls[path];
+    const { data } = await supabase.storage
+      .from("property-files")
+      .createSignedUrl(path, 3600);
+    if (data?.signedUrl) {
+      setSignedUrls(prev => ({ ...prev, [path]: data.signedUrl }));
+      return data.signedUrl;
+    }
+    return "";
+  }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setUploading(false); return; }
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/${propertyId}/${Date.now()}.${ext}`;
+    const { error: uploadErr } = await supabase.storage
+      .from("property-files")
+      .upload(path, file);
+    if (uploadErr) { alert("Chyba při nahrávání: " + uploadErr.message); setUploading(false); return; }
+    await supabase.from("property_files").insert({
+      user_id: user.id,
+      property_id: propertyId,
+      bucket: "property-files",
+      path,
+      name: file.name,
+      size: file.size,
+      mime_type: file.type,
+      category,
+      note: note || null,
+    });
+    setNote("");
+    if (fileRef.current) fileRef.current.value = "";
+    await loadFiles();
+    setUploading(false);
+  }
+
+  async function handleDelete(f: PropertyFile) {
+    if (!confirm(`Smazat soubor "${f.name}"?`)) return;
+    await supabase.storage.from("property-files").remove([f.path]);
+    await supabase.from("property_files").delete().eq("id", f.id);
+    setFiles(prev => prev.filter(x => x.id !== f.id));
+  }
+
+  async function handleOpen(f: PropertyFile) {
+    const url = await getSignedUrl(f.path);
+    if (url) window.open(url, "_blank");
+  }
+
+  useEffect(() => { loadFiles(); }, [propertyId]);
+
+  const catLabel = (c: string) => FILE_CATEGORIES.find(x => x.value === c)?.label ?? c;
+  const fmtSize = (b: number | null) => b ? (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`) : "";
+
+  if (loading) return <div style={{ padding: 24, color: "#9a9483", textAlign: "center" }}>Načítám…</div>;
+
+  return (
+    <div>
+      {/* Upload */}
+      <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e2d6", padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Nahrát soubor</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+          {FILE_CATEGORIES.map(c => (
+            <button key={c.value} onClick={() => setCategory(c.value)}
+              style={{ padding: "5px 14px", borderRadius: 20, border: "1.5px solid", borderColor: category === c.value ? "#1f3d2e" : "#d2cab4", background: category === c.value ? "#1f3d2e" : "#faf8f3", color: category === c.value ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              {c.label}
+            </button>
+          ))}
+        </div>
+        <input
+          placeholder="Poznámka (volitelné)"
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", marginBottom: 10, boxSizing: "border-box" }}
+        />
+        <label style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 18px", borderRadius: 8, background: uploading ? "#e8e2d6" : "#1f3d2e", color: "#f5f1e6", fontSize: 13, fontWeight: 600, cursor: uploading ? "default" : "pointer" }}>
+          {uploading ? "Nahrávám…" : "Vybrat soubor"}
+          <input ref={fileRef} type="file" style={{ display: "none" }} onChange={handleUpload} disabled={uploading} />
+        </label>
+      </div>
+
+      {/* File list */}
+      {files.length === 0 ? (
+        <div style={{ textAlign: "center", color: "#9a9483", fontSize: 13, padding: 24 }}>Žádné soubory</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {files.map(f => (
+            <div key={f.id} style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", padding: "11px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 8, background: "#eef4ee", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1f3d2e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1c2b22", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.name}</div>
+                <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>
+                  <span style={{ background: "#eef4ee", color: "#2d6a4f", borderRadius: 4, padding: "1px 6px", fontWeight: 600, marginRight: 6 }}>{catLabel(f.category)}</span>
+                  {fmtSize(f.size)}
+                  {f.note && <span style={{ marginLeft: 6, color: "#7c8378" }}>· {f.note}</span>}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                <button onClick={() => handleOpen(f)}
+                  style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid #d2cab4", background: "#faf8f3", color: "#1c2b22", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  Otevřít
+                </button>
+                <button onClick={() => handleDelete(f)}
+                  style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid #f5c6c6", background: "#fff5f5", color: "#c0392b", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  ×
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Property Modal ────────────────────────────────────────────────────────────
 function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   property: Property;
   mortgage: Mortgage | undefined;
@@ -355,6 +522,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   const [addMortgage, setAddMortgage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [activeTab, setActiveTab] = useState<"details" | "files">("details");
 
   async function handleSave() {
     setSaving(true);
@@ -443,10 +611,24 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
     <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)" }} onClick={onClose}>
       <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "clamp(18px, 5vw, 32px) clamp(18px, 5vw, 32px) clamp(16px, 4vw, 28px)", width: "min(640px, 92vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
         onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-start mb-6">
+        <div className="flex justify-between items-start mb-4">
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 20, color: "#1c2b22" }}>Detail nemovitosti</div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9a9483", fontSize: 22 }}>×</button>
         </div>
+
+        {/* Záložky */}
+        <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "#ede9de", borderRadius: 10, padding: 4 }}>
+          {(["details", "files"] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: "none", background: activeTab === tab ? "#fff" : "transparent", color: activeTab === tab ? "#1c2b22" : "#9a9483", fontWeight: activeTab === tab ? 700 : 500, fontSize: 13, cursor: "pointer", boxShadow: activeTab === tab ? "0 1px 4px rgba(0,0,0,0.08)" : "none" }}>
+              {tab === "details" ? "Detaily" : "Soubory"}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === "files" ? (
+          <PropertyFilesTab propertyId={property.id} supabase={supabase} />
+        ) : (<>
 
         {field("Název nemovitosti", name, setName, "text")}
 
@@ -564,6 +746,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
             {saved ? "✓ Uloženo" : saving ? "Ukládám…" : "Uložit"}
           </button>
         </div>
+        </>)}
       </div>
     </div>
   );
