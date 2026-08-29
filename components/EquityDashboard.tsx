@@ -386,6 +386,8 @@ function PropertyFilesTab({ propertyId, supabase }: {
   const [note, setNote] = useState("");
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [filterCat, setFilterCat] = useState<PropertyFile["category"] | "all">("all");
+  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [editingNoteVal, setEditingNoteVal] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const dragOver = useRef<string | null>(null);
@@ -546,7 +548,24 @@ function PropertyFilesTab({ propertyId, supabase }: {
                 <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>
                   <span style={{ background: "#eef4ee", color: "#2d6a4f", borderRadius: 4, padding: "1px 6px", fontWeight: 600, marginRight: 6 }}>{catLabel(f.category)}</span>
                   {fmtSize(f.size)}
-                  {f.note && <span style={{ marginLeft: 6, color: "#7c8378" }}>· {f.note}</span>}
+                  {editingNote === f.id ? (
+                    <span style={{ marginLeft: 6 }} onClick={e => e.stopPropagation()}>
+                      <input autoFocus value={editingNoteVal} onChange={e => setEditingNoteVal(e.target.value)}
+                        onKeyDown={async e => {
+                          if (e.key === "Enter") {
+                            await supabase.from("property_files").update({ note: editingNoteVal || null }).eq("id", f.id);
+                            setFiles(prev => prev.map(x => x.id === f.id ? { ...x, note: editingNoteVal || null } : x));
+                            setEditingNote(null);
+                          } else if (e.key === "Escape") { setEditingNote(null); }
+                        }}
+                        style={{ fontSize: 11, padding: "1px 6px", borderRadius: 4, border: "1px solid #d2cab4", width: 120 }} />
+                    </span>
+                  ) : (
+                    <span onClick={e => { e.stopPropagation(); setEditingNote(f.id); setEditingNoteVal(f.note ?? ""); }}
+                      style={{ marginLeft: 6, color: f.note ? "#7c8378" : "#c0b8a8", cursor: "text" }}>
+                      · {f.note ?? "přidat poznámku"}
+                    </span>
+                  )}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
@@ -2715,6 +2734,7 @@ export default function EquityDashboard() {
                         </div>
                         <div className="eq-prop-info" style={{ fontSize: 12, color: "#7c8378", marginTop: 2, whiteSpace: "normal", lineHeight: 1.4 }}>
                           {p.status === "rented" ? t("najemMesicne")(fmt(p.rent_amount)) : p.address ?? ""}
+                          {p.address && p.status === "rented" ? <span style={{ color: "#b0a898" }}> · {p.address}</span> : null}
                           {mortgage ? ` · ${t("splatkaX")(fmt(mortgage.monthly_payment))}` : ""}
                           {mortgage?.refix_date ? ` · Fixace ${mortgage.refix_date}` : ""}
                         </div>
@@ -2725,6 +2745,16 @@ export default function EquityDashboard() {
                           return (
                             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6, padding: "4px 10px", borderRadius: 20, background: urgent ? "#fde8e8" : "#efe3c6", color: urgent ? "#c0392b" : "#a07b2f", fontSize: 12, fontWeight: 700 }}>
                               {t("konecFixaceZaDni")(days, mortgage.refix_date)}
+                            </div>
+                          );
+                        })()}
+                        {p.insurance_to && (() => {
+                          const days = daysUntil(p.insurance_to);
+                          if (days > 60 || days < 0) return null;
+                          const urgent = days <= 14;
+                          return (
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6, padding: "4px 10px", borderRadius: 20, background: urgent ? "#fde8e8" : "#efe3c6", color: urgent ? "#c0392b" : "#a07b2f", fontSize: 12, fontWeight: 700 }}>
+                              🛡 Pojistka vyprší za {days} dní ({p.insurance_to})
                             </div>
                           );
                         })()}
@@ -2786,20 +2816,25 @@ export default function EquityDashboard() {
                         </div>
                       );
                     })()}
-                    {/* Miniatury souborů */}
+                    {/* Soubory — hero + miniatury */}
                     {(() => {
-                      const pFiles = propertyFiles
-                        .filter(f => f.property_id === p.id)
-                        .sort((a, b) => {
-                          const order: Record<string, number> = { photo: 0, contract: 1, insurance: 2, other: 3 };
-                          return (order[a.category] ?? 3) - (order[b.category] ?? 3);
-                        });
+                      const pFiles = propertyFiles.filter(f => f.property_id === p.id);
                       if (pFiles.length === 0) return null;
+                      const heroFile = pFiles.find(f => f.mime_type?.startsWith("image/") && fileThumbUrls[f.id]);
+                      const thumbFiles = pFiles.filter(f => f !== heroFile);
                       const MAX_THUMBS = 6;
-                      const visible = pFiles.slice(0, MAX_THUMBS);
-                      const rest = pFiles.length - MAX_THUMBS;
+                      const visible = thumbFiles.slice(0, MAX_THUMBS);
+                      const rest = thumbFiles.length - MAX_THUMBS;
                       return (
-                        <div style={{ display: "flex", gap: 6, marginTop: 10, alignItems: "center", flexWrap: "nowrap", overflow: "hidden" }}>
+                        <div>
+                          {heroFile && (
+                            <div onClick={e => { e.stopPropagation(); setPropertyModalTab("files"); setSelectedProperty(p); }}
+                              style={{ marginTop: 12, borderRadius: 10, overflow: "hidden", height: 140, cursor: "pointer" }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={fileThumbUrls[heroFile.id]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            </div>
+                          )}
+                        <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center", flexWrap: "nowrap", overflow: "hidden" }}>
                           {visible.map(f => {
                             const thumbUrl = fileThumbUrls[f.id];
                             const isImage = f.mime_type?.startsWith("image/");
@@ -2828,6 +2863,7 @@ export default function EquityDashboard() {
                               +{rest}
                             </div>
                           )}
+                        </div>
                         </div>
                       );
                     })()}
