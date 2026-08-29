@@ -12,7 +12,10 @@ export async function GET(request: Request) {
     { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }
   );
 
-  if (!res.ok) return NextResponse.json({ error: "Todoist API error" }, { status: 502 });
+  if (!res.ok) {
+    const body = await res.text();
+    return NextResponse.json({ error: "Todoist API error", status: res.status, body }, { status: 502 });
+  }
 
   const tasks = await res.json();
   return NextResponse.json(tasks);
