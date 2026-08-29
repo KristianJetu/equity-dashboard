@@ -533,7 +533,9 @@ function PropertyFilesTab({ propertyId, supabase }: {
                 <FilePreview path={f.path} mimeType={f.mime_type} supabase={supabase} onClick={() => handleOpen(f)} />
               )}
               <div style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ color: "#ccc", fontSize: 16, cursor: "grab", flexShrink: 0, userSelect: "none" }}>⠿</div>
+              <div style={{ cursor: "grab", flexShrink: 0, opacity: 0.35, padding: "0 2px" }}>
+                <svg width="12" height="16" viewBox="0 0 12 16" fill="#5c6359"><circle cx="4" cy="3" r="1.3"/><circle cx="8" cy="3" r="1.3"/><circle cx="4" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="4" cy="13" r="1.3"/><circle cx="8" cy="13" r="1.3"/></svg>
+              </div>
               {!hasPreview && (
               <div style={{ width: 34, height: 34, borderRadius: 8, background: "#eef4ee", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1f3d2e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
