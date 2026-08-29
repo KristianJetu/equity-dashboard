@@ -8,3 +8,4 @@ node_modules/
 .claude/settings.local.json
 tsconfig.tsbuildinfo
 components/EquityDashboard_prev.tsx
+backups/
