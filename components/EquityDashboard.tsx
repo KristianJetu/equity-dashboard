@@ -2184,7 +2184,7 @@ export default function EquityDashboard() {
         supabase.from("mortgages").select("*"),
         supabase.from("tenants").select("*"),
         supabase.from("debts").select("*").order("created_at", { ascending: true }),
-        supabase.from("property_files").select("*").order("created_at", { ascending: true }),
+        supabase.from("property_files").select("*").order("sort_order", { ascending: true }).order("created_at", { ascending: true }),
       ]);
       setProperties(props ?? []);
       setMortgages(morts ?? []);
@@ -2374,7 +2374,21 @@ export default function EquityDashboard() {
           mortgage={mortgages.find(m => m.property_id === selectedProperty.id)}
           supabase={supabase}
           defaultTab={propertyModalTab}
-          onClose={() => { setSelectedProperty(null); setPropertyModalTab("details"); }}
+          onClose={async () => {
+            setSelectedProperty(null);
+            setPropertyModalTab("details");
+            const { data: files } = await supabase.from("property_files").select("*").order("sort_order", { ascending: true }).order("created_at", { ascending: true });
+            const allFiles = files ?? [];
+            setPropertyFiles(allFiles);
+            const imageFiles = allFiles.filter(f => f.mime_type?.startsWith("image/"));
+            const urlEntries = await Promise.all(
+              imageFiles.filter(f => !fileThumbUrls[f.id]).map(async f => {
+                const { data } = await supabase.storage.from("property-files").createSignedUrl(f.path, 3600);
+                return [f.id, data?.signedUrl ?? ""] as [string, string];
+              })
+            );
+            if (urlEntries.length > 0) setFileThumbUrls(prev => ({ ...prev, ...Object.fromEntries(urlEntries.filter(([, url]) => url)) }));
+          }}
           onSaved={async () => {
             const [{ data: props }, { data: morts }] = await Promise.all([
               supabase.from("properties").select("*").order("sort_order", { ascending: true }),
