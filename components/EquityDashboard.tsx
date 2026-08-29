@@ -377,6 +377,11 @@ function PropertyFilesTab({ propertyId, supabase }: {
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Soubor je příliš velký. Maximum je 10 MB.");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     setUploading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setUploading(false); return; }
