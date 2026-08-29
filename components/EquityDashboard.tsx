@@ -546,12 +546,13 @@ function PropertyFilesTab({ propertyId, supabase }: {
 }
 
 // ── Property Modal ────────────────────────────────────────────────────────────
-function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
+function PropertyModal({ property, mortgage, supabase, onClose, onSaved, defaultTab = "details" }: {
   property: Property;
   mortgage: Mortgage | undefined;
   supabase: ReturnType<typeof createClient>;
   onClose: () => void;
   onSaved: () => void;
+  defaultTab?: "details" | "files";
 }) {
   const [name, setName] = useState(property.name);
   const [type, setType] = useState(property.type ?? "apartment");
@@ -584,7 +585,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved }: {
   const [addMortgage, setAddMortgage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState<"details" | "files">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "files">(defaultTab);
 
   async function handleSave() {
     setSaving(true);
@@ -2000,12 +2001,15 @@ export default function EquityDashboard() {
   const [mortgages, setMortgages] = useState<Mortgage[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [unmatchedPayments, setUnmatchedPayments] = useState<Payment[]>([]);
+  const [propertyFiles, setPropertyFiles] = useState<PropertyFile[]>([]);
+  const [fileThumbUrls, setFileThumbUrls] = useState<Record<string, string>>({});
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [showAddTenant, setShowAddTenant] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [propertyModalTab, setPropertyModalTab] = useState<"details" | "files">("details");
   const [activeSection, setActiveSection] = useState("dashboard");
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState("··");
@@ -2151,16 +2155,28 @@ export default function EquityDashboard() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: props }, { data: morts }, { data: tens }, { data: dts }] = await Promise.all([
+      const [{ data: props }, { data: morts }, { data: tens }, { data: dts }, { data: files }] = await Promise.all([
         supabase.from("properties").select("*").order("sort_order", { ascending: true }),
         supabase.from("mortgages").select("*"),
         supabase.from("tenants").select("*"),
         supabase.from("debts").select("*").order("created_at", { ascending: true }),
+        supabase.from("property_files").select("*").order("created_at", { ascending: true }),
       ]);
       setProperties(props ?? []);
       setMortgages(morts ?? []);
       setTenants(tens ?? []);
       setDebts(dts ?? []);
+      const allFiles = files ?? [];
+      setPropertyFiles(allFiles);
+      // Generuj signed URLs pro obrázky (pro miniatury na kartách)
+      const imageFiles = allFiles.filter(f => f.mime_type?.startsWith("image/"));
+      const urlEntries = await Promise.all(
+        imageFiles.map(async f => {
+          const { data } = await supabase.storage.from("property-files").createSignedUrl(f.path, 3600);
+          return [f.id, data?.signedUrl ?? ""] as [string, string];
+        })
+      );
+      setFileThumbUrls(Object.fromEntries(urlEntries.filter(([, url]) => url)));
       await loadPayments();
       setLoading(false);
     }
@@ -2333,7 +2349,8 @@ export default function EquityDashboard() {
           property={selectedProperty}
           mortgage={mortgages.find(m => m.property_id === selectedProperty.id)}
           supabase={supabase}
-          onClose={() => setSelectedProperty(null)}
+          defaultTab={propertyModalTab}
+          onClose={() => { setSelectedProperty(null); setPropertyModalTab("details"); }}
           onSaved={async () => {
             const [{ data: props }, { data: morts }] = await Promise.all([
               supabase.from("properties").select("*").order("sort_order", { ascending: true }),
@@ -2728,6 +2745,42 @@ export default function EquityDashboard() {
                             {" · "}
                             <span style={{ color: "#1f3d2e", fontWeight: 600 }}>Vlastní {fmtMil(p.estimated_value - mortgage.outstanding_balance)} mil</span>
                           </div>
+                        </div>
+                      );
+                    })()}
+                    {/* Miniatury souborů */}
+                    {(() => {
+                      const pFiles = propertyFiles
+                        .filter(f => f.property_id === p.id)
+                        .sort((a, b) => {
+                          const order: Record<string, number> = { photo: 0, contract: 1, insurance: 2, other: 3 };
+                          return (order[a.category] ?? 3) - (order[b.category] ?? 3);
+                        });
+                      if (pFiles.length === 0) return null;
+                      return (
+                        <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+                          {pFiles.map(f => {
+                            const thumbUrl = fileThumbUrls[f.id];
+                            const isImage = f.mime_type?.startsWith("image/");
+                            return (
+                              <div key={f.id}
+                                onClick={e => { e.stopPropagation(); setPropertyModalTab("files"); setSelectedProperty(p); }}
+                                title={f.name}
+                                style={{ width: 48, height: 48, borderRadius: 8, overflow: "hidden", border: "1px solid #e0d8cc", background: "#f0ebe1", cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                {isImage && thumbUrl ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={thumbUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                ) : (
+                                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c8378" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <span style={{ fontSize: 8, color: "#9a9483", fontWeight: 700, textTransform: "uppercase" }}>
+                                      {f.category === "contract" ? "sml" : f.category === "insurance" ? "poj" : "doc"}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })()}
