@@ -1473,20 +1473,20 @@ function TenantCard({ tenant, properties, supabase, onSaved, onDeleted }: {
   return (
     <>
       <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e8e2d6", overflow: "hidden" }}>
-        <div style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 13 }}>
+        <div style={{ padding: "13px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#d6e4d6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1f3d2e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, color: "#1c2b22", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tenant.name || "—"}</div>
-            <div style={{ fontSize: 12, color: "#9a9483", marginTop: 1 }}>{tenant.account_number}</div>
+          <div style={{ flex: 1, minWidth: 120 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: "#1c2b22", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant.name || "—"}</div>
+            <div style={{ fontSize: 12, color: "#9a9483", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant.account_number}</div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
             {property && (
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e", background: "#d6e4d6", borderRadius: 20, padding: "3px 10px" }}>{property.name}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#1f3d2e", background: "#d6e4d6", borderRadius: 20, padding: "3px 10px", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{property.name}</div>
             )}
             <button onClick={() => setShowEdit(true)}
-              style={{ padding: "5px 13px", borderRadius: 7, border: "1px solid #d2cab4", background: "#faf8f3", color: "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              style={{ padding: "5px 13px", borderRadius: 7, border: "1px solid #d2cab4", background: "#faf8f3", color: "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
               Upravit
             </button>
           </div>
