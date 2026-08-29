@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   if (!token) return NextResponse.json({ error: "Missing TODOIST_API_TOKEN" }, { status: 500 });
 
   const res = await fetch(
-    `https://api.todoist.com/rest/v2/tasks?label=${encodeURIComponent(label)}`,
+    `https://api.todoist.com/api/v1/tasks?label=${encodeURIComponent(label)}`,
     { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }
   );
 
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   const token = process.env.TODOIST_API_TOKEN;
   if (!token) return NextResponse.json({ error: "Missing TODOIST_API_TOKEN" }, { status: 500 });
 
-  const res = await fetch(`https://api.todoist.com/rest/v2/tasks/${taskId}/close`, {
+  const res = await fetch(`https://api.todoist.com/api/v1/tasks/${taskId}/close`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
