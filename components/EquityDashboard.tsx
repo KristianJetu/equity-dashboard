@@ -2717,7 +2717,7 @@ export default function EquityDashboard() {
                       if (!heroFile) return null;
                       return (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={fileThumbUrls[heroFile.id]} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.35, pointerEvents: "none", userSelect: "none", WebkitMaskImage: "linear-gradient(to right, transparent 35%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,1) 100%)", maskImage: "linear-gradient(to right, transparent 35%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,1) 100%)" }} />
+                        <img src={fileThumbUrls[heroFile.id]} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.22, pointerEvents: "none", userSelect: "none", WebkitMaskImage: "linear-gradient(to right, transparent 35%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,1) 100%)", maskImage: "linear-gradient(to right, transparent 35%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,1) 100%)" }} />
                       );
                     })()}
                     <div className="flex items-center justify-between">
