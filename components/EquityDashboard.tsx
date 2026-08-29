@@ -3229,10 +3229,12 @@ export default function EquityDashboard() {
           </button>
         </div>
 
-        {/* ÚKOLY */}
-        <section id="ukoly" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 100 }}>
-          <TodoistSection />
-        </section>
+        {/* ÚKOLY — zatím jen pro vlastníka, ostatní uživatelé sekci nevidí */}
+        {userEmail === "krislasek65@gmail.com" && (
+          <section id="ukoly" style={{ marginTop: 38, scrollMarginTop: 28, paddingBottom: 100 }}>
+            <TodoistSection />
+          </section>
+        )}
 
         {/* NASTAVENÍ — skryté, jen jako kotva pro navigaci */}
         <section id="nastaveni" className="eq-settings-section" style={{ display: "none" }}>
