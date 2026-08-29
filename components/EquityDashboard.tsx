@@ -2675,10 +2675,10 @@ export default function EquityDashboard() {
                             </span>
                           )}
                         </div>
-                        <div className="eq-prop-info" style={{ fontSize: 12, color: "#7c8378", marginTop: 2 }}>
+                        <div className="eq-prop-info" style={{ fontSize: 12, color: "#7c8378", marginTop: 2, whiteSpace: "normal", lineHeight: 1.4 }}>
                           {p.status === "rented" ? t("najemMesicne")(fmt(p.rent_amount)) : p.address ?? ""}
                           {mortgage ? ` · ${t("splatkaX")(fmt(mortgage.monthly_payment))}` : ""}
-                          {mortgage?.refix_date ? ` · ${t("konecFixaceX")(mortgage.refix_date)}` : ""}
+                          {mortgage?.refix_date ? ` · Fixace ${mortgage.refix_date}` : ""}
                         </div>
                         {mortgage?.refix_date && (() => {
                           const days = daysUntil(mortgage.refix_date);
@@ -2761,7 +2761,7 @@ export default function EquityDashboard() {
                       const visible = pFiles.slice(0, MAX_THUMBS);
                       const rest = pFiles.length - MAX_THUMBS;
                       return (
-                        <div style={{ display: "flex", gap: 6, marginTop: 10, alignItems: "center" }}>
+                        <div style={{ display: "flex", gap: 6, marginTop: 10, alignItems: "center", flexWrap: "nowrap", overflow: "hidden" }}>
                           {visible.map(f => {
                             const thumbUrl = fileThumbUrls[f.id];
                             const isImage = f.mime_type?.startsWith("image/");
