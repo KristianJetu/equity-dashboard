@@ -17,7 +17,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Todoist API error", status: res.status, body }, { status: 502 });
   }
 
-  const tasks = await res.json();
+  const data = await res.json();
+  const tasks = Array.isArray(data) ? data : (data.results ?? []);
   return NextResponse.json(tasks);
 }
 
