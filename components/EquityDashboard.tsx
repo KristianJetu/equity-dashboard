@@ -372,6 +372,7 @@ function PropertyFilesTab({ propertyId, supabase }: {
   const [category, setCategory] = useState<PropertyFile["category"]>("contract");
   const [note, setNote] = useState("");
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [filterCat, setFilterCat] = useState<PropertyFile["category"] | "all">("all");
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function loadFiles() {
@@ -475,12 +476,28 @@ function PropertyFilesTab({ propertyId, supabase }: {
         </label>
       </div>
 
+      {/* Filter */}
+      {files.length > 0 && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+          {([["all", "Vše"], ["contract", "Smlouvy"], ["insurance", "Pojistky"], ["photo", "Fotky"], ["other", "Ostatní"]] as const).map(([val, label]) => {
+            const count = val === "all" ? files.length : files.filter(f => f.category === val).length;
+            if (val !== "all" && count === 0) return null;
+            return (
+              <button key={val} onClick={() => setFilterCat(val)}
+                style={{ padding: "4px 12px", borderRadius: 20, border: "1.5px solid", borderColor: filterCat === val ? "#1f3d2e" : "#d2cab4", background: filterCat === val ? "#1f3d2e" : "#faf8f3", color: filterCat === val ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                {label} <span style={{ opacity: 0.7 }}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* File list */}
       {files.length === 0 ? (
         <div style={{ textAlign: "center", color: "#9a9483", fontSize: 13, padding: 24 }}>Žádné soubory</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {files.map(f => {
+          {files.filter(f => filterCat === "all" || f.category === filterCat).map(f => {
             const isImage = f.mime_type?.startsWith("image/");
             return (
             <div key={f.id} style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", overflow: "hidden" }}>
