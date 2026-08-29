@@ -2802,7 +2802,7 @@ export default function EquityDashboard() {
                           );
                         })()}
                       </div>
-                      <div className="flex items-center gap-3" style={{ flexShrink: 0, paddingLeft: 8 }}>
+                      <div style={{ flexShrink: 0, paddingLeft: 8, display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.75)", backdropFilter: "blur(4px)", borderRadius: 20, padding: "6px 10px 6px 12px" }}>
                         {!isManaged && <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{fmtMil(p.estimated_value)} mil</span>}
                         <button onClick={e => { e.stopPropagation(); if (!isManaged) handleToggleStatus(p.id, p.status); }} className={`inline-flex items-center rounded-[20px] ${cls}`} style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 11px", border: "none", cursor: isManaged ? "default" : "pointer" }}>{label}</button>
                       </div>
