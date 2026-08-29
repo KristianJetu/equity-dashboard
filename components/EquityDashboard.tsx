@@ -2757,9 +2757,12 @@ export default function EquityDashboard() {
                           return (order[a.category] ?? 3) - (order[b.category] ?? 3);
                         });
                       if (pFiles.length === 0) return null;
+                      const MAX_THUMBS = 6;
+                      const visible = pFiles.slice(0, MAX_THUMBS);
+                      const rest = pFiles.length - MAX_THUMBS;
                       return (
-                        <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
-                          {pFiles.map(f => {
+                        <div style={{ display: "flex", gap: 6, marginTop: 10, alignItems: "center" }}>
+                          {visible.map(f => {
                             const thumbUrl = fileThumbUrls[f.id];
                             const isImage = f.mime_type?.startsWith("image/");
                             return (
@@ -2781,6 +2784,12 @@ export default function EquityDashboard() {
                               </div>
                             );
                           })}
+                          {rest > 0 && (
+                            <div onClick={e => { e.stopPropagation(); setPropertyModalTab("files"); setSelectedProperty(p); }}
+                              style={{ width: 48, height: 48, borderRadius: 8, border: "1px solid #e0d8cc", background: "#f0ebe1", cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#7c8378" }}>
+                              +{rest}
+                            </div>
+                          )}
                         </div>
                       );
                     })()}
