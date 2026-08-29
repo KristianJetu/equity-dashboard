@@ -2707,9 +2707,19 @@ export default function EquityDashboard() {
                     onDragOver={e => { e.preventDefault(); setDragOverIndex(idx); }}
                     onDragEnd={() => { if (dragIndex !== null && dragOverIndex !== null) handleDrop(dragIndex, dragOverIndex, displayList); setDragIndex(null); setDragOverIndex(null); }}
                     onClick={() => setSelectedProperty(p)}
-                    style={{ background: p.status === "planned" ? "#eef5ee" : "#f5f1e6", borderRadius: 10, padding: "15px 18px", border: isDragOver ? "2px dashed #1f3d2e" : "1px solid transparent", cursor: "grab", transition: "box-shadow 0.15s", opacity: dragIndex === idx ? 0.5 : 1 }}
+                    style={{ position: "relative", background: p.status === "planned" ? "#eef5ee" : "#f5f1e6", borderRadius: 10, padding: "15px 18px", border: isDragOver ? "2px dashed #1f3d2e" : "1px solid transparent", cursor: "grab", transition: "box-shadow 0.15s", opacity: dragIndex === idx ? 0.5 : 1, overflow: "hidden" }}
                     onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 2px 12px rgba(31,61,46,0.10)")}
                     onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
+                    {/* Hero fotka jako jemné pozadí karty */}
+                    {(() => {
+                      const pFiles = propertyFiles.filter(f => f.property_id === p.id);
+                      const heroFile = pFiles.find(f => f.mime_type?.startsWith("image/") && fileThumbUrls[f.id]);
+                      if (!heroFile) return null;
+                      return (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={fileThumbUrls[heroFile.id]} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.15, pointerEvents: "none", userSelect: "none" }} />
+                      );
+                    })()}
                     <div className="flex items-center justify-between">
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="eq-prop-name-row" style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2820,20 +2830,11 @@ export default function EquityDashboard() {
                     {(() => {
                       const pFiles = propertyFiles.filter(f => f.property_id === p.id);
                       if (pFiles.length === 0) return null;
-                      const heroFile = pFiles.find(f => f.mime_type?.startsWith("image/") && fileThumbUrls[f.id]);
-                      const thumbFiles = pFiles.filter(f => f !== heroFile);
                       const MAX_THUMBS = 6;
-                      const visible = thumbFiles.slice(0, MAX_THUMBS);
-                      const rest = thumbFiles.length - MAX_THUMBS;
+                      const visible = pFiles.slice(0, MAX_THUMBS);
+                      const rest = pFiles.length - MAX_THUMBS;
                       return (
                         <div>
-                          {heroFile && (
-                            <div onClick={e => { e.stopPropagation(); setPropertyModalTab("files"); setSelectedProperty(p); }}
-                              style={{ marginTop: 12, borderRadius: 10, overflow: "hidden", height: 140, cursor: "pointer" }}>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={fileThumbUrls[heroFile.id]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                            </div>
-                          )}
                         <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center", flexWrap: "nowrap", overflow: "hidden" }}>
                           {visible.map(f => {
                             const thumbUrl = fileThumbUrls[f.id];
