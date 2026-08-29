@@ -388,15 +388,31 @@ function PropertyFilesTab({ propertyId, supabase }: {
   const [filterCat, setFilterCat] = useState<PropertyFile["category"] | "all">("all");
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const dragOver = useRef<string | null>(null);
+
   async function loadFiles() {
     setLoading(true);
     const { data } = await supabase
       .from("property_files")
       .select("*")
       .eq("property_id", propertyId)
-      .order("created_at", { ascending: false });
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
     setFiles(data ?? []);
     setLoading(false);
+  }
+
+  async function handleDrop(draggedId: string, targetId: string) {
+    if (draggedId === targetId) return;
+    const reordered = [...files];
+    const from = reordered.findIndex(f => f.id === draggedId);
+    const to = reordered.findIndex(f => f.id === targetId);
+    const [item] = reordered.splice(from, 1);
+    reordered.splice(to, 0, item);
+    setFiles(reordered);
+    await Promise.all(
+      reordered.map((f, i) => supabase.from("property_files").update({ sort_order: i }).eq("id", f.id))
+    );
   }
 
   async function getSignedUrl(path: string): Promise<string> {
@@ -507,11 +523,17 @@ function PropertyFilesTab({ propertyId, supabase }: {
           {files.filter(f => filterCat === "all" || f.category === filterCat).map(f => {
             const hasPreview = f.mime_type?.startsWith("image/") || f.mime_type === "application/pdf";
             return (
-            <div key={f.id} style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", overflow: "hidden" }}>
+            <div key={f.id}
+              draggable
+              onDragStart={() => { dragOver.current = f.id; }}
+              onDragOver={e => { e.preventDefault(); }}
+              onDrop={() => { if (dragOver.current) handleDrop(dragOver.current, f.id); dragOver.current = null; }}
+              style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", overflow: "hidden", cursor: "grab" }}>
               {hasPreview && (
                 <FilePreview path={f.path} mimeType={f.mime_type} supabase={supabase} onClick={() => handleOpen(f)} />
               )}
               <div style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ color: "#ccc", fontSize: 16, cursor: "grab", flexShrink: 0, userSelect: "none" }}>⠿</div>
               {!hasPreview && (
               <div style={{ width: 34, height: 34, borderRadius: 8, background: "#eef4ee", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1f3d2e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
