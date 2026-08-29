@@ -332,8 +332,9 @@ function paymentTypeLabel(t?: string) {
 // ── Property Detail Modal ─────────────────────────────────────────────────────
 
 // ── File Image Preview ────────────────────────────────────────────────────────
-function FileImagePreview({ path, supabase, onClick }: {
+function FilePreview({ path, mimeType, supabase, onClick }: {
   path: string;
+  mimeType: string | null;
   supabase: ReturnType<typeof createClient>;
   onClick: () => void;
 }) {
@@ -346,12 +347,24 @@ function FileImagePreview({ path, supabase, onClick }: {
 
   if (!url) return null;
 
-  return (
+  const isPdf = mimeType === "application/pdf";
+  const isImage = mimeType?.startsWith("image/");
+
+  if (isImage) return (
     <div onClick={onClick} style={{ cursor: "pointer", width: "100%", height: 160, overflow: "hidden", background: "#f0ebe1" }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
     </div>
   );
+
+  if (isPdf) return (
+    <div style={{ position: "relative", width: "100%", height: 200, overflow: "hidden", background: "#f5f1e6", borderBottom: "1px solid #e8e2d6" }}>
+      <iframe src={url} style={{ width: "100%", height: "100%", border: "none", pointerEvents: "none" }} />
+      <div onClick={onClick} style={{ position: "absolute", inset: 0, cursor: "pointer" }} />
+    </div>
+  );
+
+  return null;
 }
 
 // ── Property Files Tab ────────────────────────────────────────────────────────
@@ -492,14 +505,14 @@ function PropertyFilesTab({ propertyId, supabase }: {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {files.filter(f => filterCat === "all" || f.category === filterCat).map(f => {
-            const isImage = f.mime_type?.startsWith("image/");
+            const hasPreview = f.mime_type?.startsWith("image/") || f.mime_type === "application/pdf";
             return (
             <div key={f.id} style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", overflow: "hidden" }}>
-              {isImage && (
-                <FileImagePreview path={f.path} supabase={supabase} onClick={() => handleOpen(f)} />
+              {hasPreview && (
+                <FilePreview path={f.path} mimeType={f.mime_type} supabase={supabase} onClick={() => handleOpen(f)} />
               )}
               <div style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-              {!isImage && (
+              {!hasPreview && (
               <div style={{ width: 34, height: 34, borderRadius: 8, background: "#eef4ee", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1f3d2e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               </div>
