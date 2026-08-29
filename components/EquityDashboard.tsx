@@ -2802,7 +2802,7 @@ export default function EquityDashboard() {
                           );
                         })()}
                       </div>
-                      <div style={{ flexShrink: 0, paddingLeft: 8, display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.88)", backdropFilter: "blur(6px)", borderRadius: 20, padding: "6px 10px 6px 12px", boxShadow: "0 1px 6px rgba(0,0,0,0.07)" }}>
+                      <div style={{ flexShrink: 0, paddingLeft: 8, display: "flex", alignItems: "center", gap: 8, background: p.status === "planned" ? "rgba(238,245,238,0.92)" : "rgba(245,241,230,0.92)", borderRadius: 20, padding: "6px 10px 6px 12px" }}>
                         {!isManaged && <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{fmtMil(p.estimated_value)} mil</span>}
                         <button onClick={e => { e.stopPropagation(); if (!isManaged) handleToggleStatus(p.id, p.status); }} className={`inline-flex items-center rounded-[20px] ${cls}`} style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 11px", border: "none", cursor: isManaged ? "default" : "pointer" }}>{label}</button>
                       </div>
