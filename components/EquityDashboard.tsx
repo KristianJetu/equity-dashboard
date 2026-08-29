@@ -399,33 +399,27 @@ function PropertyFilesTab({ propertyId, supabase }: {
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      alert("Soubor je příliš velký. Maximum je 10 MB.");
+    const fileList = Array.from(e.target.files ?? []);
+    if (fileList.length === 0) return;
+    const oversized = fileList.filter(f => f.size > 10 * 1024 * 1024);
+    if (oversized.length > 0) {
+      alert(`Tyto soubory překračují limit 10 MB:\n${oversized.map(f => f.name).join("\n")}`);
       if (fileRef.current) fileRef.current.value = "";
       return;
     }
     setUploading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setUploading(false); return; }
-    const ext = file.name.split(".").pop();
-    const path = `${user.id}/${propertyId}/${Date.now()}.${ext}`;
-    const { error: uploadErr } = await supabase.storage
-      .from("property-files")
-      .upload(path, file);
-    if (uploadErr) { alert("Chyba při nahrávání: " + uploadErr.message); setUploading(false); return; }
-    await supabase.from("property_files").insert({
-      user_id: user.id,
-      property_id: propertyId,
-      bucket: "property-files",
-      path,
-      name: file.name,
-      size: file.size,
-      mime_type: file.type,
-      category,
-      note: note || null,
-    });
+    for (const file of fileList) {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${propertyId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("property-files").upload(path, file);
+      if (uploadErr) { alert("Chyba při nahrávání " + file.name + ": " + uploadErr.message); continue; }
+      await supabase.from("property_files").insert({
+        user_id: user.id, property_id: propertyId, bucket: "property-files",
+        path, name: file.name, size: file.size, mime_type: file.type, category, note: note || null,
+      });
+    }
     setNote("");
     if (fileRef.current) fileRef.current.value = "";
     await loadFiles();
@@ -472,7 +466,7 @@ function PropertyFilesTab({ propertyId, supabase }: {
         />
         <label style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 18px", borderRadius: 8, background: uploading ? "#e8e2d6" : "#1f3d2e", color: "#f5f1e6", fontSize: 13, fontWeight: 600, cursor: uploading ? "default" : "pointer" }}>
           {uploading ? "Nahrávám…" : "Vybrat soubor"}
-          <input ref={fileRef} type="file" style={{ display: "none" }} onChange={handleUpload} disabled={uploading} />
+          <input ref={fileRef} type="file" multiple style={{ display: "none" }} onChange={handleUpload} disabled={uploading} />
         </label>
       </div>
 
