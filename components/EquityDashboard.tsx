@@ -46,6 +46,16 @@ type PropertyFile = {
   created_at: string;
 };
 
+type PropertyValuation = {
+  id: string;
+  user_id: string;
+  property_id: string;
+  value: number;
+  valuation_date: string;
+  note: string | null;
+  created_at: string;
+};
+
 type Mortgage = {
   id: string;
   property_id: string;
@@ -588,6 +598,119 @@ function PropertyFilesTab({ propertyId, supabase }: {
   );
 }
 
+// ── Property Valuations Tab ───────────────────────────────────────────────────
+function PropertyValuationsTab({ propertyId, currentValue, supabase, onValueChanged }: {
+  propertyId: string;
+  currentValue: number;
+  supabase: ReturnType<typeof createClient>;
+  onValueChanged: (newValue: number) => void;
+}) {
+  const [valuations, setValuations] = useState<PropertyValuation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [newValue, setNewValue] = useState("");
+  const [newDate, setNewDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [newNote, setNewNote] = useState("");
+
+  async function loadValuations() {
+    setLoading(true);
+    const { data } = await supabase
+      .from("property_valuations")
+      .select("*")
+      .eq("property_id", propertyId)
+      .order("valuation_date", { ascending: false });
+    setValuations(data ?? []);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadValuations(); }, [propertyId]);
+
+  async function handleAdd() {
+    if (!newValue) return;
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
+    const value = Number(newValue);
+    await supabase.from("property_valuations").insert({
+      user_id: user.id, property_id: propertyId, value, valuation_date: newDate, note: newNote || null,
+    });
+    await supabase.from("properties").update({ estimated_value: value }).eq("id", propertyId);
+    setNewValue("");
+    setNewNote("");
+    setNewDate(new Date().toISOString().slice(0, 10));
+    await loadValuations();
+    onValueChanged(value);
+    setSaving(false);
+  }
+
+  async function handleDelete(v: PropertyValuation) {
+    if (!confirm("Smazat toto ocenění?")) return;
+    await supabase.from("property_valuations").delete().eq("id", v.id);
+    setValuations(prev => prev.filter(x => x.id !== v.id));
+  }
+
+  if (loading) return <div style={{ padding: 24, color: "#9a9483", textAlign: "center" }}>Načítám…</div>;
+
+  return (
+    <div>
+      <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e2d6", padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Přidat ocenění</div>
+        <div style={{ fontSize: 11, color: "#9a9483", marginBottom: 10 }}>Aktuální hodnota: {fmt(currentValue)} Kč</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+          <input
+            type="text" inputMode="numeric" placeholder="Nová hodnota (Kč)"
+            value={newValue !== "" ? Number(newValue).toLocaleString("cs-CZ") : ""}
+            onChange={e => setNewValue(e.target.value.replace(/\D/g, ""))}
+            style={{ flex: "1 1 160px", padding: "8px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22" }} />
+          <input
+            type="date" lang="cs" value={newDate} onChange={e => setNewDate(e.target.value)}
+            style={{ flex: "1 1 140px", padding: "8px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22" }} />
+        </div>
+        <input
+          placeholder="Poznámka (např. odhad realitky, srovnání inzerátů)"
+          value={newNote} onChange={e => setNewNote(e.target.value)}
+          style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#faf8f3", fontSize: 13, color: "#1c2b22", marginBottom: 10, boxSizing: "border-box" }} />
+        <button onClick={handleAdd} disabled={saving || !newValue}
+          style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: saving || !newValue ? "#e8e2d6" : "#1f3d2e", color: "#f5f1e6", fontSize: 13, fontWeight: 600, cursor: saving || !newValue ? "default" : "pointer" }}>
+          {saving ? "Ukládám…" : "+ Přidat ocenění"}
+        </button>
+      </div>
+
+      {valuations.length === 0 ? (
+        <div style={{ textAlign: "center", color: "#9a9483", fontSize: 13, padding: 24 }}>Zatím žádná historie ocenění</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {valuations.map((v, i) => {
+            const prev = valuations[i + 1];
+            const diff = prev ? v.value - prev.value : null;
+            return (
+              <div key={v.id} style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", padding: "11px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#1c2b22" }}>
+                    {fmt(v.value)} Kč
+                    {diff !== null && diff !== 0 && (
+                      <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: diff > 0 ? "#1f3d2e" : "#c0392b" }}>
+                        {diff > 0 ? "+" : ""}{fmt(diff)} Kč
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>
+                    {fmtDate(v.valuation_date)}{v.note ? ` · ${v.note}` : ""}
+                  </div>
+                </div>
+                <button onClick={() => handleDelete(v)}
+                  style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid #f5c6c6", background: "#fff5f5", color: "#c0392b", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
+                  ×
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Property Modal ────────────────────────────────────────────────────────────
 function PropertyModal({ property, mortgage, supabase, onClose, onSaved, defaultTab = "details" }: {
   property: Property;
@@ -595,7 +718,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved, default
   supabase: ReturnType<typeof createClient>;
   onClose: () => void;
   onSaved: () => void;
-  defaultTab?: "details" | "files";
+  defaultTab?: "details" | "files" | "valuations";
 }) {
   const [name, setName] = useState(property.name);
   const [type, setType] = useState(property.type ?? "apartment");
@@ -628,7 +751,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved, default
   const [addMortgage, setAddMortgage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState<"details" | "files">(defaultTab);
+  const [activeTab, setActiveTab] = useState<"details" | "files" | "valuations">(defaultTab);
 
   async function handleSave() {
     setSaving(true);
@@ -724,16 +847,23 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved, default
 
         {/* Záložky */}
         <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "#ede9de", borderRadius: 10, padding: 4 }}>
-          {(["details", "files"] as const).map(tab => (
+          {(["details", "valuations", "files"] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: "none", background: activeTab === tab ? "#fff" : "transparent", color: activeTab === tab ? "#1c2b22" : "#9a9483", fontWeight: activeTab === tab ? 700 : 500, fontSize: 13, cursor: "pointer", boxShadow: activeTab === tab ? "0 1px 4px rgba(0,0,0,0.08)" : "none" }}>
-              {tab === "details" ? "Detaily" : "Soubory"}
+              {tab === "details" ? "Detaily" : tab === "valuations" ? "Ocenění" : "Soubory"}
             </button>
           ))}
         </div>
 
         {activeTab === "files" ? (
           <PropertyFilesTab propertyId={property.id} supabase={supabase} />
+        ) : activeTab === "valuations" ? (
+          <PropertyValuationsTab
+            propertyId={property.id}
+            currentValue={Number(estimatedValue)}
+            supabase={supabase}
+            onValueChanged={v => { setEstimatedValue(String(v)); onSaved(); }}
+          />
         ) : (<>
 
         {field("Název nemovitosti", name, setName, "text")}
@@ -2046,13 +2176,14 @@ export default function EquityDashboard() {
   const [unmatchedPayments, setUnmatchedPayments] = useState<Payment[]>([]);
   const [propertyFiles, setPropertyFiles] = useState<PropertyFile[]>([]);
   const [fileThumbUrls, setFileThumbUrls] = useState<Record<string, string>>({});
+  const [valuations, setValuations] = useState<PropertyValuation[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [showAddTenant, setShowAddTenant] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [propertyModalTab, setPropertyModalTab] = useState<"details" | "files">("details");
+  const [propertyModalTab, setPropertyModalTab] = useState<"details" | "files" | "valuations">("details");
   const [activeSection, setActiveSection] = useState("dashboard");
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState("··");
@@ -2198,17 +2329,19 @@ export default function EquityDashboard() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: props }, { data: morts }, { data: tens }, { data: dts }, { data: files }] = await Promise.all([
+      const [{ data: props }, { data: morts }, { data: tens }, { data: dts }, { data: files }, { data: vals }] = await Promise.all([
         supabase.from("properties").select("*").order("sort_order", { ascending: true }),
         supabase.from("mortgages").select("*"),
         supabase.from("tenants").select("*"),
         supabase.from("debts").select("*").order("created_at", { ascending: true }),
         supabase.from("property_files").select("*").order("sort_order", { ascending: true }).order("created_at", { ascending: true }),
+        supabase.from("property_valuations").select("*").order("valuation_date", { ascending: false }),
       ]);
       setProperties(props ?? []);
       setMortgages(morts ?? []);
       setTenants(tens ?? []);
       setDebts(dts ?? []);
+      setValuations(vals ?? []);
       const allFiles = files ?? [];
       setPropertyFiles(allFiles);
       // Generuj signed URLs pro obrázky (pro miniatury na kartách)
@@ -2396,7 +2529,11 @@ export default function EquityDashboard() {
           onClose={async () => {
             setSelectedProperty(null);
             setPropertyModalTab("details");
-            const { data: files } = await supabase.from("property_files").select("*").order("sort_order", { ascending: true }).order("created_at", { ascending: true });
+            const [{ data: files }, { data: vals }] = await Promise.all([
+              supabase.from("property_files").select("*").order("sort_order", { ascending: true }).order("created_at", { ascending: true }),
+              supabase.from("property_valuations").select("*").order("valuation_date", { ascending: false }),
+            ]);
+            setValuations(vals ?? []);
             const allFiles = files ?? [];
             setPropertyFiles(allFiles);
             const imageFiles = allFiles.filter(f => f.mime_type?.startsWith("image/"));
@@ -2798,6 +2935,20 @@ export default function EquityDashboard() {
                           return (
                             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6, padding: "4px 10px", borderRadius: 20, background: isDanger ? "#fde8e8" : "#fff8e1", color: isDanger ? "#c0392b" : "#a07b2f", fontSize: 12, fontWeight: 700 }}>
                               ⏳ Konec smlouvy za {daysLeft} dní ({leaseEndFmt})
+                            </div>
+                          );
+                        })()}
+                        {!isManaged && p.status !== "planned" && (() => {
+                          const propValuations = valuations.filter(v => v.property_id === p.id);
+                          const lastDates = [...propValuations.map(v => v.valuation_date), ...(p.purchase_date ? [p.purchase_date] : [])];
+                          if (lastDates.length === 0) return null;
+                          const lastDate = lastDates.reduce((a, b) => (a > b ? a : b));
+                          const daysSince = Math.round((Date.now() - new Date(lastDate).getTime()) / 86400000);
+                          if (daysSince < 90) return null;
+                          return (
+                            <div onClick={e => { e.stopPropagation(); setPropertyModalTab("valuations"); setSelectedProperty(p); }}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6, padding: "4px 10px", borderRadius: 20, background: "#efe3c6", color: "#a07b2f", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                              📐 Ocenění po termínu ({daysSince} dní)
                             </div>
                           );
                         })()}

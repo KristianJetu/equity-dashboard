@@ -1,5 +1,22 @@
 # Equity Dashboard — Dokumentace projektu
 
+## Soubory k nemovitostem (nastaveno 2026-08-29)
+- **Supabase Storage** — bucket `property-files` (private), cesta `{user_id}/{property_id}/{timestamp}.{ext}`
+- **Tabulka `property_files`**: id, user_id, property_id, bucket, path, name, size, mime_type, category (`contract`/`insurance`/`photo`/`other`), note, created_at
+- **RLS**: uživatel vidí/nahrává/maže jen soubory kde `user_id = auth.uid()`. Storage politiky navíc kontrolují `(storage.foldername(name))[1] = auth.uid()::text`
+- **UI**: záložka "Soubory" v `PropertyModal` — upload s výběrem kategorie + poznámkou, seznam souborů, otevření přes signed URL (1 hod), mazání
+- **Migrace**: `supabase-migration-files.sql` — spuštěna a ověřena funkční 2026-08-29
+- **Signed URL**: soubory nejsou veřejně přístupné, URL se generuje na vyžádání přes `supabase.storage.createSignedUrl` s platností 1 hod
+
+
+## Ocenění nemovitostí (nastaveno 2026-09-06)
+- **Tabulka `property_valuations`**: id, user_id, property_id, value, valuation_date, note, created_at — historie odhadů hodnoty v čase
+- **RLS**: stejný vzorec jako `property_files` — politiky pro `authenticated` s `user_id = auth.uid()` na SELECT/INSERT/UPDATE/DELETE
+- **`properties.estimated_value` zůstává "aktuální hodnota"** — při přidání nového ocenění se přepíše (žádné jiné výpočty se neměnily, equity/LTV/cashflow projekce čtou dál `estimated_value`)
+- **UI**: záložka "Ocenění" v `PropertyModal` (mezi "Detaily" a "Soubory") — formulář na přidání (hodnota, datum, poznámka), historie se zobrazenou změnou oproti předchozímu záznamu, mazání
+- **Badge na kartě nemovitosti**: "Ocenění po termínu" pokud od posledního ocenění (nebo od `purchase_date`, pokud ještě žádné ocenění není) uplynulo 90+ dní; klik otevře rovnou záložku Ocenění. Nezobrazuje se pro spravované (`ownership_type = manager`) ani plánované nemovitosti.
+- **Migrace**: `supabase-migration-valuations.sql` — je potřeba spustit v Supabase SQL editoru
+
 ## Záloha databáze (nastaveno 2026-08-29)
 - **Skript:** `scripts/backup-database.mjs` — exportuje všech 9 tabulek přes `SUPABASE_SERVICE_ROLE_KEY` (obchází RLS), uloží kombinovaný soubor do `backups/backup-<datum>.json` a rozdělený po tabulkách do `backups/<datum>/*.json`. `raw_email_text` u plateb se vynechává (velké, jen diagnostické).
 - **`SUPABASE_SERVICE_ROLE_KEY`** je v `.env.local` (a měl by být i ve Vercelu, pokud se má používat i odjinud) — nikdy ho nedávat do gitu ani ho nevypisovat.
