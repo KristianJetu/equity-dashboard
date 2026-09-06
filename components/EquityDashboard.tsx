@@ -598,10 +598,94 @@ function PropertyFilesTab({ propertyId, supabase }: {
   );
 }
 
+// ── Valuation history chart ───────────────────────────────────────────────────
+function ValuationChart({ points }: { points: { ms: number; value: number }[] }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+
+  if (points.length < 2) return null;
+
+  const W = 600, H = 150, PAD_L = 46, PAD_R = 10, PAD_T = 14, PAD_B = 20;
+  const minMs = points[0].ms, maxMs = points[points.length - 1].ms;
+  const totalMs = Math.max(maxMs - minMs, 1);
+  const values = points.map(p => p.value);
+  const minV = Math.min(...values), maxV = Math.max(...values);
+  const pad = (maxV - minV) * 0.15 || maxV * 0.08 || 1;
+  const lo = Math.max(0, minV - pad), hi = maxV + pad;
+  const toX = (ms: number) => PAD_L + ((ms - minMs) / totalMs) * (W - PAD_L - PAD_R);
+  const toY = (v: number) => PAD_T + (1 - (v - lo) / (hi - lo)) * (H - PAD_T - PAD_B);
+
+  const linePts = points.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value).toFixed(1)}`).join(" ");
+  const fillPts = `${toX(minMs).toFixed(1)},${(H - PAD_B).toFixed(1)} ${linePts} ${toX(maxMs).toFixed(1)},${(H - PAD_B).toFixed(1)}`;
+  const gridVals = Array.from({ length: 4 }, (_, i) => lo + (hi - lo) * i / 3);
+  const showAllLabels = points.length <= 6;
+  const labelPoints = showAllLabels ? points : [points[0], points[points.length - 1]];
+
+  function handleMouseMove(e: React.MouseEvent<SVGSVGElement>) {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left) / rect.width) * W;
+    const ms = minMs + ((svgX - PAD_L) / (W - PAD_L - PAD_R)) * totalMs;
+    const idx = points.reduce((best, p, i) => Math.abs(p.ms - ms) < Math.abs(points[best].ms - ms) ? i : best, 0);
+    setHoverIdx(idx);
+  }
+
+  const hp = hoverIdx !== null ? points[hoverIdx] : null;
+  const hpX = hp ? toX(hp.ms) : 0;
+  const tooltipRight = hpX > W * 0.6;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width="100%" height={H}
+        style={{ display: "block", overflow: "visible", cursor: "crosshair" }}
+        onMouseMove={handleMouseMove} onMouseLeave={() => setHoverIdx(null)}>
+        <defs>
+          <linearGradient id="valfill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#c39a3f" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#c39a3f" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {gridVals.map((v, i) => (
+          <g key={i}>
+            <line x1={PAD_L} y1={toY(v).toFixed(1)} x2={W - PAD_R} y2={toY(v).toFixed(1)} stroke="#e8e2d6" strokeWidth="1" />
+            <text x={PAD_L - 6} y={toY(v) + 3} textAnchor="end" fontSize="9" fill="#9a9483">{fmtMil(v)}M</text>
+          </g>
+        ))}
+        <polygon points={fillPts} fill="url(#valfill)" />
+        <polyline points={linePts} fill="none" stroke="#c39a3f" strokeWidth="2.5" />
+        {points.map((p, i) => <circle key={i} cx={toX(p.ms).toFixed(1)} cy={toY(p.value).toFixed(1)} r="3.5" fill="#c39a3f" />)}
+        {labelPoints.map((p, i) => (
+          <text key={i} x={toX(p.ms).toFixed(1)} y={H - 4} textAnchor="middle" fontSize="9" fill="#9a9483">
+            {new Date(p.ms).toLocaleDateString("cs-CZ", { month: "numeric", year: "2-digit" })}
+          </text>
+        ))}
+        {hp && <line x1={hpX.toFixed(1)} y1={PAD_T} x2={hpX.toFixed(1)} y2={H - PAD_B} stroke="#888" strokeWidth="1" strokeDasharray="3 2" opacity="0.5" />}
+        {hp && <circle cx={hpX.toFixed(1)} cy={toY(hp.value).toFixed(1)} r="4.5" fill="#c39a3f" stroke="#fff" strokeWidth="1.5" />}
+      </svg>
+      {hp && (
+        <div style={{
+          position: "absolute", top: 0,
+          ...(tooltipRight ? { right: `${((W - hpX) / W * 100).toFixed(1)}%` } : { left: `${(hpX / W * 100 + 1).toFixed(1)}%` }),
+          background: "#1c2b22", color: "#f5f1e6", borderRadius: 8, padding: "6px 10px",
+          fontSize: 11, fontWeight: 600, pointerEvents: "none", whiteSpace: "nowrap",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.18)", zIndex: 10,
+        }}>
+          <div style={{ color: "#c9a24b", fontSize: 9, marginBottom: 2 }}>
+            {new Date(hp.ms).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })}
+          </div>
+          {fmt(hp.value)} Kč
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Property Valuations Tab ───────────────────────────────────────────────────
-function PropertyValuationsTab({ propertyId, currentValue, supabase, onValueChanged }: {
+function PropertyValuationsTab({ propertyId, currentValue, purchaseDate, purchasePrice, supabase, onValueChanged }: {
   propertyId: string;
   currentValue: number;
+  purchaseDate?: string;
+  purchasePrice?: string;
   supabase: ReturnType<typeof createClient>;
   onValueChanged: (newValue: number) => void;
 }) {
@@ -651,8 +735,27 @@ function PropertyValuationsTab({ propertyId, currentValue, supabase, onValueChan
 
   if (loading) return <div style={{ padding: 24, color: "#9a9483", textAlign: "center" }}>Načítám…</div>;
 
+  const chartPoints = (() => {
+    const pts: { ms: number; value: number }[] = [];
+    if (purchaseDate && purchasePrice) {
+      const ms = new Date(purchaseDate).getTime();
+      if (!isNaN(ms)) pts.push({ ms, value: Number(purchasePrice) });
+    }
+    for (const v of valuations) {
+      const ms = new Date(v.valuation_date).getTime();
+      if (!isNaN(ms)) pts.push({ ms, value: v.value });
+    }
+    return pts.sort((a, b) => a.ms - b.ms);
+  })();
+
   return (
     <div>
+      {chartPoints.length >= 2 && (
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e2d6", padding: "16px 16px 6px", marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Vývoj hodnoty</div>
+          <ValuationChart points={chartPoints} />
+        </div>
+      )}
       <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e2d6", padding: 16, marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Přidat ocenění</div>
         <div style={{ fontSize: 11, color: "#9a9483", marginBottom: 10 }}>Aktuální hodnota: {fmt(currentValue)} Kč</div>
@@ -861,6 +964,8 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved, default
           <PropertyValuationsTab
             propertyId={property.id}
             currentValue={Number(estimatedValue)}
+            purchaseDate={purchaseDate}
+            purchasePrice={purchasePrice}
             supabase={supabase}
             onValueChanged={v => { setEstimatedValue(String(v)); onSaved(); }}
           />
