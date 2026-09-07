@@ -1265,8 +1265,110 @@ function PaymentModal({
 
 
 
+// ── Optimistic scenario: simulate future acquisitions funded by accumulated cashflow,
+// gated by a bank-style income/DSTI test derived from a real ČSOB mortgage offer.
+type SimPt = { ms: number; value: number; debt: number };
+function simulateOptimisticAcquisitions(
+  allPoints: SimPt[],
+  nowMs: number,
+  conservativeRate: number,
+  properties: Property[],
+  mortgages: Mortgage[],
+  birthYearStr: string,
+  incomeEmploymentStr: string,
+  incomeOtherStr: string,
+  householdCostsStr: string,
+  assumedLtvPctStr: string,
+): SimPt[] | null {
+  const birthYear = Number(birthYearStr);
+  if (!birthYear) return null;
+
+  const NEW_LOAN_RATE = 0.0531; // z reálné bankovní nabídky (ČSOB, září 2026)
+  const STRESS_ADD = 0.02; // standardní stress-test navýšení sazby o 2 p.b.
+  const MAX_AGE = 70;
+  const YEAR_MS = 365 * 86400000;
+  const ltv = (Number(assumedLtvPctStr) || 70) / 100;
+  const income0 = (Number(incomeEmploymentStr) || 0) + (Number(incomeOtherStr) || 0);
+  const costs0 = Number(householdCostsStr) || 0;
+  const age0 = new Date(nowMs).getFullYear() - birthYear;
+
+  const ownedProps = properties.filter(p => p.ownership_type !== "manager");
+  const ownedRented = ownedProps.filter(p => p.status === "rented");
+  const baseMonthlyRent = ownedRented.reduce((s, p) => s + p.rent_amount, 0);
+  const baseMonthlyDebtService = mortgages.filter(m => ownedProps.some(p => p.id === m.property_id)).reduce((s, m) => s + m.monthly_payment, 0);
+  const baseMonthlyOtherCosts = ownedProps.reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0) + (p.monthly_costs ?? 0), 0);
+  const ownedRentedValue = ownedRented.reduce((s, p) => s + p.estimated_value, 0);
+  const avgRentYield = ownedRentedValue > 0 ? (baseMonthlyRent * 12) / ownedRentedValue : 0.045;
+
+  // Velikost "příští" akvizice vychází z průměru posledních dvou hypoték a dál roste
+  // stejným tempem jako konzervativní CAGR portfolia.
+  const recentLoans = mortgages
+    .map(m => ({ amt: m.loan_amount ?? m.outstanding_balance, ms: m.loan_start_date ? new Date(m.loan_start_date).getTime() : 0 }))
+    .filter(x => x.amt > 0)
+    .sort((a, b) => b.ms - a.ms)
+    .slice(0, 2);
+  let nextLoanSize = recentLoans.length > 0 ? recentLoans.reduce((s, x) => s + x.amt, 0) / recentLoans.length : 3000000;
+  const monthlyGrowth = Math.pow(1 + conservativeRate, 1 / 12);
+
+  function monthlyPayment(principal: number, annualRate: number, termYears: number): number {
+    const r = annualRate / 12, n = termYears * 12;
+    if (n <= 0) return Infinity;
+    if (r === 0) return principal / n;
+    return principal * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+  }
+
+  type SimProp = { startMs: number; purchasePrice: number; rentMonthly: number; loanAmount: number; paymentMonthly: number; termMs: number };
+  const simProps: SimProp[] = [];
+  let capital = 0;
+  let prevMs = nowMs;
+
+  const result: SimPt[] = [];
+  for (const base of allPoints) {
+    if (base.ms <= nowMs) continue;
+    const monthsElapsed = Math.max(0, (base.ms - prevMs) / (30 * 86400000));
+    prevMs = base.ms;
+    const age = age0 + (base.ms - nowMs) / YEAR_MS;
+
+    nextLoanSize *= Math.pow(monthlyGrowth, monthsElapsed);
+
+    const simRentTotal = simProps.reduce((s, sp) => s + (base.ms >= sp.startMs ? sp.rentMonthly : 0), 0);
+    const simDebtServiceTotal = simProps.reduce((s, sp) => s + (base.ms >= sp.startMs ? sp.paymentMonthly : 0), 0);
+    capital += (baseMonthlyRent - baseMonthlyDebtService - baseMonthlyOtherCosts + simRentTotal - simDebtServiceTotal) * monthsElapsed;
+
+    const purchasePrice = nextLoanSize / ltv;
+    const downPayment = purchasePrice - nextLoanSize;
+    const remainingTermYears = Math.min(30, Math.floor(MAX_AGE - age));
+
+    if (capital >= downPayment && remainingTermYears >= 5) {
+      const stressPayment = monthlyPayment(nextLoanSize, NEW_LOAN_RATE + STRESS_ADD, remainingTermYears);
+      const realPayment = monthlyPayment(nextLoanSize, NEW_LOAN_RATE, remainingTermYears);
+      const rentEstimate = (purchasePrice * avgRentYield) / 12;
+      const totalIncome = income0 + baseMonthlyRent + simRentTotal + rentEstimate;
+      const totalDebtService = baseMonthlyDebtService + simDebtServiceTotal + stressPayment;
+      // Bankovní income test z reálné nabídky: příjem − splátka (stress-testovaná) − životní náklady ≥ 0
+      if (totalIncome - totalDebtService - costs0 >= 0) {
+        simProps.push({ startMs: base.ms, purchasePrice, rentMonthly: rentEstimate, loanAmount: nextLoanSize, paymentMonthly: realPayment, termMs: remainingTermYears * YEAR_MS });
+        capital -= downPayment;
+      }
+    }
+
+    let simValue = 0, simDebt = 0;
+    for (const sp of simProps) {
+      if (base.ms < sp.startMs) continue;
+      simValue += sp.purchasePrice * Math.pow(1 + conservativeRate, (base.ms - sp.startMs) / YEAR_MS);
+      const payoffMs = sp.startMs + sp.termMs;
+      simDebt += base.ms >= payoffMs ? 0 : Math.max(0, sp.loanAmount * (payoffMs - base.ms) / sp.termMs);
+    }
+    result.push({ ms: base.ms, value: base.value + simValue, debt: base.debt + simDebt });
+  }
+  return result;
+}
+
 // ── Growth Chart ─────────────────────────────────────────────────────────────
-function GrowthChart({ properties, mortgages }: { properties: Property[]; mortgages: Mortgage[] }) {
+function GrowthChart({ properties, mortgages, dtiEnabled, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct }: {
+  properties: Property[]; mortgages: Mortgage[];
+  dtiEnabled: boolean; birthYear: string; incomeEmployment: string; incomeOther: string; householdCosts: string; assumedLtvPct: string;
+}) {
   const [hoverIdx, setHoverIdx] = React.useState<number | null>(null);
   const [range, setRange] = React.useState<"5" | "10" | "all">("all");
   const [scenario, setScenario] = React.useState<"pesimisticka" | "konzervativni" | "optimisticka">("konzervativni");
@@ -1359,8 +1461,16 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
   // acquisitions), scaled up for the optimistic case. Debt is identical in every scenario.
   const conservativeRate = (avgPortfolioGrowthPct ?? 5) / 100;
   const scenarioRate = scenario === "optimisticka" ? conservativeRate * 1.3 : conservativeRate;
+  // When the optional financial profile (věk + příjem) is vyplněný, Optimistická scénář
+  // reálně simuluje jednotlivé budoucí akvizice financované z naspořeného kapitálu (viz
+  // simulateOptimisticAcquisitions výše). Bez profilu spadne zpátky na jednoduché ×1,3 tempo.
+  const dtiSimulation = scenario === "optimisticka" && dtiEnabled
+    ? simulateOptimisticAcquisitions(allPoints, nowMs, conservativeRate, properties, mortgages, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct)
+    : null;
   const chartPoints: Pt[] = !showProjection || scenario === "pesimisticka" || !todayPt
     ? allPoints
+    : dtiSimulation
+    ? [...allPoints.filter(p => p.ms <= nowMs), ...dtiSimulation]
     : allPoints.map(p => p.ms <= nowMs ? p : {
         ms: p.ms,
         value: todayPt.value * Math.pow(1 + scenarioRate, (p.ms - nowMs) / (365 * 86400000)),
@@ -1459,7 +1569,9 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
           <div style={{ fontSize: 11, color: "#9a9483", marginTop: 6, lineHeight: 1.5 }}>
             {scenario === "pesimisticka" && "Pesimistická: každá nemovitost roste jen vlastním tempem (bez dalších nákupů) — žádná nová akvizice se nepředpokládá."}
             {scenario === "konzervativni" && "Konzervativní: pokračování dosavadního tempa — portfolio roste stejným historickým ročním tempem, jaké dosud reálně dosahovalo (viz \"Průměrný roční růst hodnoty portfolia\" níže)."}
-            {scenario === "optimisticka" && "Optimistická: historické tempo × 1,3 — počítá se zrychlením díky reinvestici nahromaděného kapitálu do dalších nemovitostí."}
+            {scenario === "optimisticka" && (dtiEnabled
+              ? "Optimistická: simuluje jednotlivé budoucí nákupy nemovitostí financované z naspořeného kapitálu, s ohledem na tvůj věk, příjem a bankovní income test (nastaveno v Nastavení → Finanční profil)."
+              : "Optimistická: historické tempo × 1,3 — pro přesnější odhad založený na tvém věku, příjmu a skutečné bonitě nastav Finanční profil v Nastavení.")}
           </div>
         </div>
       )}
@@ -3089,7 +3201,9 @@ export default function EquityDashboard() {
           )}
 
           {/* Chart */}
-          <GrowthChart properties={properties} mortgages={mortgages} />
+          <GrowthChart properties={properties} mortgages={mortgages}
+            dtiEnabled={dtiEnabled} birthYear={birthYear} incomeEmployment={incomeEmployment}
+            incomeOther={incomeOther} householdCosts={householdCosts} assumedLtvPct={assumedLtvPct} />
         </section>
 
         {/* NEMOVITOSTI */}

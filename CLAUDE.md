@@ -25,7 +25,13 @@
 - **Účel**: podklad pro budoucí DTI/DSTI výpočet v Optimistické projekci grafu "Jak rosteš v čase" (kolik dalších nemovitostí lze financovat, max. délka úvěru dle věku). Nepoužívá se nikde jinde v appce — příjem z nájmů appka počítá zvlášť z `properties`.
 - **UI**: v modalu Nastavení, pod přepínačem jazyka — celé za jedním přepínačem (`dtiEnabled`), skryté dokud ho uživatel sám nezapne. Text nad poli vysvětluje, k čemu přesně slouží.
 - **Migrace**: `supabase-migration-financial-profile.sql` — je potřeba spustit v Supabase SQL editoru
-- **Stav (2026-09-07)**: pole se ukládají, ale zatím se nikde nepoužívají ve výpočtu — DTI/DSTI model v Optimistické projekci se teprve staví (viz sekce Ocenění/Cashflow výše pro kontext k projekcím grafu)
+- **Stav (2026-09-07)**: implementováno — `simulateOptimisticAcquisitions()` v `EquityDashboard.tsx` simuluje jednotlivé budoucí akvizice měsíc po měsíci (5 let dopředu):
+  - Hromadí čistý cashflow portfolia (nájmy − splátky − pojistky − náklady) jako "naspořený kapitál"
+  - Jakmile kapitál pokryje zálohu na další nemovitost (cena × (1 − LTV), výchozí LTV 70 %), zkontroluje bankovní income test odvozený z reálné nabídky ČSOB: `příjem (zaměstnání+jiné+nájmy vč. nové) − všechny splátky (nová počítaná při sazbě +2 p.b. stress test) − životní náklady ≥ 0`
+  - Cena další akvizice vychází z průměru posledních dvou hypoték a roste tempem konzervativního CAGR portfolia; nájem nové nemovitosti se odhaduje z průměrného poměru nájem/hodnota stávajícího portfolia
+  - Splatnost nové hypotéky = min(30 let, do 70 let věku) — bez vyplněného roku narození se akvizice nesimulují vůbec
+  - Sazba nových úvěrů zůstává konstantní (5,31 % p.a., z nabídky) — bez vlastní budoucí projekce úrokových sazeb
+  - Bez zapnutého Finančního profilu spadne Optimistická zpátky na jednoduché "historický CAGR × 1,3"
 
 ## Záloha databáze (nastaveno 2026-08-29)
 - **Skript:** `scripts/backup-database.mjs` — exportuje všech 9 tabulek přes `SUPABASE_SERVICE_ROLE_KEY` (obchází RLS), uloží kombinovaný soubor do `backups/backup-<datum>.json` a rozdělený po tabulkách do `backups/<datum>/*.json`. `raw_email_text` u plateb se vynechává (velké, jen diagnostické).
