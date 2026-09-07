@@ -912,7 +912,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved, default
     setTimeout(() => { onSaved(); onClose(); }, 800);
   }
 
-  const field = (label: string, value: string, onChange: (v: string) => void, type = "number", suffix = "") => {
+  const field = (label: string, value: string, onChange: (v: string) => void, type = "number", suffix = "", hint = "") => {
     const isMoney = type === "money";
     const displayValue = isMoney && value !== "" ? Number(value).toLocaleString("cs-CZ") : value;
     return (
@@ -936,6 +936,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved, default
             style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22" }} />
           {suffix && <span style={{ fontSize: 13, color: "#9a9483" }}>{suffix}</span>}
         </div>
+        {hint && <div style={{ fontSize: 11, color: "#9a9483", marginTop: 5 }}>{hint}</div>}
       </div>
     );
   };
@@ -1049,8 +1050,8 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved, default
           )}
         </div>
         {(mortgage || addMortgage) && <>
-          {field("Výše úvěru", loanAmount, setLoanAmount, "money", "Kč")}
-          {field("Zbývající dluh", outstandingBalance, setOutstandingBalance, "money", "Kč")}
+          {field("Výše úvěru", loanAmount, setLoanAmount, "money", "Kč", "Historická částka půjčená bankou při čerpání — appka ji nikde nepočítá, je jen pro přehled.")}
+          {field("Zbývající dluh", outstandingBalance, setOutstandingBalance, "money", "Kč", "Aktuální nedoplatek — z něj appka počítá vlastní kapitál, LTV a výnos na kapitál.")}
           {field("Datum čerpání", loanStartDate, setLoanStartDate, "date")}
           {field("Úroková sazba", interestRate, setInterestRate, "number", "%")}
           {field("Splatnost", loanTermYears, setLoanTermYears, "number", "let")}
