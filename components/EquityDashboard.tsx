@@ -1050,8 +1050,8 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved, default
           )}
         </div>
         {(mortgage || addMortgage) && <>
-          {field("Výše úvěru", loanAmount, setLoanAmount, "money", "Kč", "Historická částka půjčená bankou při čerpání — appka ji nikde nepočítá, je jen pro přehled.")}
-          {field("Zbývající dluh", outstandingBalance, setOutstandingBalance, "money", "Kč", "Aktuální nedoplatek — z něj appka počítá vlastní kapitál, LTV a výnos na kapitál.")}
+          {field("Výše úvěru", loanAmount, setLoanAmount, "money", "Kč", "Historická částka půjčená bankou při čerpání — jen pro přehled, nepoužívá se ve výpočtech.")}
+          {field("Zbývající dluh", outstandingBalance, setOutstandingBalance, "money", "Kč", "Aktuální nedoplatek — používá se pro výpočet vlastního kapitálu, LTV a výnosu na kapitál.")}
           {field("Datum čerpání", loanStartDate, setLoanStartDate, "date")}
           {field("Úroková sazba", interestRate, setInterestRate, "number", "%")}
           {field("Splatnost", loanTermYears, setLoanTermYears, "number", "let")}
