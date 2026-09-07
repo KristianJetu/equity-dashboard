@@ -1270,7 +1270,7 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
   const [hoverIdx, setHoverIdx] = React.useState<number | null>(null);
   const [range, setRange] = React.useState<"5" | "10" | "all">("all");
   const [scenario, setScenario] = React.useState<"pesimisticka" | "konzervativni" | "optimisticka">("konzervativni");
-  const [showProjection, setShowProjection] = React.useState(false);
+  const [showProjection, setShowProjection] = React.useState(true);
   const svgRef = React.useRef<SVGSVGElement>(null);
 
   const W = 600, H = 240, PAD_L = 40, PAD_R = 16, PAD_T = 20, PAD_B = 30;
@@ -1426,6 +1426,14 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
               </button>
             ))}
           </div>
+          {/* Predikce do budoucna */}
+          <button onClick={() => setShowProjection(v => !v)}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "7px 12px", borderRadius: 16, border: `1.5px solid ${showProjection ? "#1f3d2e" : "#d2cab4"}`, background: showProjection ? "#1f3d2e" : "transparent", color: showProjection ? "#f5f1e6" : "#5c6359", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+            <span style={{ width: 26, height: 14, borderRadius: 8, background: showProjection ? "#c9a24b" : "#d2cab4", position: "relative", display: "inline-block", flexShrink: 0 }}>
+              <span style={{ position: "absolute", top: 1.5, left: showProjection ? 13 : 1.5, width: 11, height: 11, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
+            </span>
+            Predikce do budoucna
+          </button>
           {/* Legend */}
           <div className="flex gap-4" style={{ fontSize: 11, fontWeight: 600, color: "#5c6359" }}>
             {([{ color: "#1f3d2e", label: "Majetek" }, { color: "#c39a3f", label: "Hodnota portfolia" }, { color: "#b08c7a", label: "Dluh" }] as {color:string;label:string}[]).map(({ color, label }) => (
@@ -1436,37 +1444,25 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
           </div>
         </div>
       </div>
-      {/* Predikce do budoucna */}
-      <div style={{ marginBottom: 14 }}>
-        <div className="flex items-center gap-2" style={{ flexWrap: "wrap" }}>
-          <button onClick={() => setShowProjection(v => !v)}
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 16, border: `1.5px solid ${showProjection ? "#1f3d2e" : "#d2cab4"}`, background: showProjection ? "#1f3d2e" : "transparent", color: showProjection ? "#f5f1e6" : "#5c6359", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-            <span style={{ width: 26, height: 14, borderRadius: 8, background: showProjection ? "#c9a24b" : "#d2cab4", position: "relative", display: "inline-block", flexShrink: 0 }}>
-              <span style={{ position: "absolute", top: 1.5, left: showProjection ? 13 : 1.5, width: 11, height: 11, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
-            </span>
-            Predikce do budoucna
-          </button>
-          {showProjection && (
-            <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 16, padding: 2 }}>
-              {([["pesimisticka", "Pesimistická"], ["konzervativni", "Konzervativní"], ["optimisticka", "Optimistická"]] as const).map(([val, label]) => (
-                <button key={val} onClick={() => setScenario(val)}
-                  style={{ padding: "7px 14px", borderRadius: 14, border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer",
-                    background: scenario === val ? "#1f3d2e" : "transparent",
-                    color: scenario === val ? "#f5f1e6" : "#5c6359" }}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        {showProjection && (
+      {showProjection && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: "inline-flex", background: "#e6e0d0", borderRadius: 16, padding: 2 }}>
+            {([["pesimisticka", "Pesimistická"], ["konzervativni", "Konzervativní"], ["optimisticka", "Optimistická"]] as const).map(([val, label]) => (
+              <button key={val} onClick={() => setScenario(val)}
+                style={{ padding: "7px 14px", borderRadius: 14, border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                  background: scenario === val ? "#1f3d2e" : "transparent",
+                  color: scenario === val ? "#f5f1e6" : "#5c6359" }}>
+                {label}
+              </button>
+            ))}
+          </div>
           <div style={{ fontSize: 11, color: "#9a9483", marginTop: 6, lineHeight: 1.5 }}>
             {scenario === "pesimisticka" && "Pesimistická: každá nemovitost roste jen vlastním tempem (bez dalších nákupů) — žádná nová akvizice se nepředpokládá."}
             {scenario === "konzervativni" && "Konzervativní: pokračování dosavadního tempa — portfolio roste stejným historickým ročním tempem, jaké dosud reálně dosahovalo (viz \"Průměrný roční růst hodnoty portfolia\" níže)."}
             {scenario === "optimisticka" && "Optimistická: historické tempo × 1,3 — počítá se zrychlením díky reinvestici nahromaděného kapitálu do dalších nemovitostí."}
           </div>
-        )}
-      </div>
+        </div>
+      )}
       <div className="eq-chart-wrap" style={{ position: "relative" }}>
         <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width="100%" height="250"
           style={{ display: "block", overflow: "visible", cursor: "crosshair" }}
