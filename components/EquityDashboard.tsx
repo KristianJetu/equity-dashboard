@@ -122,7 +122,7 @@ const translations = {
     najemnici: "Nájemníci",
     komunikace: "Komunikace",
     asistent: "Asistent",
-    dluhy: "Dluhy",
+    dluhy: "Půjčky",
     ukoly: "Úkoly",
     nastaveni: "Nastavení",
     majetek: "Majetek",
@@ -135,9 +135,9 @@ const translations = {
     anglictina: "English",
     zavrit: "Zavřít",
     tvujVlastniKapital: "Tvůj vlastní kapitál",
-    bezDluhu: "Bez dluhů",
-    vcBilanceZDluhy: "Vč. bilance z Dluhy",
-    bilanceZDluhy: "bilance z Dluhy",
+    bezDluhu: "Bez půjček",
+    vcBilanceZDluhy: "Vč. bilance z Půjček",
+    bilanceZDluhy: "bilance z Půjček",
     hodnotaPortfolia: "Hodnota portfolia",
     vlastniKapital: "Vlastní kapitál",
     uveryNaNemovitosti: "Úvěry na nemovitosti",
@@ -195,7 +195,7 @@ const translations = {
     najemnici: "Tenants",
     komunikace: "Communication",
     asistent: "Assistant",
-    dluhy: "Debts",
+    dluhy: "Loans",
     ukoly: "Tasks",
     nastaveni: "Settings",
     majetek: "Net worth",
@@ -208,9 +208,9 @@ const translations = {
     anglictina: "English",
     zavrit: "Close",
     tvujVlastniKapital: "Your net worth",
-    bezDluhu: "Excl. debts",
-    vcBilanceZDluhy: "Incl. debts balance",
-    bilanceZDluhy: "debts balance",
+    bezDluhu: "Excl. loans",
+    vcBilanceZDluhy: "Incl. loans balance",
+    bilanceZDluhy: "loans balance",
     hodnotaPortfolia: "Portfolio value",
     vlastniKapital: "Net worth",
     uveryNaNemovitosti: "Property loans",
@@ -289,7 +289,7 @@ const NAV_ITEMS = [
     icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.6-.8L3 21l1.8-5.4A8.5 8.5 0 1 1 21 11.5z" /></svg>,
   },
   {
-    id: "dluhy", title: "Dluhy",
+    id: "dluhy", title: "Půjčky",
     icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
   },
   {
@@ -3190,7 +3190,7 @@ export default function EquityDashboard() {
                   </button>
                   <button onClick={() => setShowDebtsInCashflow(true)}
                     style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: showDebtsInCashflow ? "#4a7c59" : "transparent", color: showDebtsInCashflow ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                    Vč. bilance úvěru
+                    Vč. půjček
                   </button>
                 </div>
               )}
