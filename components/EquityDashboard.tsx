@@ -837,6 +837,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved, default
   const [monthlyPayment, setMonthlyPayment] = useState(String(mortgage?.monthly_payment ?? ""));
   const [refixDate, setRefixDate] = useState(mortgage?.refix_date ?? "");
   const [loanAmount, setLoanAmount] = useState(String(mortgage?.loan_amount ?? ""));
+  const [outstandingBalance, setOutstandingBalance] = useState(String(mortgage?.outstanding_balance ?? ""));
   const [loanStartDate, setLoanStartDate] = useState(mortgage?.loan_start_date ?? "");
   const [interestRate, setInterestRate] = useState(String(mortgage?.interest_rate ?? ""));
   const [loanTermYears, setLoanTermYears] = useState(String(mortgage?.loan_term_years ?? ""));
@@ -882,7 +883,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved, default
     if (mortgage) {
       const { error: mortErr } = await supabase.from("mortgages").update({
         monthly_payment: Number(monthlyPayment),
-        outstanding_balance: loanAmount ? Number(loanAmount) : mortgage.outstanding_balance,
+        outstanding_balance: outstandingBalance ? Number(outstandingBalance) : mortgage.outstanding_balance,
         refix_date: refixDate || null,
         loan_amount: loanAmount ? Number(loanAmount) : null,
         loan_start_date: loanStartDate || null,
@@ -896,7 +897,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved, default
         user_id: user!.id,
         property_id: property.id,
         bank: null,
-        outstanding_balance: Number(loanAmount),
+        outstanding_balance: outstandingBalance ? Number(outstandingBalance) : Number(loanAmount),
         monthly_payment: Number(monthlyPayment) || 0,
         refix_date: refixDate || null,
         loan_amount: Number(loanAmount),
@@ -1049,6 +1050,7 @@ function PropertyModal({ property, mortgage, supabase, onClose, onSaved, default
         </div>
         {(mortgage || addMortgage) && <>
           {field("Výše úvěru", loanAmount, setLoanAmount, "money", "Kč")}
+          {field("Zbývající dluh", outstandingBalance, setOutstandingBalance, "money", "Kč")}
           {field("Datum čerpání", loanStartDate, setLoanStartDate, "date")}
           {field("Úroková sazba", interestRate, setInterestRate, "number", "%")}
           {field("Splatnost", loanTermYears, setLoanTermYears, "number", "let")}
