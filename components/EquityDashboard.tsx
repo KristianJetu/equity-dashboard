@@ -2849,7 +2849,7 @@ export default function EquityDashboard() {
                 <div style={{ flex: 1, paddingRight: 12 }}>
                   <div style={{ fontWeight: 600, fontSize: 14, color: "#1c2b22" }}>Finanční profil pro projekce</div>
                   <div style={{ fontSize: 12, color: "#7c8378", marginTop: 4 }}>
-                    Volitelné — použije se jen pro Optimistickou projekci v grafu "Jak rosteš v čase" (odhad, kolik dalších nemovitostí si ještě můžeš dovolit financovat). Nikde jinde v appce se to nepoužije.
+                    Volitelné — použije se jen pro Optimistickou projekci v grafu "Jak rosteš v čase" (odhad, kolik dalších nemovitostí si ještě můžeš dovolit financovat). Nikde jinde se nepoužije.
                   </div>
                 </div>
                 <button onClick={() => { const next = !dtiEnabled; setDtiEnabled(next); saveFinancialProfile({ dtiEnabled: next }); }}
@@ -2878,7 +2878,7 @@ export default function EquityDashboard() {
                     <input type="number" value={incomeOther} onChange={e => setIncomeOther(e.target.value)}
                       placeholder="Kč"
                       style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
-                    <div style={{ fontSize: 11, color: "#9a9483", marginTop: 4 }}>Např. další práce, dividendy — nájmy z nemovitostí appka počítá zvlášť, sem je nepiš.</div>
+                    <div style={{ fontSize: 11, color: "#9a9483", marginTop: 4 }}>Např. další práce, dividendy — nájmy z nemovitostí se počítají zvlášť, sem je nepiš.</div>
                   </div>
                   <button onClick={() => saveFinancialProfile()} disabled={savingFinancialProfile}
                     style={{ padding: "8px 0", borderRadius: 8, border: "none", background: savingFinancialProfile ? "#e8e2d6" : "#1f3d2e", color: "#f5f1e6", fontSize: 13, fontWeight: 600, cursor: savingFinancialProfile ? "default" : "pointer" }}>
