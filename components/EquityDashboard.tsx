@@ -3109,6 +3109,21 @@ export default function EquityDashboard() {
                         </div>
                       );
                     })()}
+                    {p.status === "rented" && !isManaged && p.rent_amount > 0 && p.estimated_value > 0 && (() => {
+                      const grossYield = (p.rent_amount * 12 / p.estimated_value) * 100;
+                      const monthlyOut = (mortgage?.monthly_payment ?? 0) + (p.insurance_amount ? p.insurance_amount / 12 : 0) + (p.monthly_costs ?? 0);
+                      const annualNetCashflow = (p.rent_amount - monthlyOut) * 12;
+                      const equityValue = p.estimated_value - (mortgage?.outstanding_balance ?? 0);
+                      const equityYield = equityValue > 0 ? (annualNetCashflow / equityValue) * 100 : null;
+                      return (
+                        <div style={{ marginTop: 8, display: "flex", gap: 16, fontSize: 11, color: "#9a9483" }}>
+                          <span>Hrubý výnos <strong style={{ color: "#1f3d2e" }}>{grossYield.toFixed(1)} %</strong></span>
+                          {equityYield !== null && (
+                            <span>Výnos na kapitál <strong style={{ color: equityYield >= 0 ? "#1f3d2e" : "#c0392b" }}>{equityYield.toFixed(1)} %</strong></span>
+                          )}
+                        </div>
+                      );
+                    })()}
                     {/* Soubory — hero + miniatury */}
                     {(() => {
                       const pFiles = propertyFiles.filter(f => f.property_id === p.id);
