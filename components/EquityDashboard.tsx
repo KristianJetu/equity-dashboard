@@ -1348,6 +1348,10 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
   const avgGrowthPct = firstPt && todayPt && firstPt.ms < todayPt.ms && firstPt.value - firstPt.debt > 0
     ? (Math.pow((todayPt.value - todayPt.debt) / (firstPt.value - firstPt.debt), 1 / ((todayPt.ms - firstPt.ms) / (365 * 86400000))) - 1) * 100
     : null;
+  const firstValPt = allPoints.find(p => p.value > 0);
+  const avgPortfolioGrowthPct = firstValPt && todayPt && firstValPt.ms < todayPt.ms
+    ? (Math.pow(todayPt.value / firstValPt.value, 1 / ((todayPt.ms - firstValPt.ms) / (365 * 86400000))) - 1) * 100
+    : null;
 
   const purchaseMarkers: { ms: number }[] = [];
   const seenDates = new Set<string>();
@@ -1470,9 +1474,14 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
         )}
       </div>
       {/* Avg annual growth stat */}
-      {avgGrowthPct !== null && (
-        <div style={{ marginTop: 10, display: "flex", gap: 24, fontSize: 12, color: "#7c8378" }}>
-          <span>{"Průměrný roční růst majetku:"} <strong style={{ color: avgGrowthPct >= 0 ? "#4a7c59" : "#c0392b" }}>{avgGrowthPct >= 0 ? "+" : ""}{avgGrowthPct.toFixed(1)} %</strong></span>
+      {(avgGrowthPct !== null || avgPortfolioGrowthPct !== null) && (
+        <div style={{ marginTop: 10, display: "flex", gap: 24, fontSize: 12, color: "#7c8378", flexWrap: "wrap" }}>
+          {avgGrowthPct !== null && (
+            <span>{"Průměrný roční růst majetku:"} <strong style={{ color: avgGrowthPct >= 0 ? "#4a7c59" : "#c0392b" }}>{avgGrowthPct >= 0 ? "+" : ""}{avgGrowthPct.toFixed(1)} %</strong></span>
+          )}
+          {avgPortfolioGrowthPct !== null && (
+            <span>{"Průměrný roční růst hodnoty portfolia:"} <strong style={{ color: avgPortfolioGrowthPct >= 0 ? "#c39a3f" : "#c0392b" }}>{avgPortfolioGrowthPct >= 0 ? "+" : ""}{avgPortfolioGrowthPct.toFixed(1)} %</strong></span>
+          )}
         </div>
       )}
     </div>
