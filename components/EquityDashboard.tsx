@@ -2584,17 +2584,15 @@ export default function EquityDashboard() {
   const valuationGrowth = (() => {
     let delta = 0;
     let latestDate: string | null = null;
-    let latestPropName: string | null = null;
+    const propNames: string[] = [];
     for (const p of ownedProperties) {
       const propVals = valuations.filter(v => v.property_id === p.id);
       if (propVals.length < 2) continue;
       delta += propVals[0].value - propVals[1].value;
-      if (!latestDate || propVals[0].valuation_date > latestDate) {
-        latestDate = propVals[0].valuation_date;
-        latestPropName = p.name;
-      }
+      propNames.push(p.name);
+      if (!latestDate || propVals[0].valuation_date > latestDate) latestDate = propVals[0].valuation_date;
     }
-    return latestDate ? { delta, date: latestDate, propName: latestPropName } : null;
+    return latestDate ? { delta, date: latestDate, propNames } : null;
   })();
   const debtsBalance = debts.reduce((s, d) => s + (d.direction === "they_owe" ? d.amount_remaining : -d.amount_remaining), 0);
   const displayEquity = showDebtsBalance ? equity + debtsBalance : equity;
@@ -2866,7 +2864,7 @@ export default function EquityDashboard() {
                   </div>
                   {valuationGrowth && (
                     <div style={{ fontSize: 13, color: valuationGrowth.delta >= 0 ? "#9db8a6" : "#e0a8a0", marginTop: 8, fontWeight: 600 }}>
-                      {valuationGrowth.delta >= 0 ? "▲ +" : "▼ "}{fmt(Math.abs(valuationGrowth.delta))} Kč od posledního ocenění ({fmtDate(valuationGrowth.date)}{valuationGrowth.propName ? `, ${valuationGrowth.propName}` : ""})
+                      {valuationGrowth.delta >= 0 ? "▲ +" : "▼ "}{fmt(Math.abs(valuationGrowth.delta))} Kč od posledního ocenění ({monthLabel(valuationGrowth.date)}, {valuationGrowth.propNames.join(", ")})
                     </div>
                   )}
                   {totalDebt > 0 && (
