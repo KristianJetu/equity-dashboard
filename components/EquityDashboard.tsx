@@ -1270,7 +1270,7 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
   const [hoverIdx, setHoverIdx] = React.useState<number | null>(null);
   const [range, setRange] = React.useState<"5" | "10" | "all">("all");
   const [scenario, setScenario] = React.useState<"pesimisticka" | "konzervativni" | "optimisticka">("konzervativni");
-  const [showProjection, setShowProjection] = React.useState(true);
+  const [showProjection, setShowProjection] = React.useState(false);
   const svgRef = React.useRef<SVGSVGElement>(null);
 
   const W = 600, H = 240, PAD_L = 40, PAD_R = 16, PAD_T = 20, PAD_B = 30;
