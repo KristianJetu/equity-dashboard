@@ -1269,6 +1269,7 @@ function PaymentModal({
 function GrowthChart({ properties, mortgages }: { properties: Property[]; mortgages: Mortgage[] }) {
   const [hoverIdx, setHoverIdx] = React.useState<number | null>(null);
   const [range, setRange] = React.useState<"5" | "10" | "all">("all");
+  const [scenario, setScenario] = React.useState<"pesimisticka" | "konzervativni" | "optimisticka">("konzervativni");
   const svgRef = React.useRef<SVGSVGElement>(null);
 
   const W = 600, H = 240, PAD_L = 40, PAD_R = 16, PAD_T = 20, PAD_B = 30;
@@ -1337,15 +1338,43 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
 
   if (allPoints.length === 0) return null;
 
-  const maxVal = Math.max(...allPoints.map(p => p.value));
-  const minVal = Math.min(...allPoints.map(p => Math.min(p.value - p.debt, 0)));
+  // Average annual growth (from first point with a positive value/equity to today) — this is
+  // always computed from the real historical trajectory (allPoints), regardless of which
+  // future scenario is selected below, since it describes the past, not a projection.
+  const firstPt = allPoints.find(p => p.value - p.debt > 0);
+  const todayPt = allPoints.find(p => p.ms >= nowMs);
+  const avgGrowthPct = firstPt && todayPt && firstPt.ms < todayPt.ms && firstPt.value - firstPt.debt > 0
+    ? (Math.pow((todayPt.value - todayPt.debt) / (firstPt.value - firstPt.debt), 1 / ((todayPt.ms - firstPt.ms) / (365 * 86400000))) - 1) * 100
+    : null;
+  const firstValPt = allPoints.find(p => p.value > 0);
+  const avgPortfolioGrowthPct = firstValPt && todayPt && firstValPt.ms < todayPt.ms
+    ? (Math.pow(todayPt.value / firstValPt.value, 1 / ((todayPt.ms - firstValPt.ms) / (365 * 86400000))) - 1) * 100
+    : null;
+
+  // Future projection scenarios. "Pesimistická" keeps the original per-property projection
+  // (each property compounds at its own annual_growth_pct — i.e. organic appreciation only,
+  // no further acquisitions). "Konzervativní" and "optimistická" instead extrapolate the whole
+  // portfolio forward using the historical blended CAGR above (which already reflects past
+  // acquisitions), scaled up for the optimistic case. Debt is identical in every scenario.
+  const conservativeRate = (avgPortfolioGrowthPct ?? 5) / 100;
+  const scenarioRate = scenario === "optimisticka" ? conservativeRate * 1.3 : conservativeRate;
+  const chartPoints: Pt[] = scenario === "pesimisticka" || !todayPt
+    ? allPoints
+    : allPoints.map(p => p.ms <= nowMs ? p : {
+        ms: p.ms,
+        value: todayPt.value * Math.pow(1 + scenarioRate, (p.ms - nowMs) / (365 * 86400000)),
+        debt: p.debt,
+      });
+
+  const maxVal = Math.max(...chartPoints.map(p => p.value));
+  const minVal = Math.min(...chartPoints.map(p => Math.min(p.value - p.debt, 0)));
   const valRange = maxVal - minVal || 1;
   const toX = (ms: number) => PAD_L + ((ms - minMs) / totalMs) * (W - PAD_L - PAD_R);
   const toY = (v: number) => PAD_T + (1 - (v - minVal) / valRange) * (H - PAD_T - PAD_B);
 
-  const valuePts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value).toFixed(1)}`).join(" ");
-  const debtPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.debt).toFixed(1)}`).join(" ");
-  const equityPts = allPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value - p.debt).toFixed(1)}`).join(" ");
+  const valuePts = chartPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value).toFixed(1)}`).join(" ");
+  const debtPts = chartPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.debt).toFixed(1)}`).join(" ");
+  const equityPts = chartPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value - p.debt).toFixed(1)}`).join(" ");
   const equityFill = equityPts + ` ${toX(maxMs).toFixed(1)},${toY(minVal).toFixed(1)} ${toX(minMs).toFixed(1)},${toY(minVal).toFixed(1)}`;
   const todayX = toX(nowMs);
 
@@ -1356,17 +1385,6 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
   for (let y = firstLabel; y <= endYear; y += 5) labelMs.push(new Date(y, 0, 1).getTime());
 
   const gridVals = [maxVal * 0.25, maxVal * 0.5, maxVal * 0.75, maxVal].map(v => ({ v, y: toY(v) }));
-
-  // Average annual equity growth (from first point with value > 0 to today)
-  const firstPt = allPoints.find(p => p.value - p.debt > 0);
-  const todayPt = allPoints.find(p => p.ms >= nowMs);
-  const avgGrowthPct = firstPt && todayPt && firstPt.ms < todayPt.ms && firstPt.value - firstPt.debt > 0
-    ? (Math.pow((todayPt.value - todayPt.debt) / (firstPt.value - firstPt.debt), 1 / ((todayPt.ms - firstPt.ms) / (365 * 86400000))) - 1) * 100
-    : null;
-  const firstValPt = allPoints.find(p => p.value > 0);
-  const avgPortfolioGrowthPct = firstValPt && todayPt && firstValPt.ms < todayPt.ms
-    ? (Math.pow(todayPt.value / firstValPt.value, 1 / ((todayPt.ms - firstValPt.ms) / (365 * 86400000))) - 1) * 100
-    : null;
 
   const purchaseMarkers: { ms: number }[] = [];
   const seenDates = new Set<string>();
@@ -1383,11 +1401,11 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
     const rect = svg.getBoundingClientRect();
     const svgX = ((e.clientX - rect.left) / rect.width) * W;
     const ms = minMs + ((svgX - PAD_L) / (W - PAD_L - PAD_R)) * totalMs;
-    const idx = allPoints.reduce((best, p, i) => Math.abs(p.ms - ms) < Math.abs(allPoints[best].ms - ms) ? i : best, 0);
+    const idx = chartPoints.reduce((best, p, i) => Math.abs(p.ms - ms) < Math.abs(chartPoints[best].ms - ms) ? i : best, 0);
     setHoverIdx(idx);
   };
 
-  const hp = hoverIdx !== null ? allPoints[hoverIdx] : null;
+  const hp = hoverIdx !== null ? chartPoints[hoverIdx] : null;
   const hpX = hp ? toX(hp.ms) : 0;
   const tooltipRight = hpX > W * 0.6;
 
@@ -1404,6 +1422,17 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
                   background: range === r ? "#1f3d2e" : "transparent",
                   color: range === r ? "#f5f1e6" : "#5c6359" }}>
                 {r === "all" ? "Vše" : `${r} let`}
+              </button>
+            ))}
+          </div>
+          {/* Scénář projekce */}
+          <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 16, padding: 2 }}>
+            {([["pesimisticka", "Pesimistická"], ["konzervativni", "Konzervativní"], ["optimisticka", "Optimistická"]] as const).map(([val, label]) => (
+              <button key={val} onClick={() => setScenario(val)}
+                style={{ padding: "8px 14px", borderRadius: 14, border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                  background: scenario === val ? "#1f3d2e" : "transparent",
+                  color: scenario === val ? "#f5f1e6" : "#5c6359" }}>
+                {label}
               </button>
             ))}
           </div>
@@ -1441,7 +1470,7 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
           <polyline points={valuePts} fill="none" stroke="#c39a3f" strokeWidth="2" />
           <polyline points={equityPts} fill="none" stroke="#1f3d2e" strokeWidth="3" />
           {(() => {
-            const tp = allPoints.find(p => p.ms >= nowMs);
+            const tp = chartPoints.find(p => p.ms >= nowMs);
             if (!tp) return null;
             return <circle cx={todayX.toFixed(1)} cy={toY(tp.value - tp.debt).toFixed(1)} r="4.5" fill="#1f3d2e" />;
           })()}
