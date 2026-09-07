@@ -1480,7 +1480,7 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
 }
 
 // ── Cashflow Extra (donut + nejlepší/nejhorší) ────────────────────────────────
-function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Property[]; mortgages: Mortgage[]; showPlanned: boolean }) {
+function CashflowExtra({ properties, mortgages, debts, showPlanned, showDebtsInCashflow }: { properties: Property[]; mortgages: Mortgage[]; debts: Debt[]; showPlanned: boolean; showDebtsInCashflow: boolean }) {
   if (properties.length === 0) return null;
 
   const visibleProps = showPlanned ? properties : properties.filter(p => p.status !== "planned");
@@ -1491,7 +1491,9 @@ function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Pro
   const totalInsurance = ownedProps.reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0), 0);
   const totalCosts = ownedProps.reduce((s, p) => s + (p.monthly_costs ?? 0), 0);
   const totalMgmtFee = managedProps.reduce((s, p) => s + (p.management_fee ?? 0), 0);
-  const net = totalRent - totalMortgage - totalInsurance - totalCosts + totalMgmtFee;
+  const debtsIncome = showDebtsInCashflow ? debts.filter(d => d.direction === "they_owe").reduce((s, d) => s + (d.monthly_payment ?? 0), 0) : 0;
+  const debtsExpense = showDebtsInCashflow ? debts.filter(d => d.direction === "i_owe").reduce((s, d) => s + (d.monthly_payment ?? 0), 0) : 0;
+  const net = totalRent + debtsIncome - totalMortgage - totalInsurance - totalCosts - debtsExpense + totalMgmtFee;
 
   const propCashflow = visibleProps.map(p => {
     const isManaged = p.ownership_type === "manager";
@@ -1509,6 +1511,7 @@ function CashflowExtra({ properties, mortgages, showPlanned }: { properties: Pro
     { label: "Splátky hypoték", value: totalMortgage, color: "#b85c5c" },
     { label: "Pojistky", value: Math.round(totalInsurance), color: "#c4a882" },
     { label: "Náklady", value: totalCosts, color: "#a89070" },
+    { label: "Splátky půjček", value: debtsExpense, color: "#8a6d8f" },
     { label: "Čistý příjem", value: Math.max(net, 0), color: "#1f3d2e" },
   ].filter(s => s.value > 0);
   const total = slices.reduce((s, sl) => s + sl.value, 0) || 1;
@@ -3454,7 +3457,7 @@ export default function EquityDashboard() {
             );
           })()}
 
-          <CashflowExtra properties={properties} mortgages={mortgages} showPlanned={showPlanned} />
+          <CashflowExtra properties={properties} mortgages={mortgages} debts={debts} showPlanned={showPlanned} showDebtsInCashflow={showDebtsInCashflow} />
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>{t("historiePlateb")}</div>
