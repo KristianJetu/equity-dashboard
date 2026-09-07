@@ -2366,6 +2366,11 @@ export default function EquityDashboard() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState("··");
   const [language, setLanguage] = useState<"cs" | "en">("cs");
+  const [dtiEnabled, setDtiEnabled] = useState(false);
+  const [birthYear, setBirthYear] = useState("");
+  const [incomeEmployment, setIncomeEmployment] = useState("");
+  const [incomeOther, setIncomeOther] = useState("");
+  const [savingFinancialProfile, setSavingFinancialProfile] = useState(false);
   function t<K extends keyof typeof translations["cs"]>(key: K): typeof translations["cs"][K] {
     return translations[language][key] as typeof translations["cs"][K];
   }
@@ -2386,8 +2391,12 @@ export default function EquityDashboard() {
       } else if (user.email) {
         setUserInitials(user.email.slice(0, 2).toUpperCase());
       }
-      supabase.from("profiles").select("language").eq("id", user.id).single().then(({ data: profile }) => {
+      supabase.from("profiles").select("language, birth_year, income_employment, income_other, dti_projection_enabled").eq("id", user.id).single().then(({ data: profile }) => {
         if (profile?.language === "en" || profile?.language === "cs") setLanguage(profile.language);
+        if (profile?.dti_projection_enabled) setDtiEnabled(true);
+        if (profile?.birth_year) setBirthYear(String(profile.birth_year));
+        if (profile?.income_employment) setIncomeEmployment(String(profile.income_employment));
+        if (profile?.income_other) setIncomeOther(String(profile.income_other));
       });
     });
   }, []);
@@ -2398,6 +2407,21 @@ export default function EquityDashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) await supabase.from("profiles").upsert({ id: user.id, language: lang });
     setSavingLanguage(false);
+  }
+
+  async function saveFinancialProfile(next?: { dtiEnabled?: boolean }) {
+    setSavingFinancialProfile(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("profiles").upsert({
+        id: user.id,
+        dti_projection_enabled: next?.dtiEnabled ?? dtiEnabled,
+        birth_year: birthYear ? Number(birthYear) : null,
+        income_employment: incomeEmployment ? Number(incomeEmployment) : null,
+        income_other: incomeOther ? Number(incomeOther) : null,
+      });
+    }
+    setSavingFinancialProfile(false);
   }
 
   type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -2819,6 +2843,51 @@ export default function EquityDashboard() {
                 </button>
               </div>
             </div>
+
+            <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "18px 20px", marginTop: 14 }}>
+              <div className="flex items-center justify-between" style={{ marginBottom: dtiEnabled ? 12 : 0 }}>
+                <div style={{ flex: 1, paddingRight: 12 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: "#1c2b22" }}>Finanční profil pro projekce</div>
+                  <div style={{ fontSize: 12, color: "#7c8378", marginTop: 4 }}>
+                    Volitelné — použije se jen pro Optimistickou projekci v grafu "Jak rosteš v čase" (odhad, kolik dalších nemovitostí si ještě můžeš dovolit financovat). Nikde jinde v appce se to nepoužije.
+                  </div>
+                </div>
+                <button onClick={() => { const next = !dtiEnabled; setDtiEnabled(next); saveFinancialProfile({ dtiEnabled: next }); }}
+                  style={{ flexShrink: 0, width: 40, height: 22, borderRadius: 12, border: "none", background: dtiEnabled ? "#1f3d2e" : "#d2cab4", position: "relative", cursor: "pointer" }}>
+                  <span style={{ position: "absolute", top: 2, left: dtiEnabled ? 20 : 2, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
+                </button>
+              </div>
+
+              {dtiEnabled && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Rok narození</div>
+                    <input type="number" value={birthYear} onChange={e => setBirthYear(e.target.value)}
+                      placeholder="např. 1988"
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
+                    <div style={{ fontSize: 11, color: "#9a9483", marginTop: 4 }}>Určuje maximální délku nové hypotéky — banky obvykle nepůjčují za hranici ~70 let věku.</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Měsíční čistý příjem ze zaměstnání/podnikání</div>
+                    <input type="number" value={incomeEmployment} onChange={e => setIncomeEmployment(e.target.value)}
+                      placeholder="Kč"
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Měsíční čistý příjem z jiných zdrojů</div>
+                    <input type="number" value={incomeOther} onChange={e => setIncomeOther(e.target.value)}
+                      placeholder="Kč"
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
+                    <div style={{ fontSize: 11, color: "#9a9483", marginTop: 4 }}>Např. další práce, dividendy — nájmy z nemovitostí appka počítá zvlášť, sem je nepiš.</div>
+                  </div>
+                  <button onClick={() => saveFinancialProfile()} disabled={savingFinancialProfile}
+                    style={{ padding: "8px 0", borderRadius: 8, border: "none", background: savingFinancialProfile ? "#e8e2d6" : "#1f3d2e", color: "#f5f1e6", fontSize: 13, fontWeight: 600, cursor: savingFinancialProfile ? "default" : "pointer" }}>
+                    {savingFinancialProfile ? "Ukládám…" : "Uložit"}
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
               style={{ marginTop: 12, width: "100%", padding: "10px 0", borderRadius: 10, border: "none", background: "transparent", color: "#c0392b", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c0392b" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>

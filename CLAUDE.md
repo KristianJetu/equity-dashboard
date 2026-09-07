@@ -9,13 +9,23 @@
 - **Signed URL**: soubory nejsou veřejně přístupné, URL se generuje na vyžádání přes `supabase.storage.createSignedUrl` s platností 1 hod
 
 
-## Ocenění nemovitostí (nastaveno 2026-09-06)
+## Ocenění nemovitostí (nastaveno 2026-09-06, rozšířeno 2026-09-07)
 - **Tabulka `property_valuations`**: id, user_id, property_id, value, valuation_date, note, created_at — historie odhadů hodnoty v čase
 - **RLS**: stejný vzorec jako `property_files` — politiky pro `authenticated` s `user_id = auth.uid()` na SELECT/INSERT/UPDATE/DELETE
 - **`properties.estimated_value` zůstává "aktuální hodnota"** — při přidání nového ocenění se přepíše (žádné jiné výpočty se neměnily, equity/LTV/cashflow projekce čtou dál `estimated_value`)
 - **UI**: záložka "Ocenění" v `PropertyModal` (mezi "Detaily" a "Soubory") — formulář na přidání (hodnota, datum, poznámka), historie se zobrazenou změnou oproti předchozímu záznamu, mazání
+- **Graf vývoje hodnoty**: `ValuationChart` — ručně kreslený SVG (styl jako hlavní graf "Jak rosteš v čase"), hover tooltip, zobrazí se nad formulářem v záložce Ocenění jakmile jsou k dispozici aspoň 2 body. Prvním bodem je `purchase_price`/`purchase_date`, pokud jsou vyplněné.
 - **Badge na kartě nemovitosti**: "Ocenění po termínu" pokud od posledního ocenění (nebo od `purchase_date`, pokud ještě žádné ocenění není) uplynulo 90+ dní; klik otevře rovnou záložku Ocenění. Nezobrazuje se pro spravované (`ownership_type = manager`) ani plánované nemovitosti.
-- **Migrace**: `supabase-migration-valuations.sql` — je potřeba spustit v Supabase SQL editoru
+- **Delta od posledního ocenění**: na kartě nemovitosti (vedle cenové pilulky) i souhrnně v hero sekci Majetek — rozdíl mezi dvěma nejnovějšími záznamy v `property_valuations` na nemovitost, zobrazí se jen když má nemovitost aspoň 2 záznamy. Souhrn v Majetku ukazuje měsíc nejnovějšího ocenění (ne konkrétní den, protože nemovitosti se oceňují v různé dny) a jmenovitě všechny nemovitosti, které do součtu přispěly.
+- **Výnos z nájmu** na kartě nemovitosti (pod LTV blokem, jen u pronajatých vlastních nemovitostí): "Hrubý výnos" = roční nájem / hodnota nemovitosti; "Výnos na kapitál" = roční čistý cashflow (nájem − splátka − pojistka/12 − náklady) / vlastní kapitál (hodnota − zbývající dluh).
+- **Migrace**: `supabase-migration-valuations.sql` — spuštěna a ověřena funkční 2026-09-07
+
+## Finanční profil pro projekce (nastaveno 2026-09-07)
+- **Sloupce v `profiles`**: `birth_year`, `income_employment`, `income_other`, `dti_projection_enabled` (bool) — vše nepovinné
+- **Účel**: podklad pro budoucí DTI/DSTI výpočet v Optimistické projekci grafu "Jak rosteš v čase" (kolik dalších nemovitostí lze financovat, max. délka úvěru dle věku). Nepoužívá se nikde jinde v appce — příjem z nájmů appka počítá zvlášť z `properties`.
+- **UI**: v modalu Nastavení, pod přepínačem jazyka — celé za jedním přepínačem (`dtiEnabled`), skryté dokud ho uživatel sám nezapne. Text nad poli vysvětluje, k čemu přesně slouží.
+- **Migrace**: `supabase-migration-financial-profile.sql` — je potřeba spustit v Supabase SQL editoru
+- **Stav (2026-09-07)**: pole se ukládají, ale zatím se nikde nepoužívají ve výpočtu — DTI/DSTI model v Optimistické projekci se teprve staví (viz sekce Ocenění/Cashflow výše pro kontext k projekcím grafu)
 
 ## Záloha databáze (nastaveno 2026-08-29)
 - **Skript:** `scripts/backup-database.mjs` — exportuje všech 9 tabulek přes `SUPABASE_SERVICE_ROLE_KEY` (obchází RLS), uloží kombinovaný soubor do `backups/backup-<datum>.json` a rozdělený po tabulkách do `backups/<datum>/*.json`. `raw_email_text` u plateb se vynechává (velké, jen diagnostické).
@@ -25,18 +35,20 @@
 - **Automatizace:** naplánovaná úloha `equity-dashboard-db-backup` (Claude Code scheduled task, běží každé pondělí ~8:21) — spustí skript a nahraje výstup na Disk. Běží jen když je appka Claude Code spuštěná; pokud ne, doběhne při dalším spuštění.
 - Supabase free plán nemá vlastní automatické zálohy/PITR — tohle je náhrada. Pro plnohodnotnější řešení zvážit upgrade na Supabase Pro (denní zálohy + 7denní PITR).
 
-## Sekce Dluhy
-- Tabulka `debts`: id, user_id, direction (`i_owe`/`they_owe`), name, amount_original, amount_remaining, monthly_payment, interest_rate, note, due_date
+## Sekce Půjčky (do 2026-09-07 „Dluhy" — přejmenováno)
+- Tabulka zůstává `debts` (jen UI název se změnil): id, user_id, direction (`i_owe`/`they_owe`), name, amount_original, amount_remaining, monthly_payment, interest_rate, note, due_date
 - RLS: `USING (user_id = auth.uid())` na SELECT/INSERT/UPDATE/DELETE — každý vidí jen své záznamy
 - Komponenta `DebtModal` (samostatná funkce před `AddTenantModal`) — přidání, editace, mazání
 - State: `debts`, `debtModal` v hlavním `EquityDashboard`
 - Fetch v hlavním `useEffect` spolu s properties/mortgages/tenants
+- **Přejmenování 2026-09-07**: nav položka, nadpis sekce a přepínače v Majetku/Cashflow přejmenovány z "Dluhy" na "Půjčky" (a EN varianta z "Debts" na "Loans") — slovo "dluhy" jazykově naznačovalo, že uživatel je vždy dlužník, ale sekce obsahuje obě strany (`i_owe` i `they_owe`). Beze změny zůstalo slovo "Dluh" tam, kde jde jednoznačně o zůstatek hypotéky (graf "Jak rosteš v čase", LTV na kartě nemovitosti) — to je jiný, nezaměnitelný koncept.
 
-## Cashflow sekce — přepínač Reálné / Vč. plánovaných
+## Cashflow sekce — přepínače Reálné / Vč. plánovaných a Bez půjček / Vč. půjček
 - Header cashflow sekce obsahuje přepínač `showPlanned` (state v `EquityDashboard.tsx`)
 - Při zapnutí se do výpočtu příjmů/výdajů zahrnou i nemovitosti se statusem `planned`
 - Plánované položky mají badge „plánovaná" a jemně zelené pozadí — bez přerušovaného rámečku
 - Přepínač je i v sekci „Tvé nemovitosti" (`showPlannedProps`) — zobrazí plánované nemovitosti v přehledu karet, umožňuje jejich editaci přes modal
+- **Přepínač bilance půjček** (`showDebtsInCashflow`, nastaveno 2026-09-07) — zobrazí se jen když existuje aspoň jeden záznam v Půjčkách. Po zapnutí se do příjmů/výdajů/čistého cashflow připočtou měsíční splátky z `debts.monthly_payment` (`they_owe` jako příjem, `i_owe` jako výdaj). Promítá se i do souhrnných panelů, per-nemovitost mřížky (nová karta "Půjčky" s rozpisem jednotlivých položek) a do donut grafu "Kam jdou příjmy" v `CashflowExtra` (segment "Splátky půjček").
 
 ## Co to je
 Aplikace pro správu portfolia nemovitostí. Majitel vidí přehled nemovitostí, hypotéky, nájmy, cashflow a historii plateb. Multi-user — každý uživatel vidí jen svá data.
