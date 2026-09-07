@@ -2370,6 +2370,8 @@ export default function EquityDashboard() {
   const [birthYear, setBirthYear] = useState("");
   const [incomeEmployment, setIncomeEmployment] = useState("");
   const [incomeOther, setIncomeOther] = useState("");
+  const [householdCosts, setHouseholdCosts] = useState("");
+  const [assumedLtvPct, setAssumedLtvPct] = useState("70");
   const [savingFinancialProfile, setSavingFinancialProfile] = useState(false);
   function t<K extends keyof typeof translations["cs"]>(key: K): typeof translations["cs"][K] {
     return translations[language][key] as typeof translations["cs"][K];
@@ -2391,12 +2393,14 @@ export default function EquityDashboard() {
       } else if (user.email) {
         setUserInitials(user.email.slice(0, 2).toUpperCase());
       }
-      supabase.from("profiles").select("language, birth_year, income_employment, income_other, dti_projection_enabled").eq("id", user.id).single().then(({ data: profile }) => {
+      supabase.from("profiles").select("language, birth_year, income_employment, income_other, dti_projection_enabled, household_costs, assumed_ltv_pct").eq("id", user.id).single().then(({ data: profile }) => {
         if (profile?.language === "en" || profile?.language === "cs") setLanguage(profile.language);
         if (profile?.dti_projection_enabled) setDtiEnabled(true);
         if (profile?.birth_year) setBirthYear(String(profile.birth_year));
         if (profile?.income_employment) setIncomeEmployment(String(profile.income_employment));
         if (profile?.income_other) setIncomeOther(String(profile.income_other));
+        if (profile?.household_costs) setHouseholdCosts(String(profile.household_costs));
+        if (profile?.assumed_ltv_pct) setAssumedLtvPct(String(profile.assumed_ltv_pct));
       });
     });
   }, []);
@@ -2419,6 +2423,8 @@ export default function EquityDashboard() {
         birth_year: birthYear ? Number(birthYear) : null,
         income_employment: incomeEmployment ? Number(incomeEmployment) : null,
         income_other: incomeOther ? Number(incomeOther) : null,
+        household_costs: householdCosts ? Number(householdCosts) : null,
+        assumed_ltv_pct: assumedLtvPct ? Number(assumedLtvPct) : 70,
       });
     }
     setSavingFinancialProfile(false);
@@ -2879,6 +2885,20 @@ export default function EquityDashboard() {
                       placeholder="Kč"
                       style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
                     <div style={{ fontSize: 11, color: "#9a9483", marginTop: 4 }}>Např. další práce, dividendy — nájmy z nemovitostí se počítají zvlášť, sem je nepiš.</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Měsíční životní náklady (mimo bydlení a splátek)</div>
+                    <input type="number" value={householdCosts} onChange={e => setHouseholdCosts(e.target.value)}
+                      placeholder="Kč"
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
+                    <div style={{ fontSize: 11, color: "#9a9483", marginTop: 4 }}>Domácnost, jídlo, běžné výdaje — banky tohle při posuzování úvěru odečítají od příjmu, než spočítají, kolik zbývá na splátku.</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Předpokládané LTV pro budoucí úvěry</div>
+                    <input type="number" value={assumedLtvPct} onChange={e => setAssumedLtvPct(e.target.value)}
+                      placeholder="%"
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
+                    <div style={{ fontSize: 11, color: "#9a9483", marginTop: 4 }}>Jaký podíl ceny další nemovitosti očekáváš, že ti banka půjčí — výchozích 70 % odpovídá běžné nabídce.</div>
                   </div>
                   <button onClick={() => saveFinancialProfile()} disabled={savingFinancialProfile}
                     style={{ padding: "8px 0", borderRadius: 8, border: "none", background: savingFinancialProfile ? "#e8e2d6" : "#1f3d2e", color: "#f5f1e6", fontSize: 13, fontWeight: 600, cursor: savingFinancialProfile ? "default" : "pointer" }}>
