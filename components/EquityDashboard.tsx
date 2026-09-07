@@ -2349,6 +2349,7 @@ export default function EquityDashboard() {
   const [cfPropExpanded, setCfPropExpanded] = useState<string | null>(null);
   const [showPlanned, setShowPlanned] = useState(false);
   const [showPlannedProps, setShowPlannedProps] = useState(false);
+  const [showDebtsInCashflow, setShowDebtsInCashflow] = useState(false);
   const [showAllPayments, setShowAllPayments] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -3175,17 +3176,31 @@ export default function EquityDashboard() {
 
         {/* PLATBY */}
         <section id="platby" style={{ marginTop: 38, scrollMarginTop: 28 }}>
-          <div className="eq-section-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <div className="eq-section-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
             <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>{t("mesicniCashflow")}</div>
-            <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3 }}>
-              <button onClick={() => setShowPlanned(false)}
-                style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: !showPlanned ? "#1f3d2e" : "transparent", color: !showPlanned ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                {t("realne")}
-              </button>
-              <button onClick={() => setShowPlanned(true)}
-                style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: showPlanned ? "#4a7c59" : "transparent", color: showPlanned ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                {t("planovane")}
-              </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {debts.length > 0 && (
+                <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3 }}>
+                  <button onClick={() => setShowDebtsInCashflow(false)}
+                    style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: !showDebtsInCashflow ? "#1f3d2e" : "transparent", color: !showDebtsInCashflow ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    Bez půjček
+                  </button>
+                  <button onClick={() => setShowDebtsInCashflow(true)}
+                    style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: showDebtsInCashflow ? "#4a7c59" : "transparent", color: showDebtsInCashflow ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    Vč. bilance úvěru
+                  </button>
+                </div>
+              )}
+              <div style={{ display: "flex", background: "#e6e0d0", borderRadius: 20, padding: 3 }}>
+                <button onClick={() => setShowPlanned(false)}
+                  style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: !showPlanned ? "#1f3d2e" : "transparent", color: !showPlanned ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  {t("realne")}
+                </button>
+                <button onClick={() => setShowPlanned(true)}
+                  style={{ padding: "5px 14px", borderRadius: 18, border: "none", background: showPlanned ? "#4a7c59" : "transparent", color: showPlanned ? "#f5f1e6" : "#5c6359", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  {t("planovane")}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -3203,8 +3218,10 @@ export default function EquityDashboard() {
             const totalMortgage = mortgages.filter(m => ownedCf.some(p => p.id === m.property_id)).reduce((s, m) => s + m.monthly_payment, 0);
             const totalInsurance = ownedCf.reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0), 0);
             const totalCosts = ownedCf.reduce((s, p) => s + (p.monthly_costs ?? 0), 0);
-            const totalOut = totalMortgage + totalInsurance + totalCosts;
-            const net = totalRent - totalOut;
+            const debtsIncome = showDebtsInCashflow ? debts.filter(d => d.direction === "they_owe").reduce((s, d) => s + (d.monthly_payment ?? 0), 0) : 0;
+            const debtsExpense = showDebtsInCashflow ? debts.filter(d => d.direction === "i_owe").reduce((s, d) => s + (d.monthly_payment ?? 0), 0) : 0;
+            const totalOut = totalMortgage + totalInsurance + totalCosts + debtsExpense;
+            const net = totalRent + debtsIncome - totalOut;
 
             const propCf = visProps.map(p => {
                 const isManaged = p.ownership_type === "manager";
@@ -3238,9 +3255,11 @@ export default function EquityDashboard() {
                         <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>{t("prijmy")}</div>
                         <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "income" ? "▴" : "▾"}</span>
                       </div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#1f3d2e", marginTop: 4 }}>+{fmt(totalRent)} Kč</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#1f3d2e", marginTop: 4 }}>+{fmt(totalRent + debtsIncome)} Kč</div>
                       {showPlanned && plannedRent > 0
                         ? <div style={{ fontSize: 11, color: "#4a7c59", marginTop: 2 }}>{t("zTohoPlanovane")(fmt(plannedRent))}</div>
+                        : debtsIncome > 0
+                        ? <div style={{ fontSize: 11, color: "#4a7c59", marginTop: 2 }}>z toho +{fmt(debtsIncome)} Kč z půjček</div>
                         : <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>{t("mesicne")}</div>
                       }
                     </div>
@@ -3251,7 +3270,10 @@ export default function EquityDashboard() {
                         <span style={{ fontSize: 11, color: "#9a9483" }}>{cfExpanded === "expenses" ? "▴" : "▾"}</span>
                       </div>
                       <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 26, fontWeight: 800, color: "#c0392b", marginTop: 4 }}>−{fmt(totalOut)} Kč</div>
-                      <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>{t("mesicne")}</div>
+                      {debtsExpense > 0
+                        ? <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>z toho −{fmt(debtsExpense)} Kč splátky půjček</div>
+                        : <div style={{ fontSize: 11, color: "#9a9483", marginTop: 2 }}>{t("mesicne")}</div>
+                      }
                     </div>
                     {/* Čistý cashflow */}
                     <div style={panelStyle("net")} onClick={() => toggleCf("net")}>
@@ -3387,6 +3409,46 @@ export default function EquityDashboard() {
                       </div>
                     );
                   })}
+                  {showDebtsInCashflow && debts.some(d => d.monthly_payment) && (() => {
+                    const relevantDebts = debts.filter(d => d.monthly_payment);
+                    const debtIncome = relevantDebts.filter(d => d.direction === "they_owe").reduce((s, d) => s + (d.monthly_payment ?? 0), 0);
+                    const debtExpense = relevantDebts.filter(d => d.direction === "i_owe").reduce((s, d) => s + (d.monthly_payment ?? 0), 0);
+                    const netDebt = debtIncome - debtExpense;
+                    const isOpen = cfPropExpanded === "__debts__";
+                    return (
+                      <div key="__debts__"
+                        onClick={() => setCfPropExpanded(prev => prev === "__debts__" ? null : "__debts__")}
+                        style={{ flex: "0 0 calc(33.333% - 8px)", background: "#f5f1e6", borderRadius: 10, padding: "16px 18px", border: "1px solid #e3ddcb", cursor: "pointer", boxSizing: "border-box" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#5c6359" }}>Půjčky</div>
+                          <span style={{ fontSize: 11, color: "#9a9483" }}>{isOpen ? "▴" : "▾"}</span>
+                        </div>
+                        <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 20, fontWeight: 800, color: netDebt >= 0 ? "#1f3d2e" : "#c0392b", marginBottom: 6 }}>
+                          {netDebt >= 0 ? "+" : ""}{fmt(netDebt)} Kč
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9a9483" }}>
+                          <span>{t("prijemLower")} +{fmt(debtIncome)} Kč</span>
+                          <span>−{fmt(debtExpense)} {t("vydajeLower")}</span>
+                        </div>
+                        {isOpen && (
+                          <div style={{ borderTop: "1px solid #d2cab4", marginTop: 12, paddingTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
+                            {relevantDebts.map(d => (
+                              <div key={d.id} style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span style={{ fontSize: 12, color: "#5c6359" }}>{d.name}</span>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: d.direction === "they_owe" ? "#1f3d2e" : "#c0392b" }}>
+                                  {d.direction === "they_owe" ? "+" : "−"}{fmt(d.monthly_payment ?? 0)} Kč
+                                </span>
+                              </div>
+                            ))}
+                            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #d2cab4", paddingTop: 4, marginTop: 2 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#1c2b22" }}>{t("cistyCashflow")}</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: netDebt >= 0 ? "#1f3d2e" : "#c0392b" }}>{netDebt >= 0 ? "+" : ""}{fmt(netDebt)} Kč</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </>
             );
