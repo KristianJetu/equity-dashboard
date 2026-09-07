@@ -1289,7 +1289,7 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
   const minMs = range === "all" ? earliestMs
     : range === "10" ? Math.max(earliestMs, nowMs - 10 * 365 * 86400000)
     : Math.max(earliestMs, nowMs - 5 * 365 * 86400000);
-  const maxMs = showProjection ? nowMs + FUTURE_YEARS * 365 * 86400000 : nowMs;
+  const maxMs = nowMs + FUTURE_YEARS * 365 * 86400000;
   const totalMs = maxMs - minMs;
 
   type Pt = { ms: number; value: number; debt: number };
@@ -1359,7 +1359,7 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
   // acquisitions), scaled up for the optimistic case. Debt is identical in every scenario.
   const conservativeRate = (avgPortfolioGrowthPct ?? 5) / 100;
   const scenarioRate = scenario === "optimisticka" ? conservativeRate * 1.3 : conservativeRate;
-  const chartPoints: Pt[] = scenario === "pesimisticka" || !todayPt
+  const chartPoints: Pt[] = !showProjection || scenario === "pesimisticka" || !todayPt
     ? allPoints
     : allPoints.map(p => p.ms <= nowMs ? p : {
         ms: p.ms,
