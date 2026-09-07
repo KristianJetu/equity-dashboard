@@ -1316,9 +1316,19 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
       if (mort) {
         const loanMs = mort.loan_start_date ? new Date(mort.loan_start_date).getTime() : purchaseMs;
         if (ms >= loanMs) {
-          const termMs = (mort.loan_term_years ?? 30) * 365 * 86400000;
           const loanAmt = mort.loan_amount ?? mort.outstanding_balance;
-          debt += Math.max(0, loanAmt * (1 - Math.max(0, Math.min(1, (ms - loanMs) / termMs))));
+          const termMs = (mort.loan_term_years ?? 30) * 365 * 86400000;
+          const payoffMs = loanMs + termMs;
+          if (ms <= nowMs) {
+            // Interpolate between the loan amount at drawdown and the actual current balance —
+            // real mortgages front-load interest, so a pure linear-amortization model would
+            // understate today's balance if it ignored the real outstanding_balance.
+            const t = Math.min(1, (ms - loanMs) / (nowMs - loanMs || 1));
+            debt += Math.max(0, loanAmt + t * (mort.outstanding_balance - loanAmt));
+          } else if (ms < payoffMs) {
+            const t = (ms - nowMs) / (payoffMs - nowMs || 1);
+            debt += Math.max(0, mort.outstanding_balance * (1 - t));
+          }
         }
       }
     }
