@@ -2581,6 +2581,21 @@ export default function EquityDashboard() {
   const totalValue = ownedProperties.reduce((s, p) => s + p.estimated_value, 0);
   const totalDebt = mortgages.filter(m => ownedProperties.some(p => p.id === m.property_id)).reduce((s, m) => s + m.outstanding_balance, 0);
   const equity = totalValue - totalDebt;
+  const valuationGrowth = (() => {
+    let delta = 0;
+    let latestDate: string | null = null;
+    let latestPropName: string | null = null;
+    for (const p of ownedProperties) {
+      const propVals = valuations.filter(v => v.property_id === p.id);
+      if (propVals.length < 2) continue;
+      delta += propVals[0].value - propVals[1].value;
+      if (!latestDate || propVals[0].valuation_date > latestDate) {
+        latestDate = propVals[0].valuation_date;
+        latestPropName = p.name;
+      }
+    }
+    return latestDate ? { delta, date: latestDate, propName: latestPropName } : null;
+  })();
   const debtsBalance = debts.reduce((s, d) => s + (d.direction === "they_owe" ? d.amount_remaining : -d.amount_remaining), 0);
   const displayEquity = showDebtsBalance ? equity + debtsBalance : equity;
   const filteredPayments = (activeFilter ? payments.filter((p) => p.property_id === activeFilter) : payments)
@@ -2849,6 +2864,11 @@ export default function EquityDashboard() {
                     </span>
                     <span style={{ fontSize: 15, color: "#cfe0d4", fontWeight: 500 }}>{t("hodnotaPortfolia")} {fmtMil(totalValue)} mil Kč</span>
                   </div>
+                  {valuationGrowth && (
+                    <div style={{ fontSize: 13, color: valuationGrowth.delta >= 0 ? "#9db8a6" : "#e0a8a0", marginTop: 8, fontWeight: 600 }}>
+                      {valuationGrowth.delta >= 0 ? "▲ +" : "▼ "}{fmt(Math.abs(valuationGrowth.delta))} Kč od posledního ocenění ({fmtDate(valuationGrowth.date)}{valuationGrowth.propName ? `, ${valuationGrowth.propName}` : ""})
+                    </div>
+                  )}
                   {totalDebt > 0 && (
                     <div className="eq-header-progress" style={{ marginTop: 26, maxWidth: 440 }}>
                       <div className="flex justify-between items-baseline mb-[9px]" style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9db8a6" }}>
@@ -2941,6 +2961,8 @@ export default function EquityDashboard() {
                   ? { label: t("spravovano"), cls: "text-[#2255aa] bg-[#dce8f8]" }
                   : statusBadge(p.status, language);
                 const mortgage = isManaged ? undefined : mortgages.find((m) => m.property_id === p.id);
+                const propValuations = valuations.filter(v => v.property_id === p.id);
+                const valuationDelta = propValuations.length >= 2 ? propValuations[0].value - propValuations[1].value : null;
                 const isDragOver = dragOverIndex === idx && dragIndex !== null && dragIndex !== idx;
                 return (
                   <div key={p.id}
@@ -3058,9 +3080,16 @@ export default function EquityDashboard() {
                           );
                         })()}
                       </div>
-                      <div style={{ flexShrink: 0, paddingLeft: 8, display: "flex", alignItems: "center", gap: 8, background: p.status === "planned" ? "rgba(238,245,238,0.92)" : "rgba(245,241,230,0.92)", borderRadius: 20, padding: "6px 10px 6px 12px" }}>
-                        {!isManaged && <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{fmtMil(p.estimated_value)} mil</span>}
-                        <button onClick={e => { e.stopPropagation(); if (!isManaged) handleToggleStatus(p.id, p.status); }} className={`inline-flex items-center rounded-[20px] ${cls}`} style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 11px", border: "none", cursor: isManaged ? "default" : "pointer" }}>{label}</button>
+                      <div style={{ flexShrink: 0, paddingLeft: 8, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, background: p.status === "planned" ? "rgba(238,245,238,0.92)" : "rgba(245,241,230,0.92)", borderRadius: 20, padding: "6px 10px 6px 12px" }}>
+                          {!isManaged && <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 15, color: "#1c2b22" }}>{fmtMil(p.estimated_value)} mil</span>}
+                          <button onClick={e => { e.stopPropagation(); if (!isManaged) handleToggleStatus(p.id, p.status); }} className={`inline-flex items-center rounded-[20px] ${cls}`} style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 11px", border: "none", cursor: isManaged ? "default" : "pointer" }}>{label}</button>
+                        </div>
+                        {!isManaged && valuationDelta !== null && valuationDelta !== 0 && (
+                          <span style={{ fontSize: 11, fontWeight: 700, color: valuationDelta > 0 ? "#1f3d2e" : "#c0392b", paddingRight: 4 }}>
+                            {valuationDelta > 0 ? "▲ +" : "▼ "}{fmt(Math.abs(valuationDelta))} Kč
+                          </span>
+                        )}
                       </div>
                     </div>
                     {mortgage && (() => {
