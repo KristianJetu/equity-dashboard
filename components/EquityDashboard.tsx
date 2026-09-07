@@ -1315,9 +1315,11 @@ function GrowthChart({ properties, mortgages }: { properties: Property[]; mortga
       const mort = mortgages.find(m => m.property_id === p.id);
       if (mort) {
         const loanMs = mort.loan_start_date ? new Date(mort.loan_start_date).getTime() : purchaseMs;
-        const termMs = (mort.loan_term_years ?? 30) * 365 * 86400000;
-        const loanAmt = mort.loan_amount ?? mort.outstanding_balance;
-        debt += Math.max(0, loanAmt * (1 - Math.max(0, Math.min(1, (ms - loanMs) / termMs))));
+        if (ms >= loanMs) {
+          const termMs = (mort.loan_term_years ?? 30) * 365 * 86400000;
+          const loanAmt = mort.loan_amount ?? mort.outstanding_balance;
+          debt += Math.max(0, loanAmt * (1 - Math.max(0, Math.min(1, (ms - loanMs) / termMs))));
+        }
       }
     }
     allPoints.push({ ms, value, debt });
