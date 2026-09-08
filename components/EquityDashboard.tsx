@@ -1518,20 +1518,20 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
   }
 
   const sliderField = (label: string, value: number, onChange: (v: number) => void, min: number, max: number, step: number, display: (v: number) => string, hint = "") => (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
-        <span style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontWeight: 700, fontSize: 13, color: "#1f3d2e", flexShrink: 0 }}>{display(value)}</span>
+    <div style={{ marginBottom: 11 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+        <span style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "var(--ppm-text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</span>
+        <span style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontWeight: 600, fontSize: 12.5, color: "var(--ppm-accent)", flexShrink: 0 }}>{display(value)}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={e => onChange(Number(e.target.value))}
-        style={{ width: "100%", accentColor: "#1f3d2e", display: "block" }} />
-      {hint && <div style={{ fontSize: 11, color: "#9a9483", marginTop: 5, lineHeight: 1.4 }}>{hint}</div>}
+        style={{ width: "100%", accentColor: "var(--ppm-accent)", display: "block" }} />
+      {hint && <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10.5, color: "var(--ppm-text-faint)", marginTop: 4, lineHeight: 1.4 }}>{hint}</div>}
     </div>
   );
 
-  const sectionTitle = (t: string) => (
-    <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 16 }}>{t}</div>
+  const sectionTitle = (t: string, first = false) => (
+    <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10.5, fontWeight: 700, color: "var(--ppm-text-faint)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 9, marginTop: first ? 0 : 13, borderTop: first ? "none" : "1px solid var(--ppm-border)", paddingTop: first ? 0 : 13 }}>{t}</div>
   );
 
   // ── Živý náhled ──────────────────────────────────────────────────────────
@@ -1570,32 +1570,39 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
   const buyPts = chartPoints.filter(p => p.bought);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)", padding: 16 }} onClick={onClose}>
-      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "clamp(18px, 3vw, 28px)", width: "min(1180px, 96vw)", maxHeight: "94vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.28)" }}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{
+      background: "rgba(6,9,7,0.72)", padding: 16,
+      ["--ppm-bg" as string]: "#121a13", ["--ppm-panel" as string]: "#1a251b", ["--ppm-panel-2" as string]: "#212d22",
+      ["--ppm-border" as string]: "#2c3a2d", ["--ppm-text" as string]: "#eef2ea", ["--ppm-text-dim" as string]: "#9fac9a",
+      ["--ppm-text-faint" as string]: "#6c7a6a", ["--ppm-accent" as string]: "#d3a052", ["--ppm-accent-soft" as string]: "rgba(211,160,82,0.14)",
+      ["--ppm-positive" as string]: "#7cc493", ["--ppm-positive-soft" as string]: "rgba(124,196,147,0.13)",
+      ["--ppm-negative" as string]: "#e0796a", ["--ppm-negative-soft" as string]: "rgba(224,121,106,0.13)", ["--ppm-debt" as string]: "#c9a06f",
+    } as React.CSSProperties} onClick={onClose}>
+      <div style={{ background: "var(--ppm-bg)", borderRadius: 14, padding: "clamp(16px, 2.4vw, 22px)", width: "min(1180px, 96vw)", maxHeight: "94vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.5)", border: "1px solid var(--ppm-border)" }}
         onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex justify-between items-start mb-3">
           <div>
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 20, color: "#1c2b22" }}>Projekce budoucích akvizic</div>
-            <div style={{ fontSize: 12, color: "#7c8378", marginTop: 4, maxWidth: 640, lineHeight: 1.5 }}>Simuluje, kdy by šlo koupit další nemovitost financovanou refinancováním portfolia (LTV) a bankovním income testem (DSTI/DTI) — bez nutnosti našetřit hotovost na zálohu. Uprav si vstupy a zkontroluj, jestli výsledek dává smysl.</div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 21, color: "var(--ppm-text)" }}>Projekce budoucích akvizic</div>
+            <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, color: "var(--ppm-text-dim)", marginTop: 3, maxWidth: 640, lineHeight: 1.45 }}>Simuluje, kdy by šlo koupit další nemovitost financovanou refinancováním portfolia (LTV) a bankovním income testem (DSTI/DTI) — bez nutnosti našetřit hotovost na zálohu. Uprav si vstupy a zkontroluj, jestli výsledek dává smysl.</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9a9483", fontSize: 22, flexShrink: 0 }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ppm-text-faint)", fontSize: 22, flexShrink: 0, lineHeight: 1 }}>×</button>
         </div>
 
-        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
           {/* LEVÝ SLOUPEC — vstupy */}
-          <div style={{ flex: "0 0 300px", minWidth: 260 }}>
-            {sectionTitle("Osobní a příjmové vstupy")}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Rok narození</div>
+          <div style={{ flex: "0 0 292px", minWidth: 260 }}>
+            {sectionTitle("Osobní a příjmové vstupy", true)}
+            <div style={{ marginBottom: 11 }}>
+              <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "var(--ppm-text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Rok narození</div>
               <input type="number" value={form.birthYear} onChange={e => set("birthYear", e.target.value)} placeholder="např. 1988"
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", boxSizing: "border-box" }} />
-              {!form.birthYear && <div style={{ fontSize: 11, color: "#c0392b", marginTop: 5 }}>Bez roku narození nejde spočítat maximální délku úvěru — náhled vpravo zůstane prázdný.</div>}
+                style={{ width: "100%", padding: "7px 9px", borderRadius: 7, border: "1px solid var(--ppm-border)", background: "var(--ppm-panel)", fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 13, color: "var(--ppm-text)", boxSizing: "border-box" }} />
+              {!form.birthYear && <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10.5, color: "var(--ppm-negative)", marginTop: 4 }}>Bez roku narození nejde spočítat maximální délku úvěru — náhled vpravo zůstane prázdný.</div>}
             </div>
             {sliderField("Čistý příjem ze zaměstnání", Number(form.incomeEmployment) || 0, v => set("incomeEmployment", String(v)), 0, 200000, 1000, v => `${fmt(v)} Kč`)}
             {sliderField("Čistý příjem z jiných zdrojů", Number(form.incomeOther) || 0, v => set("incomeOther", String(v)), 0, 100000, 1000, v => `${fmt(v)} Kč`)}
             {sliderField("Měsíční životní náklady", Number(form.householdCosts) || 0, v => set("householdCosts", String(v)), 0, 60000, 500, v => `${fmt(v)} Kč`)}
-            <label className="flex items-center gap-2" style={{ fontSize: 12, color: "#5c6359", cursor: "pointer" }}>
-              <input type="checkbox" checked={form.includeDebts} onChange={e => set("includeDebts", e.target.checked)} style={{ width: 14, height: 14, accentColor: "#1f3d2e" }} />
+            <label className="flex items-center gap-2" style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11.5, color: "var(--ppm-text-dim)", cursor: "pointer" }}>
+              <input type="checkbox" checked={form.includeDebts} onChange={e => set("includeDebts", e.target.checked)} style={{ width: 13, height: 13, accentColor: "var(--ppm-accent)" }} />
               Počítat i současné osobní půjčky do DSTI/DTI
             </label>
 
@@ -1620,20 +1627,20 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
               "Předpokládaný hrubý nájemní výnos (roční nájem / cena) budoucí akvizice.")}
 
             {sectionTitle("Akvizice a vlastní kapitál")}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.05em" }}>Výchozí cena další akvizice</span>
-                <span style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontWeight: 700, fontSize: 13, color: "#1f3d2e", flexShrink: 0 }}>{form.basePrice === null ? "auto" : `${fmt(form.basePrice)} Kč`}</span>
+            <div style={{ marginBottom: 11 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "var(--ppm-text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Výchozí cena další akvizice</span>
+                <span style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontWeight: 600, fontSize: 12.5, color: "var(--ppm-accent)", flexShrink: 0 }}>{form.basePrice === null ? "auto" : `${fmt(form.basePrice)} Kč`}</span>
               </div>
-              <label className="flex items-center gap-2" style={{ fontSize: 12, color: "#5c6359", marginBottom: form.basePrice === null ? 0 : 8, cursor: "pointer" }}>
+              <label className="flex items-center gap-2" style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11.5, color: "var(--ppm-text-dim)", marginBottom: form.basePrice === null ? 0 : 6, cursor: "pointer" }}>
                 <input type="checkbox" checked={form.basePrice === null} onChange={e => set("basePrice", e.target.checked ? null : 3400000)}
-                  style={{ width: 14, height: 14, accentColor: "#1f3d2e" }} />
+                  style={{ width: 13, height: 13, accentColor: "var(--ppm-accent)" }} />
                 Automaticky (průměr posledních dvou hypoték)
               </label>
               {form.basePrice !== null && (
                 <input type="range" min={1000000} max={10000000} step={100000} value={form.basePrice}
                   onChange={e => set("basePrice", Number(e.target.value))}
-                  style={{ width: "100%", accentColor: "#1f3d2e", display: "block" }} />
+                  style={{ width: "100%", accentColor: "var(--ppm-accent)", display: "block" }} />
               )}
             </div>
             {sliderField("Min. rozestup mezi akvizicemi", form.cooldownMonths, v => set("cooldownMonths", v), 3, 36, 1, v => `${v} měs.`)}
@@ -1646,78 +1653,78 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
 
           {/* PRAVÝ SLOUPEC — živý náhled */}
           <div style={{ flex: "1 1 520px", minWidth: 420 }}>
-            {sectionTitle("Souhrn za horizont")}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+            {sectionTitle("Souhrn za horizont", true)}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 12 }}>
               {tiles.map(t => (
-                <div key={t.k} style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", padding: "12px 14px" }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 5 }}>{t.k}</div>
-                  <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 700, color: t.warn ? "#c0392b" : t.accent ? "#1f3d2e" : "#1c2b22" }}>{t.v}</div>
+                <div key={t.k} style={{ background: "var(--ppm-panel)", borderRadius: 9, border: "1px solid var(--ppm-border)", padding: "10px 12px" }}>
+                  <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10, fontWeight: 700, color: "var(--ppm-text-faint)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{t.k}</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 17, fontWeight: 600, color: t.warn ? "var(--ppm-negative)" : t.accent ? "var(--ppm-accent)" : "var(--ppm-text)" }}>{t.v}</div>
                 </div>
               ))}
             </div>
 
             {!form.birthYear ? (
-              <div style={{ textAlign: "center", color: "#9a9483", fontSize: 13, padding: "40px 20px", background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6" }}>
+              <div style={{ fontFamily: "'Work Sans', sans-serif", textAlign: "center", color: "var(--ppm-text-faint)", fontSize: 13, padding: "36px 20px", background: "var(--ppm-panel)", borderRadius: 9, border: "1px solid var(--ppm-border)" }}>
                 Vyplň rok narození vlevo, ať appka spočítá náhled.
               </div>
             ) : (
               <>
-                <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", padding: "12px 14px 4px", marginBottom: 16 }}>
+                <div style={{ background: "var(--ppm-panel)", borderRadius: 9, border: "1px solid var(--ppm-border)", padding: "10px 12px 3px", marginBottom: 12 }}>
                   <svg viewBox={`0 0 ${CW} ${CH}`} width="100%" height={CH} style={{ display: "block" }}>
                     {chartGridVals.map((v, i) => (
                       <g key={i}>
-                        <line x1={CPL} y1={cToY(v).toFixed(1)} x2={CW - CPR} y2={cToY(v).toFixed(1)} stroke="#e8e2d6" strokeWidth="1" />
-                        <text x={CPL - 6} y={cToY(v) + 3} textAnchor="end" fontSize="9" fill="#9a9483">{fmtMil(v)}M</text>
+                        <line x1={CPL} y1={cToY(v).toFixed(1)} x2={CW - CPR} y2={cToY(v).toFixed(1)} stroke="var(--ppm-border)" strokeWidth="1" />
+                        <text x={CPL - 6} y={cToY(v) + 3} textAnchor="end" fontSize="9" fontFamily="'IBM Plex Mono', ui-monospace, monospace" fill="var(--ppm-text-faint)">{fmtMil(v)}M</text>
                       </g>
                     ))}
                     {buyPts.map((p, i) => (
-                      <line key={i} x1={cToX(p.ms).toFixed(1)} y1={CPT} x2={cToX(p.ms).toFixed(1)} y2={CH - CPB} stroke="#c9a24b" strokeWidth="1" strokeDasharray="3 3" />
+                      <line key={i} x1={cToX(p.ms).toFixed(1)} y1={CPT} x2={cToX(p.ms).toFixed(1)} y2={CH - CPB} stroke="var(--ppm-accent)" strokeWidth="1" strokeDasharray="3 3" />
                     ))}
-                    <polyline points={debtPts} fill="none" stroke="#b08c7a" strokeWidth="2" />
-                    <polyline points={valuePts} fill="none" stroke="#c39a3f" strokeWidth="2" />
-                    <polyline points={eqPts} fill="none" stroke="#1f3d2e" strokeWidth="2.6" />
+                    <polyline points={debtPts} fill="none" stroke="var(--ppm-debt)" strokeWidth="2" />
+                    <polyline points={valuePts} fill="none" stroke="var(--ppm-accent)" strokeWidth="2" />
+                    <polyline points={eqPts} fill="none" stroke="var(--ppm-positive)" strokeWidth="2.6" />
                     {buyPts.map((p, i) => (
-                      <circle key={i} cx={cToX(p.ms).toFixed(1)} cy={cToY(p.value - p.debt).toFixed(1)} r="4" fill="#c39a3f" stroke="#fff" strokeWidth="1.3" />
+                      <circle key={i} cx={cToX(p.ms).toFixed(1)} cy={cToY(p.value - p.debt).toFixed(1)} r="4" fill="var(--ppm-accent)" stroke="var(--ppm-bg)" strokeWidth="1.3" />
                     ))}
                   </svg>
-                  <div className="flex gap-4" style={{ fontSize: 11, fontWeight: 600, color: "#5c6359", padding: "0 0 10px" }}>
-                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 3, borderRadius: 2, background: "#c39a3f", display: "inline-block" }} />Hodnota portfolia</span>
-                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 3, borderRadius: 2, background: "#b08c7a", display: "inline-block" }} />Dluh</span>
-                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 3, borderRadius: 2, background: "#1f3d2e", display: "inline-block" }} />Majetek</span>
-                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 0, borderTop: "1px dashed #c9a24b", display: "inline-block" }} />Akvizice</span>
+                  <div className="flex gap-4" style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10.5, fontWeight: 600, color: "var(--ppm-text-dim)", padding: "0 0 8px" }}>
+                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 3, borderRadius: 2, background: "var(--ppm-accent)", display: "inline-block" }} />Hodnota portfolia</span>
+                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 3, borderRadius: 2, background: "var(--ppm-debt)", display: "inline-block" }} />Dluh</span>
+                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 3, borderRadius: 2, background: "var(--ppm-positive)", display: "inline-block" }} />Majetek</span>
+                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 0, borderTop: "1px dashed var(--ppm-accent)", display: "inline-block" }} />Akvizice</span>
                   </div>
                 </div>
 
-                <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", padding: "12px 14px", marginBottom: 16, overflowX: "auto" }}>
-                  <div style={{ fontSize: 10.5, color: "#9a9483", marginBottom: 8 }}>DSTI = splátky/uznaný příjem · DTI = celkový dluh/roční příjem · zůstatek = příjem − splátky (stress) − náklady</div>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <div style={{ background: "var(--ppm-panel)", borderRadius: 9, border: "1px solid var(--ppm-border)", padding: "10px 12px", marginBottom: 12, overflowX: "auto" }}>
+                  <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10, color: "var(--ppm-text-faint)", marginBottom: 7 }}>DSTI = splátky/uznaný příjem · DTI = celkový dluh/roční příjem · zůstatek = příjem − splátky (stress) − náklady</div>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 11.5 }}>
                     <thead>
                       <tr>
                         {["Rok", "Věk", "Hodnota", "Dluh", "Majetek", "Příjem", "Splátky", "DSTI", "DTI", "Zůstatek", "Akvizice"].map(h => (
-                          <th key={h} style={{ textAlign: h === "Rok" ? "left" : "right", fontSize: 10, textTransform: "uppercase", color: "#9a9483", paddingBottom: 6, borderBottom: "1px solid #e8e2d6", whiteSpace: "nowrap" }}>{h}</th>
+                          <th key={h} style={{ fontFamily: "'Work Sans', sans-serif", textAlign: h === "Rok" ? "left" : "right", fontSize: 9.5, textTransform: "uppercase", letterSpacing: "0.03em", color: "var(--ppm-text-faint)", paddingBottom: 5, borderBottom: "1px solid var(--ppm-border)", whiteSpace: "nowrap" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {rows.map(r => (
-                        <tr key={r.year} style={{ background: r.purchases.length ? "#f2f7f2" : undefined }}>
-                          <td style={{ padding: "6px 8px 6px 0", fontWeight: 600 }}>{r.year}</td>
-                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{r.age}</td>
-                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{fmtMil(r.value)} M</td>
-                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{fmtMil(r.debt)} M</td>
-                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{fmtMil(r.equity)} M</td>
-                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{fmt(r.income)}</td>
-                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{fmt(r.debtService)}</td>
-                          <td style={{ textAlign: "right", padding: "6px 8px", color: r.dsti > form.dstiCap ? "#c0392b" : undefined }}>{Math.round(r.dsti * 100)} %</td>
-                          <td style={{ textAlign: "right", padding: "6px 8px", color: r.dti > form.dtiCap ? "#c0392b" : undefined }}>{r.dti.toFixed(1)}×</td>
-                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{fmt(r.surplus)}</td>
-                          <td style={{ textAlign: "right", padding: "6px 8px" }}>
+                        <tr key={r.year} style={{ background: r.purchases.length ? "var(--ppm-positive-soft)" : undefined }}>
+                          <td style={{ fontFamily: "'Work Sans', sans-serif", padding: "5px 8px 5px 0", fontWeight: 600, color: "var(--ppm-text)" }}>{r.year}</td>
+                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text)" }}>{r.age}</td>
+                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text)" }}>{fmtMil(r.value)} M</td>
+                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text)" }}>{fmtMil(r.debt)} M</td>
+                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text)" }}>{fmtMil(r.equity)} M</td>
+                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text-dim)" }}>{fmt(r.income)}</td>
+                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text-dim)" }}>{fmt(r.debtService)}</td>
+                          <td style={{ textAlign: "right", padding: "5px 8px", color: r.dsti > form.dstiCap ? "var(--ppm-negative)" : "var(--ppm-text-dim)" }}>{Math.round(r.dsti * 100)} %</td>
+                          <td style={{ textAlign: "right", padding: "5px 8px", color: r.dti > form.dtiCap ? "var(--ppm-negative)" : "var(--ppm-text-dim)" }}>{r.dti.toFixed(1)}×</td>
+                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text-dim)" }}>{fmt(r.surplus)}</td>
+                          <td style={{ textAlign: "right", padding: "5px 8px" }}>
                             {r.purchases.length ? r.purchases.map((b, i) => (
                               <span key={i} title={`Cena ${fmt(b.price)} Kč · hotovost ${fmt(b.cash)} Kč · nový dluh ${fmt(b.loan)} Kč · nájem ${fmt(b.rent)} Kč/měs`}
-                                style={{ display: "inline-block", marginLeft: 4, fontSize: 11, fontWeight: 700, color: "#1f3d2e", background: "#e4ecdf", borderRadius: 20, padding: "1px 7px", cursor: "help" }}>
+                                style={{ display: "inline-block", marginLeft: 4, fontSize: 10.5, fontWeight: 600, color: "var(--ppm-accent)", background: "var(--ppm-accent-soft)", borderRadius: 20, padding: "1px 7px", cursor: "help" }}>
                                 {fmtMil(b.price)} M
                               </span>
-                            )) : <span style={{ color: "#c5bfb0" }}>—</span>}
+                            )) : <span style={{ color: "var(--ppm-text-faint)" }}>—</span>}
                           </td>
                         </tr>
                       ))}
@@ -1729,18 +1736,18 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
           </div>
         </div>
 
-        <div className="flex gap-3" style={{ marginTop: 12, paddingTop: 16, borderTop: "1px solid #e3ddcb" }}>
+        <div className="flex gap-3" style={{ marginTop: 10, paddingTop: 13, borderTop: "1px solid var(--ppm-border)" }}>
           <button onClick={() => setForm(f => ({ ...DEFAULT_PROJECTION_SETTINGS, birthYear: f.birthYear, incomeEmployment: f.incomeEmployment, incomeOther: f.incomeOther, householdCosts: f.householdCosts, assumedLtvPct: f.assumedLtvPct, horizonYears: f.horizonYears }))}
-            style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            style={{ fontFamily: "'Work Sans', sans-serif", padding: "9px 14px", borderRadius: 7, border: "1px solid var(--ppm-border)", background: "transparent", color: "var(--ppm-text-dim)", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
             Výchozí hodnoty
           </button>
           <div style={{ flex: 1 }} />
           <button onClick={onClose}
-            style={{ padding: "10px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+            style={{ fontFamily: "'Work Sans', sans-serif", padding: "9px 16px", borderRadius: 7, border: "1px solid var(--ppm-border)", background: "transparent", color: "var(--ppm-text-dim)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
             Zavřít
           </button>
           <button onClick={handleSave} disabled={saving}
-            style={{ padding: "10px 18px", borderRadius: 8, border: "none", background: saving ? "#c5bfb0" : "#1f3d2e", color: "#f5f1e6", fontSize: 14, fontWeight: 600, cursor: saving ? "default" : "pointer" }}>
+            style={{ fontFamily: "'Work Sans', sans-serif", padding: "9px 16px", borderRadius: 7, border: "none", background: saving ? "var(--ppm-text-faint)" : "var(--ppm-accent)", color: "#141a12", fontSize: 13, fontWeight: 700, cursor: saving ? "default" : "pointer" }}>
             {saving ? "Ukládám…" : "Uložit"}
           </button>
         </div>
