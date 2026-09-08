@@ -33,6 +33,13 @@
   - Sazba nových úvěrů zůstává konstantní (5,31 % p.a., z nabídky) — bez vlastní budoucí projekce úrokových sazeb
   - Bez zapnutého Finančního profilu spadne Optimistická zpátky na jednoduché "historický CAGR × 1,3"
 
+## Pokročilé nastavení projekce (nastaveno 2026-09-07)
+- **Sloupec `profiles.projection_settings`** (jsonb) — sbaluje ~15 vzájemně souvisejících parametrů simulace Optimistické projekce (viz `ProjectionSettings` typ a `DEFAULT_PROJECTION_SETTINGS` v `EquityDashboard.tsx`): strop DSTI/DTI, uznání nájmu bankou, sazba/stress-test nových úvěrů, max. věk splatnosti, tempa růstu (plat/nájem/cena akvizice), výnos nové nemovitosti, výchozí cena další akvizice (nebo auto-odhad), min. rozestup mezi akvizicemi, počáteční a roční vklad vlastního kapitálu, zahrnutí osobních půjček do DSTI/DTI. Sbaleno do jednoho jsonb sloupce místo řady samostatných — jde o desítky vzájemně souvisejících "kohoutků" simulace, ne o obecná data profilu.
+- **UI**: modal `ProjectionSettingsModal`, otevíraný odkazem "⚙ Upravit předpoklady" u vysvětlivky Optimistické projekce (zobrazí se jen když je Optimistická vybraná a Finanční profil zapnutý) — ne v hlavním Nastavení, kam by se netrefilo tolik pokročilých parametrů.
+- **Výpočet**: `simulateOptimisticAcquisitions()` — opravená verze, vychází z ověřovací kalkulačky (viz níže): nová akvizice se financuje kombinací vlastního kapitálu (počáteční + roční vklad) a zbytku jako navýšeného dluhu (refinancování portfolia v rámci LTV), ne už čistě naspořeným cashflow ani jen 70% hypotékou na tu jednu nemovitost. Gatuje se testem DSTI + DTI + LTV portfolia současně, počítá i osobní půjčky (`debts` tabulka) pokud je zapnuto.
+- **Migrace**: `supabase-migration-projection-settings.sql` — je potřeba spustit v Supabase SQL editoru
+- **Vývoj modelu**: než šlo do appky, model + parametry (uznání nájmu bankou, DSTI/DTI stropy dle reálných bank, tempo růstu nájmů) se ověřovaly v samostatné interaktivní kalkulačce (Artifact) na reálných datech portfolia — najdeš historii ve zprávách s Claude z 2026-09-07.
+
 ## Záloha databáze (nastaveno 2026-08-29)
 - **Skript:** `scripts/backup-database.mjs` — exportuje všech 9 tabulek přes `SUPABASE_SERVICE_ROLE_KEY` (obchází RLS), uloží kombinovaný soubor do `backups/backup-<datum>.json` a rozdělený po tabulkách do `backups/<datum>/*.json`. `raw_email_text` u plateb se vynechává (velké, jen diagnostické).
 - **`SUPABASE_SERVICE_ROLE_KEY`** je v `.env.local` (a měl by být i ve Vercelu, pokud se má používat i odjinud) — nikdy ho nedávat do gitu ani ho nevypisovat.

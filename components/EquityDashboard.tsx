@@ -1265,8 +1265,32 @@ function PaymentModal({
 
 
 
-// ── Optimistic scenario: simulate future acquisitions funded by accumulated cashflow,
-// gated by a bank-style income/DSTI test derived from a real ČSOB mortgage offer.
+// ── Pokročilé nastavení Optimistické projekce (viz ProjectionSettingsModal) ───────
+type ProjectionSettings = {
+  dstiCap: number; // podíl splátek na uznaném příjmu, např. 0.70
+  dtiCap: number; // násobek ročního příjmu, např. 7
+  rentRecognition: number; // podíl nájmu uznaný bankou, např. 0.70
+  salaryGrowth: number; // roční tempo růstu platu, např. 0.025
+  rentGrowth: number; // roční tempo růstu nájmů, např. 0.04
+  priceGrowth: number; // roční tempo zdražování další akvizice, např. 0.04
+  newYield: number; // předpokládaný hrubý nájemní výnos nové nemovitosti, např. 0.049
+  newLoanRate: number; // úroková sazba nových úvěrů, např. 0.0531
+  stressAdd: number; // stress-test přirážka k sazbě, např. 0.02
+  maxAge: number; // max. věk na konci splatnosti nového úvěru
+  cooldownMonths: number; // min. rozestup mezi akvizicemi
+  initialCash: number; // počáteční hotovost na akvizici (Kč)
+  annualCash: number; // roční vklad vlastního kapitálu (Kč/rok)
+  basePrice: number | null; // výchozí cena další akvizice (Kč); null = odvodit z hypoték
+  includeDebts: boolean; // počítat i osobní půjčky do DSTI/DTI
+};
+const DEFAULT_PROJECTION_SETTINGS: ProjectionSettings = {
+  dstiCap: 0.70, dtiCap: 7, rentRecognition: 0.70, salaryGrowth: 0.025, rentGrowth: 0.04,
+  priceGrowth: 0.04, newYield: 0.049, newLoanRate: 0.0531, stressAdd: 0.02, maxAge: 70,
+  cooldownMonths: 3, initialCash: 0, annualCash: 0, basePrice: null, includeDebts: true,
+};
+
+// ── Optimistic scenario: simulate future acquisitions funded by a mix of own capital and
+// LTV-headroom refinancing, gated by DSTI/DTI tests derived from a real ČSOB mortgage offer.
 type SimPt = { ms: number; value: number; debt: number };
 function simulateOptimisticAcquisitions(
   allPoints: SimPt[],
@@ -1274,21 +1298,21 @@ function simulateOptimisticAcquisitions(
   conservativeRate: number,
   properties: Property[],
   mortgages: Mortgage[],
+  debts: Debt[],
   birthYearStr: string,
   incomeEmploymentStr: string,
   incomeOtherStr: string,
   householdCostsStr: string,
   assumedLtvPctStr: string,
+  settings: ProjectionSettings,
 ): SimPt[] | null {
   const birthYear = Number(birthYearStr);
   if (!birthYear) return null;
 
-  const NEW_LOAN_RATE = 0.0531; // z reálné bankovní nabídky (ČSOB, září 2026)
-  const STRESS_ADD = 0.02; // standardní stress-test navýšení sazby o 2 p.b.
-  const MAX_AGE = 70;
   const YEAR_MS = 365 * 86400000;
   const ltv = (Number(assumedLtvPctStr) || 70) / 100;
-  const income0 = (Number(incomeEmploymentStr) || 0) + (Number(incomeOtherStr) || 0);
+  const incomeEmployment0 = Number(incomeEmploymentStr) || 0;
+  const incomeOther0 = Number(incomeOtherStr) || 0;
   const costs0 = Number(householdCostsStr) || 0;
   const age0 = new Date(nowMs).getFullYear() - birthYear;
 
@@ -1297,18 +1321,17 @@ function simulateOptimisticAcquisitions(
   const baseMonthlyRent = ownedRented.reduce((s, p) => s + p.rent_amount, 0);
   const baseMonthlyDebtService = mortgages.filter(m => ownedProps.some(p => p.id === m.property_id)).reduce((s, m) => s + m.monthly_payment, 0);
   const baseMonthlyOtherCosts = ownedProps.reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0) + (p.monthly_costs ?? 0), 0);
-  const ownedRentedValue = ownedRented.reduce((s, p) => s + p.estimated_value, 0);
-  const avgRentYield = ownedRentedValue > 0 ? (baseMonthlyRent * 12) / ownedRentedValue : 0.045;
 
-  // Velikost "příští" akvizice vychází z průměru posledních dvou hypoték a dál roste
-  // stejným tempem jako konzervativní CAGR portfolia.
+  // Velikost "příští" akvizice — buď zadaná ručně (Pokročilé nastavení projekce), nebo
+  // odvozená z průměru posledních dvou hypoték; dál roste tempem priceGrowth.
   const recentLoans = mortgages
     .map(m => ({ amt: m.loan_amount ?? m.outstanding_balance, ms: m.loan_start_date ? new Date(m.loan_start_date).getTime() : 0 }))
     .filter(x => x.amt > 0)
     .sort((a, b) => b.ms - a.ms)
     .slice(0, 2);
-  let nextLoanSize = recentLoans.length > 0 ? recentLoans.reduce((s, x) => s + x.amt, 0) / recentLoans.length : 3000000;
-  const monthlyGrowth = Math.pow(1 + conservativeRate, 1 / 12);
+  const autoBasePrice = recentLoans.length > 0 ? recentLoans.reduce((s, x) => s + x.amt, 0) / recentLoans.length : 3000000;
+  let nextPurchasePrice = settings.basePrice ?? autoBasePrice;
+  let cashPool = settings.initialCash;
 
   function monthlyPayment(principal: number, annualRate: number, termYears: number): number {
     const r = annualRate / 12, n = termYears * 12;
@@ -1317,57 +1340,196 @@ function simulateOptimisticAcquisitions(
     return principal * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
   }
 
+  // Osobní půjčky — hrubý odhad doby do splacení (zbývá / splátka), stejně jako v ověřovací
+  // kalkulačce. Počítají se do DSTI/DTI jen když je includeDebts zapnuté.
+  const debtEntries = settings.includeDebts
+    ? debts.filter(d => (d.monthly_payment ?? 0) > 0).map(d => ({
+        direction: d.direction,
+        payment: d.monthly_payment as number,
+        remaining0: d.amount_remaining,
+        monthsLeft: Math.round(d.amount_remaining / (d.monthly_payment as number)),
+      }))
+    : [];
+
   type SimProp = { startMs: number; purchasePrice: number; rentMonthly: number; loanAmount: number; paymentMonthly: number; termMs: number };
   const simProps: SimProp[] = [];
-  let capital = 0;
+  let lastPurchaseMonth = -Infinity;
   let prevMs = nowMs;
+  let monthIdx = 0;
 
   const result: SimPt[] = [];
   for (const base of allPoints) {
     if (base.ms <= nowMs) continue;
+    monthIdx++;
     const monthsElapsed = Math.max(0, (base.ms - prevMs) / (30 * 86400000));
     prevMs = base.ms;
-    const age = age0 + (base.ms - nowMs) / YEAR_MS;
+    const yearsFromNow = (base.ms - nowMs) / YEAR_MS;
+    const age = age0 + yearsFromNow;
 
-    nextLoanSize *= Math.pow(monthlyGrowth, monthsElapsed);
+    nextPurchasePrice *= Math.pow(1 + settings.priceGrowth, monthsElapsed / 12);
+    cashPool += (settings.annualCash / 12) * monthsElapsed;
 
-    const simRentTotal = simProps.reduce((s, sp) => s + (base.ms >= sp.startMs ? sp.rentMonthly : 0), 0);
-    const simDebtServiceTotal = simProps.reduce((s, sp) => s + (base.ms >= sp.startMs ? sp.paymentMonthly : 0), 0);
-    capital += (baseMonthlyRent - baseMonthlyDebtService - baseMonthlyOtherCosts + simRentTotal - simDebtServiceTotal) * monthsElapsed;
-
-    const purchasePrice = nextLoanSize / ltv;
-    const downPayment = purchasePrice - nextLoanSize;
-    const remainingTermYears = Math.min(30, Math.floor(MAX_AGE - age));
-
-    if (capital >= downPayment && remainingTermYears >= 5) {
-      const stressPayment = monthlyPayment(nextLoanSize, NEW_LOAN_RATE + STRESS_ADD, remainingTermYears);
-      const realPayment = monthlyPayment(nextLoanSize, NEW_LOAN_RATE, remainingTermYears);
-      const rentEstimate = (purchasePrice * avgRentYield) / 12;
-      const totalIncome = income0 + baseMonthlyRent + simRentTotal + rentEstimate;
-      const totalDebtService = baseMonthlyDebtService + simDebtServiceTotal + stressPayment;
-      // Bankovní income test z reálné nabídky: příjem − splátka (stress-testovaná) − životní náklady ≥ 0
-      if (totalIncome - totalDebtService - costs0 >= 0) {
-        simProps.push({ startMs: base.ms, purchasePrice, rentMonthly: rentEstimate, loanAmount: nextLoanSize, paymentMonthly: realPayment, termMs: remainingTermYears * YEAR_MS });
-        capital -= downPayment;
-      }
+    let debtsService = 0, debtsIncome = 0, debtsBalance = 0;
+    for (const d of debtEntries) {
+      if (monthIdx > d.monthsLeft) continue;
+      if (d.direction === "i_owe") { debtsService += d.payment; debtsBalance += Math.max(0, d.remaining0 - d.payment * monthIdx); }
+      else debtsIncome += d.payment;
     }
+
+    const salary = incomeEmployment0 * Math.pow(1 + settings.salaryGrowth, yearsFromNow) + incomeOther0;
+    const baseRentNow = baseMonthlyRent * Math.pow(1 + settings.rentGrowth, yearsFromNow);
+    const simRentTotal = simProps.reduce((s, sp) => s + (base.ms >= sp.startMs ? sp.rentMonthly * Math.pow(1 + settings.rentGrowth, (base.ms - sp.startMs) / YEAR_MS) : 0), 0);
+    const simDebtServiceTotal = simProps.reduce((s, sp) => s + (base.ms >= sp.startMs ? sp.paymentMonthly : 0), 0);
 
     let simValue = 0, simDebt = 0;
     for (const sp of simProps) {
       if (base.ms < sp.startMs) continue;
-      simValue += sp.purchasePrice * Math.pow(1 + conservativeRate, (base.ms - sp.startMs) / YEAR_MS);
+      simValue += sp.purchasePrice * Math.pow(1.03, (base.ms - sp.startMs) / YEAR_MS);
       const payoffMs = sp.startMs + sp.termMs;
       simDebt += base.ms >= payoffMs ? 0 : Math.max(0, sp.loanAmount * (payoffMs - base.ms) / sp.termMs);
     }
-    result.push({ ms: base.ms, value: base.value + simValue, debt: base.debt + simDebt });
+    const totalValue = base.value + simValue;
+    const totalDebt = base.debt + simDebt;
+
+    const remainingTermYears = Math.min(30, Math.floor(settings.maxAge - age));
+
+    if (remainingTermYears >= 5 && (monthIdx - lastPurchaseMonth) >= settings.cooldownMonths) {
+      const purchasePrice = nextPurchasePrice;
+      // Vlastní kapitál (počáteční hotovost + roční vklady) se použije jako záloha první;
+      // zbytek ceny se financuje navýšeným dluhem (refinancováním stávajícího portfolia
+      // v rámci LTV headroomu), ne samostatnou hypotékou jen na tu jednu nemovitost.
+      const cashUsed = Math.min(cashPool, purchasePrice);
+      const loanNeeded = purchasePrice - cashUsed;
+      const ltvOk = (totalDebt + loanNeeded) <= ltv * (totalValue + purchasePrice);
+
+      const stressPay = loanNeeded > 0 ? monthlyPayment(loanNeeded, settings.newLoanRate + settings.stressAdd, remainingTermYears) : 0;
+      const realPay = loanNeeded > 0 ? monthlyPayment(loanNeeded, settings.newLoanRate, remainingTermYears) : 0;
+      const rentEstimate = (purchasePrice * settings.newYield) / 12;
+      const recognizedIncome = salary + settings.rentRecognition * (baseRentNow + simRentTotal + rentEstimate) + debtsIncome;
+      const totalDebtSvc = baseMonthlyDebtService + simDebtServiceTotal + debtsService + stressPay;
+      const dstiAfter = recognizedIncome > 0 ? totalDebtSvc / recognizedIncome : 1;
+      const dtiAfter = recognizedIncome > 0 ? (totalDebt + debtsBalance + loanNeeded) / (recognizedIncome * 12) : 99;
+      // Bankovní income test z reálné nabídky: příjem − splátka (stress-testovaná) − životní
+      // náklady ≥ 0, plus stropy DSTI/DTI a LTV portfolia.
+      if (ltvOk && recognizedIncome - totalDebtSvc - costs0 >= 0 && dstiAfter <= settings.dstiCap && dtiAfter <= settings.dtiCap) {
+        simProps.push({ startMs: base.ms, purchasePrice, rentMonthly: rentEstimate, loanAmount: loanNeeded, paymentMonthly: realPay, termMs: remainingTermYears * YEAR_MS });
+        cashPool -= cashUsed;
+        lastPurchaseMonth = monthIdx;
+      }
+    }
+
+    result.push({ ms: base.ms, value: totalValue, debt: totalDebt });
   }
   return result;
 }
 
+// ── Projection Settings Modal ──────────────────────────────────────────────────
+function ProjectionSettingsModal({ settings, onClose, onSave }: {
+  settings: ProjectionSettings;
+  onClose: () => void;
+  onSave: (s: ProjectionSettings) => void;
+}) {
+  const [form, setForm] = useState<ProjectionSettings>(settings);
+  const [saving, setSaving] = useState(false);
+
+  function set<K extends keyof ProjectionSettings>(key: K, value: ProjectionSettings[K]) {
+    setForm(f => ({ ...f, [key]: value }));
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    await onSave(form);
+    setSaving(false);
+    onClose();
+  }
+
+  const field = (label: string, value: string, onChange: (v: string) => void, suffix = "", hint = "") => (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{label}</div>
+      <div className="flex items-center gap-2">
+        <input type="number" value={value} onChange={e => onChange(e.target.value)}
+          style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22" }} />
+        {suffix && <span style={{ fontSize: 13, color: "#9a9483" }}>{suffix}</span>}
+      </div>
+      {hint && <div style={{ fontSize: 11, color: "#9a9483", marginTop: 5 }}>{hint}</div>}
+    </div>
+  );
+
+  const sectionTitle = (t: string) => (
+    <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>{t}</div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)" }} onClick={onClose}>
+      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "clamp(18px, 5vw, 32px)", width: "min(560px, 92vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
+        onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 20, color: "#1c2b22" }}>Pokročilé nastavení projekce</div>
+            <div style={{ fontSize: 12, color: "#7c8378", marginTop: 4 }}>Ovlivňuje jen Optimistickou projekci v grafu "Jak rosteš v čase". Výchozí hodnoty vychází z reálné bankovní nabídky a aktuálních tržních dat (2026).</div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9a9483", fontSize: 22, flexShrink: 0 }}>×</button>
+        </div>
+
+        {sectionTitle("Bankovní parametry")}
+        {field("Strop DSTI banky", String(Math.round(form.dstiCap * 100)), v => set("dstiCap", (Number(v) || 0) / 100), "%",
+          "ČNB od 7/2023 nevyžaduje závazně. Reálně: Komerční banka 50 %, Česká spořitelna 55–60 %, Hypoteční banka (ČSOB) až 70 %.")}
+        {field("Strop DTI (násobek ročního příjmu)", String(form.dtiCap), v => set("dtiCap", Number(v) || 0), "×",
+          "ČNB od 4/2026 doporučuje pro investiční hypotéky max. 7×.")}
+        {field("Uznání nájmu bankou", String(Math.round(form.rentRecognition * 100)), v => set("rentRecognition", (Number(v) || 0) / 100), "%",
+          "Banky obvykle uznávají 40–70 % nájmu; dlouhodobé smlouvy (12+ měs.) bývají na horní hranici.")}
+        {field("Sazba nových úvěrů", String(form.newLoanRate * 100), v => set("newLoanRate", (Number(v) || 0) / 100), "%")}
+        {field("Stress-test přirážka", String(form.stressAdd * 100), v => set("stressAdd", (Number(v) || 0) / 100), "p.b.")}
+        {field("Max. věk na konci splatnosti", String(form.maxAge), v => set("maxAge", Number(v) || 70), "let")}
+
+        {sectionTitle("Růst v čase")}
+        {field("Růst platu", String(form.salaryGrowth * 100), v => set("salaryGrowth", (Number(v) || 0) / 100), "%/rok")}
+        {field("Růst nájmů", String(form.rentGrowth * 100), v => set("rentGrowth", (Number(v) || 0) / 100), "%/rok",
+          "Aktuální tržní růst nájmů v ČR běží kolem 5–6 % (místy až 10 %), ale trh se stabilizuje.")}
+        {field("Růst ceny další akvizice", String(form.priceGrowth * 100), v => set("priceGrowth", (Number(v) || 0) / 100), "%/rok")}
+        {field("Výnos nové nemovitosti", String(form.newYield * 100), v => set("newYield", (Number(v) || 0) / 100), "%/rok",
+          "Předpokládaný hrubý nájemní výnos (roční nájem / cena) budoucí akvizice.")}
+
+        {sectionTitle("Akvizice a vlastní kapitál")}
+        {field("Výchozí cena další akvizice", form.basePrice === null ? "" : String(form.basePrice), v => set("basePrice", v === "" ? null : Number(v)), "Kč",
+          "Nech prázdné pro automatický odhad z průměru posledních dvou hypoték.")}
+        {field("Min. rozestup mezi akvizicemi", String(form.cooldownMonths), v => set("cooldownMonths", Number(v) || 1), "měs.")}
+        {field("Počáteční hotovost na akvizici", String(form.initialCash), v => set("initialCash", Number(v) || 0), "Kč",
+          "Jednorázová hotovost k dispozici teď — použije se jako vlastní kapitál do první koupě.")}
+        {field("Roční vklad vlastního kapitálu", String(form.annualCash), v => set("annualCash", Number(v) || 0), "Kč/rok",
+          "Kolik vlastní hotovosti mimo cashflow z nájmů ročně přiléváš do investičního koloběhu.")}
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, marginBottom: 20 }}>
+          <input type="checkbox" checked={form.includeDebts} onChange={e => set("includeDebts", e.target.checked)}
+            style={{ width: 16, height: 16 }} />
+          <span style={{ fontSize: 13, color: "#1c2b22" }}>Počítat i současné osobní půjčky do DSTI/DTI</span>
+        </div>
+
+        <div className="flex gap-3">
+          <button onClick={() => setForm(DEFAULT_PROJECTION_SETTINGS)}
+            style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            Výchozí hodnoty
+          </button>
+          <div style={{ flex: 1 }} />
+          <button onClick={onClose}
+            style={{ padding: "10px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+            Zavřít
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            style={{ padding: "10px 18px", borderRadius: 8, border: "none", background: saving ? "#c5bfb0" : "#1f3d2e", color: "#f5f1e6", fontSize: 14, fontWeight: 600, cursor: saving ? "default" : "pointer" }}>
+            {saving ? "Ukládám…" : "Uložit"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Growth Chart ─────────────────────────────────────────────────────────────
-function GrowthChart({ properties, mortgages, dtiEnabled, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct }: {
-  properties: Property[]; mortgages: Mortgage[];
+function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings, onOpenProjectionSettings }: {
+  properties: Property[]; mortgages: Mortgage[]; debts: Debt[];
   dtiEnabled: boolean; birthYear: string; incomeEmployment: string; incomeOther: string; householdCosts: string; assumedLtvPct: string;
+  projectionSettings: ProjectionSettings; onOpenProjectionSettings: () => void;
 }) {
   const [hoverIdx, setHoverIdx] = React.useState<number | null>(null);
   const [range, setRange] = React.useState<"5" | "10" | "all">("all");
@@ -1465,7 +1627,7 @@ function GrowthChart({ properties, mortgages, dtiEnabled, birthYear, incomeEmplo
   // reálně simuluje jednotlivé budoucí akvizice financované z naspořeného kapitálu (viz
   // simulateOptimisticAcquisitions výše). Bez profilu spadne zpátky na jednoduché ×1,3 tempo.
   const dtiSimulation = scenario === "optimisticka" && dtiEnabled
-    ? simulateOptimisticAcquisitions(allPoints, nowMs, conservativeRate, properties, mortgages, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct)
+    ? simulateOptimisticAcquisitions(allPoints, nowMs, conservativeRate, properties, mortgages, debts, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings)
     : null;
   const chartPoints: Pt[] = !showProjection || scenario === "pesimisticka" || !todayPt
     ? allPoints
@@ -1566,12 +1728,20 @@ function GrowthChart({ properties, mortgages, dtiEnabled, birthYear, incomeEmplo
               </button>
             ))}
           </div>
-          <div style={{ fontSize: 11, color: "#9a9483", marginTop: 6, lineHeight: 1.5 }}>
-            {scenario === "pesimisticka" && "Pesimistická: každá nemovitost roste jen vlastním tempem (bez dalších nákupů) — žádná nová akvizice se nepředpokládá."}
-            {scenario === "konzervativni" && "Konzervativní: pokračování dosavadního tempa — portfolio roste stejným historickým ročním tempem, jaké dosud reálně dosahovalo (viz \"Průměrný roční růst hodnoty portfolia\" níže)."}
-            {scenario === "optimisticka" && (dtiEnabled
-              ? "Optimistická: simuluje jednotlivé budoucí nákupy nemovitostí financované z naspořeného kapitálu, s ohledem na tvůj věk, příjem a bankovní income test (nastaveno v Nastavení → Finanční profil)."
-              : "Optimistická: historické tempo × 1,3 — pro přesnější odhad založený na tvém věku, příjmu a skutečné bonitě nastav Finanční profil v Nastavení.")}
+          <div style={{ fontSize: 11, color: "#9a9483", marginTop: 6, lineHeight: 1.5, display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+            <span>
+              {scenario === "pesimisticka" && "Pesimistická: každá nemovitost roste jen vlastním tempem (bez dalších nákupů) — žádná nová akvizice se nepředpokládá."}
+              {scenario === "konzervativni" && "Konzervativní: pokračování dosavadního tempa — portfolio roste stejným historickým ročním tempem, jaké dosud reálně dosahovalo (viz \"Průměrný roční růst hodnoty portfolia\" níže)."}
+              {scenario === "optimisticka" && (dtiEnabled
+                ? "Optimistická: simuluje jednotlivé budoucí nákupy nemovitostí (financované kombinací vlastního kapitálu a refinancování portfolia), s ohledem na tvůj věk, příjem a bankovní testy DSTI/DTI/LTV (nastaveno v Nastavení → Finanční profil)."
+                : "Optimistická: historické tempo × 1,3 — pro přesnější odhad založený na tvém věku, příjmu a skutečné bonitě nastav Finanční profil v Nastavení.")}
+            </span>
+            {scenario === "optimisticka" && dtiEnabled && (
+              <button onClick={onOpenProjectionSettings}
+                style={{ flexShrink: 0, background: "none", border: "none", padding: 0, color: "#1f3d2e", fontSize: 11, fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>
+                ⚙ Upravit předpoklady
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -2485,6 +2655,8 @@ export default function EquityDashboard() {
   const [householdCosts, setHouseholdCosts] = useState("");
   const [assumedLtvPct, setAssumedLtvPct] = useState("70");
   const [savingFinancialProfile, setSavingFinancialProfile] = useState(false);
+  const [projectionSettings, setProjectionSettings] = useState<ProjectionSettings>(DEFAULT_PROJECTION_SETTINGS);
+  const [showProjectionSettingsModal, setShowProjectionSettingsModal] = useState(false);
   function t<K extends keyof typeof translations["cs"]>(key: K): typeof translations["cs"][K] {
     return translations[language][key] as typeof translations["cs"][K];
   }
@@ -2505,7 +2677,7 @@ export default function EquityDashboard() {
       } else if (user.email) {
         setUserInitials(user.email.slice(0, 2).toUpperCase());
       }
-      supabase.from("profiles").select("language, birth_year, income_employment, income_other, dti_projection_enabled, household_costs, assumed_ltv_pct").eq("id", user.id).single().then(({ data: profile }) => {
+      supabase.from("profiles").select("language, birth_year, income_employment, income_other, dti_projection_enabled, household_costs, assumed_ltv_pct, projection_settings").eq("id", user.id).single().then(({ data: profile }) => {
         if (profile?.language === "en" || profile?.language === "cs") setLanguage(profile.language);
         if (profile?.dti_projection_enabled) setDtiEnabled(true);
         if (profile?.birth_year) setBirthYear(String(profile.birth_year));
@@ -2513,6 +2685,7 @@ export default function EquityDashboard() {
         if (profile?.income_other) setIncomeOther(String(profile.income_other));
         if (profile?.household_costs) setHouseholdCosts(String(profile.household_costs));
         if (profile?.assumed_ltv_pct) setAssumedLtvPct(String(profile.assumed_ltv_pct));
+        if (profile?.projection_settings) setProjectionSettings({ ...DEFAULT_PROJECTION_SETTINGS, ...profile.projection_settings });
       });
     });
   }, []);
@@ -2540,6 +2713,12 @@ export default function EquityDashboard() {
       });
     }
     setSavingFinancialProfile(false);
+  }
+
+  async function saveProjectionSettings(next: ProjectionSettings) {
+    setProjectionSettings(next);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) await supabase.from("profiles").upsert({ id: user.id, projection_settings: next });
   }
 
   type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -2940,6 +3119,15 @@ export default function EquityDashboard() {
         />
       )}
 
+      {/* Projection Settings Modal */}
+      {showProjectionSettingsModal && (
+        <ProjectionSettingsModal
+          settings={projectionSettings}
+          onClose={() => setShowProjectionSettingsModal(false)}
+          onSave={saveProjectionSettings}
+        />
+      )}
+
       {/* Settings Modal */}
       {settingsOpen && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(28,43,34,0.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
@@ -3203,9 +3391,10 @@ export default function EquityDashboard() {
           )}
 
           {/* Chart */}
-          <GrowthChart properties={properties} mortgages={mortgages}
+          <GrowthChart properties={properties} mortgages={mortgages} debts={debts}
             dtiEnabled={dtiEnabled} birthYear={birthYear} incomeEmployment={incomeEmployment}
-            incomeOther={incomeOther} householdCosts={householdCosts} assumedLtvPct={assumedLtvPct} />
+            incomeOther={incomeOther} householdCosts={householdCosts} assumedLtvPct={assumedLtvPct}
+            projectionSettings={projectionSettings} onOpenProjectionSettings={() => setShowProjectionSettingsModal(true)} />
         </section>
 
         {/* NEMOVITOSTI */}
