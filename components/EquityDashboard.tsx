@@ -2060,10 +2060,10 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
               {scenario === "pesimisticka" && t("Bez akvizic: každá nemovitost roste jen vlastním tempem (bez dalších nákupů) — žádná nová akvizice se nepředpokládá.", "No acquisitions: each property grows only at its own pace (no further purchases) — no new acquisition is assumed.")}
               {scenario === "konzervativni" && t("Historické tempo: pokračování dosavadního tempa — portfolio roste stejným historickým ročním tempem, jaké dosud reálně dosahovalo (viz \"Průměrný roční růst hodnoty portfolia\" níže).", "Historical pace: continuing the current pace — the portfolio grows at the same historical annual rate it has actually achieved so far (see \"Average annual portfolio value growth\" below).")}
               {scenario === "optimisticka" && (dtiEnabled
-                ? t("Simulace akvizic: simuluje jednotlivé budoucí nákupy nemovitostí (financované kombinací vlastního kapitálu a refinancování portfolia), s ohledem na tvůj věk, příjem a bankovní testy DSTI/DTI/LTV (nastaveno v Nastavení → Finanční profil).", "Acquisition simulation: simulates individual future property purchases (financed by a mix of your own capital and refinancing the portfolio), factoring in your age, income, and bank DSTI/DTI/LTV tests (set up in Settings → Financial profile).")
-                : t("Simulace akvizic: historické tempo × 1,3 — pro přesnější odhad založený na tvém věku, příjmu a skutečné bonitě nastav Finanční profil v Nastavení.", "Acquisition simulation: historical pace × 1.3 — for a more accurate estimate based on your age, income and actual creditworthiness, set up your Financial profile in Settings."))}
+                ? t("Simulace akvizic: simuluje jednotlivé budoucí nákupy nemovitostí (financované kombinací vlastního kapitálu a refinancování portfolia), s ohledem na tvůj věk, příjem a bankovní testy DSTI/DTI/LTV.", "Acquisition simulation: simulates individual future property purchases (financed by a mix of your own capital and refinancing the portfolio), factoring in your age, income, and bank DSTI/DTI/LTV tests.")
+                : t("Simulace akvizic: historické tempo × 1,3 — pro přesnější odhad založený na tvém věku, příjmu a skutečné bonitě klikni níže na „Upravit předpoklady“ a vyplň je.", "Acquisition simulation: historical pace × 1.3 — for a more accurate estimate based on your age, income and actual creditworthiness, click \"Edit assumptions\" below and fill them in."))}
             </span>
-            {scenario === "optimisticka" && dtiEnabled && (
+            {scenario === "optimisticka" && (
               <button onClick={onOpenProjectionSettings}
                 style={{ flexShrink: 0, background: "none", border: "none", padding: 0, color: "#1f3d2e", fontSize: 11, fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>
                 ⚙ {t("Upravit předpoklady", "Edit assumptions")}
@@ -2975,13 +2975,11 @@ export default function EquityDashboard() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState("··");
   const [language, setLanguage] = useState<"cs" | "en">("cs");
-  const [dtiEnabled, setDtiEnabled] = useState(false);
   const [birthYear, setBirthYear] = useState("");
   const [incomeEmployment, setIncomeEmployment] = useState("");
   const [incomeOther, setIncomeOther] = useState("");
   const [householdCosts, setHouseholdCosts] = useState("");
   const [assumedLtvPct, setAssumedLtvPct] = useState("70");
-  const [savingFinancialProfile, setSavingFinancialProfile] = useState(false);
   const [projectionSettings, setProjectionSettings] = useState<ProjectionSettings>(DEFAULT_PROJECTION_SETTINGS);
   const [showProjectionSettingsModal, setShowProjectionSettingsModal] = useState(false);
   function t<K extends keyof typeof translations["cs"]>(key: K): typeof translations["cs"][K] {
@@ -3004,9 +3002,8 @@ export default function EquityDashboard() {
       } else if (user.email) {
         setUserInitials(user.email.slice(0, 2).toUpperCase());
       }
-      supabase.from("profiles").select("language, birth_year, income_employment, income_other, dti_projection_enabled, household_costs, assumed_ltv_pct, projection_settings").eq("id", user.id).single().then(({ data: profile }) => {
+      supabase.from("profiles").select("language, birth_year, income_employment, income_other, household_costs, assumed_ltv_pct, projection_settings").eq("id", user.id).single().then(({ data: profile }) => {
         if (profile?.language === "en" || profile?.language === "cs") setLanguage(profile.language);
-        if (profile?.dti_projection_enabled) setDtiEnabled(true);
         if (profile?.birth_year) setBirthYear(String(profile.birth_year));
         if (profile?.income_employment) setIncomeEmployment(String(profile.income_employment));
         if (profile?.income_other) setIncomeOther(String(profile.income_other));
@@ -3023,23 +3020,6 @@ export default function EquityDashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) await supabase.from("profiles").upsert({ id: user.id, language: lang });
     setSavingLanguage(false);
-  }
-
-  async function saveFinancialProfile(next?: { dtiEnabled?: boolean }) {
-    setSavingFinancialProfile(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("profiles").upsert({
-        id: user.id,
-        dti_projection_enabled: next?.dtiEnabled ?? dtiEnabled,
-        birth_year: birthYear ? Number(birthYear) : null,
-        income_employment: incomeEmployment ? Number(incomeEmployment) : null,
-        income_other: incomeOther ? Number(incomeOther) : null,
-        household_costs: householdCosts ? Number(householdCosts) : null,
-        assumed_ltv_pct: assumedLtvPct ? Number(assumedLtvPct) : 70,
-      });
-    }
-    setSavingFinancialProfile(false);
   }
 
   async function saveProjectionModal(next: ProjectionModalSave) {
@@ -3498,64 +3478,6 @@ export default function EquityDashboard() {
               </div>
             </div>
 
-            <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "18px 20px", marginTop: 14 }}>
-              <div className="flex items-center justify-between" style={{ marginBottom: dtiEnabled ? 12 : 0 }}>
-                <div style={{ flex: 1, paddingRight: 12 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: "#1c2b22" }}>Finanční profil pro projekce</div>
-                  <div style={{ fontSize: 12, color: "#7c8378", marginTop: 4 }}>
-                    Volitelné — použije se jen pro Simulaci akvizic v grafu "Jak rosteš v čase" (odhad, kolik dalších nemovitostí si ještě můžeš dovolit financovat). Nikde jinde se nepoužije.
-                  </div>
-                </div>
-                <button onClick={() => { const next = !dtiEnabled; setDtiEnabled(next); saveFinancialProfile({ dtiEnabled: next }); }}
-                  style={{ flexShrink: 0, width: 40, height: 22, borderRadius: 12, border: "none", background: dtiEnabled ? "#1f3d2e" : "#d2cab4", position: "relative", cursor: "pointer" }}>
-                  <span style={{ position: "absolute", top: 2, left: dtiEnabled ? 20 : 2, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
-                </button>
-              </div>
-
-              {dtiEnabled && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <div>
-                    <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Rok narození</div>
-                    <input type="number" value={birthYear} onChange={e => setBirthYear(e.target.value)}
-                      placeholder="např. 1988"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
-                    <div style={{ fontSize: 11, color: "#9a9483", marginTop: 4 }}>Určuje maximální délku nové hypotéky — banky obvykle nepůjčují za hranici ~70 let věku.</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Měsíční čistý příjem ze zaměstnání/podnikání</div>
-                    <input type="number" value={incomeEmployment} onChange={e => setIncomeEmployment(e.target.value)}
-                      placeholder="Kč"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Měsíční čistý příjem z jiných zdrojů</div>
-                    <input type="number" value={incomeOther} onChange={e => setIncomeOther(e.target.value)}
-                      placeholder="Kč"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
-                    <div style={{ fontSize: 11, color: "#9a9483", marginTop: 4 }}>Např. další práce, dividendy — nájmy z nemovitostí se počítají zvlášť, sem je nepiš.</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Měsíční životní náklady (mimo bydlení a splátek)</div>
-                    <input type="number" value={householdCosts} onChange={e => setHouseholdCosts(e.target.value)}
-                      placeholder="Kč"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
-                    <div style={{ fontSize: 11, color: "#9a9483", marginTop: 4 }}>Domácnost, jídlo, běžné výdaje — banky tohle při posuzování úvěru odečítají od příjmu, než spočítají, kolik zbývá na splátku.</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, color: "#7c8378", marginBottom: 4 }}>Předpokládané LTV pro budoucí úvěry</div>
-                    <input type="number" value={assumedLtvPct} onChange={e => setAssumedLtvPct(e.target.value)}
-                      placeholder="%"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", outline: "none", boxSizing: "border-box" }} />
-                    <div style={{ fontSize: 11, color: "#9a9483", marginTop: 4 }}>Jaký podíl ceny další nemovitosti očekáváš, že ti banka půjčí — výchozích 70 % odpovídá běžné nabídce.</div>
-                  </div>
-                  <button onClick={() => saveFinancialProfile()} disabled={savingFinancialProfile}
-                    style={{ padding: "8px 0", borderRadius: 8, border: "none", background: savingFinancialProfile ? "#e8e2d6" : "#1f3d2e", color: "#f5f1e6", fontSize: 13, fontWeight: 600, cursor: savingFinancialProfile ? "default" : "pointer" }}>
-                    {savingFinancialProfile ? "Ukládám…" : "Uložit"}
-                  </button>
-                </div>
-              )}
-            </div>
-
             <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
               style={{ marginTop: 12, width: "100%", padding: "10px 0", borderRadius: 10, border: "none", background: "transparent", color: "#c0392b", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c0392b" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -3738,7 +3660,7 @@ export default function EquityDashboard() {
 
           {/* Chart */}
           <GrowthChart properties={properties} mortgages={mortgages} debts={debts}
-            dtiEnabled={dtiEnabled} birthYear={birthYear} incomeEmployment={incomeEmployment}
+            dtiEnabled={!!birthYear} birthYear={birthYear} incomeEmployment={incomeEmployment}
             incomeOther={incomeOther} householdCosts={householdCosts} assumedLtvPct={assumedLtvPct}
             projectionSettings={projectionSettings} lang={language} onOpenProjectionSettings={() => setShowProjectionSettingsModal(true)} />
         </section>
