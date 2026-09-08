@@ -44,6 +44,17 @@ body {
     flex-direction: row !important;
     align-items: center !important;
     padding: 6px 10px !important;
+    /* 9 nav ikony + badge + logout se do jednoho řádku na užších telefonech
+       nevejdou — bez tohohle by zbytek (vč. Nastavení) prostě zmizel za
+       okrajem obrazovky, protože .eq-sidebar je position:fixed a stránka
+       sama nescrolluje vodorovně (body má overflow-x:hidden). */
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+  .eq-sidebar::-webkit-scrollbar {
+    display: none !important;
   }
 
   .eq-sidebar-logo {
@@ -53,16 +64,25 @@ body {
   .eq-nav-items {
     flex-direction: row !important;
     gap: 2px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .eq-nav-items > * {
+    width: 40px !important;
+    height: 40px !important;
+    flex-shrink: 0 !important;
   }
 
   .eq-sidebar-badge {
     margin-top: 0 !important;
     margin-left: 2px !important;
+    flex-shrink: 0 !important;
   }
 
   .eq-sidebar-logout {
     margin-top: 0 !important;
-    margin-left: auto !important;
+    margin-left: 6px !important;
+    flex-shrink: 0 !important;
   }
 
   .eq-sidebar-logout-label {

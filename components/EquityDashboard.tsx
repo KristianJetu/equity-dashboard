@@ -1611,7 +1611,7 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
       ["--ppm-positive" as string]: "#7cc493", ["--ppm-positive-soft" as string]: "rgba(124,196,147,0.13)",
       ["--ppm-negative" as string]: "#e0796a", ["--ppm-negative-soft" as string]: "rgba(224,121,106,0.13)", ["--ppm-debt" as string]: "#c9a06f",
     } as React.CSSProperties} onClick={onClose}>
-      <div style={{ background: "var(--ppm-bg)", borderRadius: 16, padding: "clamp(22px, 2.6vw, 34px)", width: "min(1440px, 94vw)", maxHeight: "94vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.5)", border: "1px solid var(--ppm-border)" }}
+      <div style={{ background: "var(--ppm-bg)", borderRadius: 16, padding: "clamp(16px, 2.6vw, 34px)", width: "min(1440px, 94vw)", maxHeight: "94vh", overflowY: "auto", overflowX: "hidden", boxSizing: "border-box", boxShadow: "0 24px 64px rgba(0,0,0,0.5)", border: "1px solid var(--ppm-border)" }}
         onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-start mb-4">
           <div>
@@ -1623,7 +1623,7 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
 
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
           {/* LEVÝ SLOUPEC — vstupy */}
-          <div style={{ flex: "0 0 320px", minWidth: 280 }}>
+          <div style={{ flex: "1 1 300px", minWidth: "min(280px, 100%)" }}>
             <div style={panelStyle}>
               {panelHead(t("Osobní a příjmové vstupy", "Personal & income inputs"), t("Z profilu appky, doplň co chybí", "From your app profile — fill in what's missing"))}
               <div style={{ marginBottom: 11 }}>
@@ -1690,10 +1690,10 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
           </div>
 
           {/* PRAVÝ SLOUPEC — živý náhled */}
-          <div style={{ flex: "1 1 520px", minWidth: 420 }}>
+          <div style={{ flex: "1 1 480px", minWidth: "min(420px, 100%)" }}>
             <div style={panelStyle}>
               {panelHead(t("Souhrn za horizont", "Summary over the horizon"), t(`Simulace na ${form.horizonYears} let dopředu, na tvých skutečných datech`, `Simulation ${form.horizonYears} years ahead, on your real data`))}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: form.birthYear ? 16 : 0 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(150px, 100%), 1fr))", gap: 10, marginBottom: form.birthYear ? 16 : 0 }}>
                 {tiles.map(t => (
                   <div key={t.k} style={{ background: "var(--ppm-panel-2)", borderRadius: 10, padding: "12px 14px" }}>
                     <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10, fontWeight: 700, color: "var(--ppm-text-faint)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 5 }}>{t.k}</div>
@@ -2045,7 +2045,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
       </div>
       {showProjection && (
         <div style={{ marginBottom: 14 }}>
-          <div style={{ display: "inline-flex", background: "#e6e0d0", borderRadius: 16, padding: 2 }}>
+          <div style={{ display: "inline-flex", flexWrap: "wrap", background: "#e6e0d0", borderRadius: 16, padding: 2 }}>
             {([["pesimisticka", t("Bez akvizic", "No acquisitions")], ["konzervativni", t("Historické tempo", "Historical pace")], ["optimisticka", t("Simulace akvizic", "Acquisition simulation")]] as const).map(([val, label]) => (
               <button key={val} onClick={() => setScenario(val)}
                 style={{ padding: "7px 14px", borderRadius: 14, border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer",
