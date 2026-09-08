@@ -1444,29 +1444,35 @@ function ProjectionSettingsModal({ settings, onClose, onSave }: {
   }
 
   const sliderField = (label: string, value: number, onChange: (v: number) => void, min: number, max: number, step: number, display: (v: number) => string, hint = "") => (
-    <div className="psaw-field">
-      <div className="psaw-field-head">
-        <span className="psaw-label">{label}</span>
-        <span className="psaw-value">{display(value)}</span>
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
+        <span style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontWeight: 700, fontSize: 13, color: "#1f3d2e", flexShrink: 0 }}>{display(value)}</span>
       </div>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))} />
-      {hint && <div className="psaw-hint">{hint}</div>}
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        style={{ width: "100%", accentColor: "#1f3d2e", display: "block" }} />
+      {hint && <div style={{ fontSize: 11, color: "#9a9483", marginTop: 5, lineHeight: 1.4 }}>{hint}</div>}
     </div>
   );
 
+  const sectionTitle = (t: string) => (
+    <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>{t}</div>
+  );
+
   return (
-    <div className="psaw-overlay" onClick={onClose}>
-      <style>{PROJECTION_SETTINGS_CSS}</style>
-      <div className="psaw-box" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)" }} onClick={onClose}>
+      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "clamp(18px, 5vw, 32px)", width: "min(560px, 92vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
+        onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h2>Pokročilé nastavení projekce</h2>
-            <div className="psaw-sub">Ovlivňuje jen Optimistickou projekci v grafu "Jak rosteš v čase". Výchozí hodnoty vychází z reálné bankovní nabídky a aktuálních tržních dat (2026).</div>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 20, color: "#1c2b22" }}>Pokročilé nastavení projekce</div>
+            <div style={{ fontSize: 12, color: "#7c8378", marginTop: 4 }}>Ovlivňuje jen Optimistickou projekci v grafu "Jak rosteš v čase". Výchozí hodnoty vychází z reálné bankovní nabídky a aktuálních tržních dat (2026).</div>
           </div>
-          <button onClick={onClose} className="psaw-close">×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9a9483", fontSize: 22, flexShrink: 0 }}>×</button>
         </div>
 
-        <div className="psaw-section-title">Bankovní parametry</div>
+        {sectionTitle("Bankovní parametry")}
         {sliderField("Strop DSTI banky", Math.round(form.dstiCap * 100), v => set("dstiCap", v / 100), 40, 80, 1, v => `${v} %`,
           "ČNB od 7/2023 nevyžaduje závazně. Reálně: Komerční banka 50 %, Česká spořitelna 55–60 %, Hypoteční banka (ČSOB) až 70 %.")}
         {sliderField("Strop DTI (násobek ročního příjmu)", form.dtiCap, v => set("dtiCap", v), 3, 12, 0.5, v => `${v.toFixed(1)}×`,
@@ -1477,7 +1483,7 @@ function ProjectionSettingsModal({ settings, onClose, onSave }: {
         {sliderField("Stress-test přirážka", form.stressAdd * 100, v => set("stressAdd", v / 100), 0, 4, 0.1, v => `${v.toFixed(1)} p.b.`)}
         {sliderField("Max. věk na konci splatnosti", form.maxAge, v => set("maxAge", v), 60, 80, 1, v => `${v} let`)}
 
-        <div className="psaw-section-title">Růst v čase</div>
+        {sectionTitle("Růst v čase")}
         {sliderField("Růst platu", form.salaryGrowth * 100, v => set("salaryGrowth", v / 100), 0, 8, 0.1, v => `${v.toFixed(1)} %/rok`)}
         {sliderField("Růst nájmů", form.rentGrowth * 100, v => set("rentGrowth", v / 100), 0, 10, 0.1, v => `${v.toFixed(1)} %/rok`,
           "Aktuální tržní růst nájmů v ČR běží kolem 5–6 % (místy až 10 %), ale trh se stabilizuje.")}
@@ -1485,19 +1491,21 @@ function ProjectionSettingsModal({ settings, onClose, onSave }: {
         {sliderField("Výnos nové nemovitosti", form.newYield * 100, v => set("newYield", v / 100), 2, 10, 0.1, v => `${v.toFixed(1)} %/rok`,
           "Předpokládaný hrubý nájemní výnos (roční nájem / cena) budoucí akvizice.")}
 
-        <div className="psaw-section-title">Akvizice a vlastní kapitál</div>
-        <div className="psaw-field">
-          <div className="psaw-field-head">
-            <span className="psaw-label">Výchozí cena další akvizice</span>
-            <span className="psaw-value">{form.basePrice === null ? "auto" : `${fmt(form.basePrice)} Kč`}</span>
+        {sectionTitle("Akvizice a vlastní kapitál")}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.05em" }}>Výchozí cena další akvizice</span>
+            <span style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontWeight: 700, fontSize: 13, color: "#1f3d2e", flexShrink: 0 }}>{form.basePrice === null ? "auto" : `${fmt(form.basePrice)} Kč`}</span>
           </div>
-          <label className="psaw-checkline" style={{ marginBottom: form.basePrice === null ? 0 : 8 }}>
-            <input type="checkbox" checked={form.basePrice === null} onChange={e => set("basePrice", e.target.checked ? null : 3400000)} />
+          <label className="flex items-center gap-2" style={{ fontSize: 12, color: "#5c6359", marginBottom: form.basePrice === null ? 0 : 8, cursor: "pointer" }}>
+            <input type="checkbox" checked={form.basePrice === null} onChange={e => set("basePrice", e.target.checked ? null : 3400000)}
+              style={{ width: 14, height: 14, accentColor: "#1f3d2e" }} />
             Automaticky (průměr posledních dvou hypoték)
           </label>
           {form.basePrice !== null && (
             <input type="range" min={1000000} max={10000000} step={100000} value={form.basePrice}
-              onChange={e => set("basePrice", Number(e.target.value))} />
+              onChange={e => set("basePrice", Number(e.target.value))}
+              style={{ width: "100%", accentColor: "#1f3d2e", display: "block" }} />
           )}
         </div>
         {sliderField("Min. rozestup mezi akvizicemi", form.cooldownMonths, v => set("cooldownMonths", v), 3, 36, 1, v => `${v} měs.`)}
@@ -1506,20 +1514,24 @@ function ProjectionSettingsModal({ settings, onClose, onSave }: {
         {sliderField("Roční vklad vlastního kapitálu", form.annualCash, v => set("annualCash", v), 0, 3000000, 50000, v => `${fmt(v)} Kč/rok`,
           "Kolik vlastní hotovosti mimo cashflow z nájmů ročně přiléváš do investičního koloběhu.")}
 
-        <label className="psaw-checkline" style={{ marginTop: 8, marginBottom: 20 }}>
-          <input type="checkbox" checked={form.includeDebts} onChange={e => set("includeDebts", e.target.checked)} />
-          Počítat i současné osobní půjčky do DSTI/DTI
-        </label>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, marginBottom: 20 }}>
+          <input type="checkbox" checked={form.includeDebts} onChange={e => set("includeDebts", e.target.checked)}
+            style={{ width: 16, height: 16, accentColor: "#1f3d2e" }} />
+          <span style={{ fontSize: 13, color: "#1c2b22" }}>Počítat i současné osobní půjčky do DSTI/DTI</span>
+        </div>
 
         <div className="flex gap-3">
-          <button onClick={() => setForm(DEFAULT_PROJECTION_SETTINGS)} className="psaw-btn psaw-btn-ghost">
+          <button onClick={() => setForm(DEFAULT_PROJECTION_SETTINGS)}
+            style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
             Výchozí hodnoty
           </button>
           <div style={{ flex: 1 }} />
-          <button onClick={onClose} className="psaw-btn psaw-btn-ghost">
+          <button onClick={onClose}
+            style={{ padding: "10px 18px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
             Zavřít
           </button>
-          <button onClick={handleSave} disabled={saving} className="psaw-btn psaw-btn-primary">
+          <button onClick={handleSave} disabled={saving}
+            style={{ padding: "10px 18px", borderRadius: 8, border: "none", background: saving ? "#c5bfb0" : "#1f3d2e", color: "#f5f1e6", fontSize: 14, fontWeight: 600, cursor: saving ? "default" : "pointer" }}>
             {saving ? "Ukládám…" : "Uložit"}
           </button>
         </div>
@@ -1527,43 +1539,6 @@ function ProjectionSettingsModal({ settings, onClose, onSave }: {
     </div>
   );
 }
-
-const PROJECTION_SETTINGS_CSS = `
-.psaw-overlay {
-  position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.55);
-  --psaw-bg:#f7f3ea; --psaw-surface:#ffffff; --psaw-ink:#1e2b22; --psaw-ink-dim:#6f6a5a; --psaw-ink-faint:#a39d8a;
-  --psaw-border:#ddd0af; --psaw-border-soft:#e9dfc4; --psaw-accent:#a8752f; --psaw-accent-ink:#5c3f19;
-}
-@media (prefers-color-scheme: dark) {
-  .psaw-overlay {
-    --psaw-bg:#141b15; --psaw-surface:#1c2620; --psaw-ink:#eae3d2; --psaw-ink-dim:#a8a08c; --psaw-ink-faint:#726c5b;
-    --psaw-border:#37453a; --psaw-border-soft:#2b382f; --psaw-accent:#d3a052; --psaw-accent-ink:#f0d9ac;
-  }
-}
-.psaw-box {
-  background: var(--psaw-bg); border: 1px solid var(--psaw-border-soft); border-radius: 16px;
-  padding: clamp(18px, 5vw, 32px); width: min(560px, 92vw); max-height: 90vh; overflow-y: auto;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.4); color: var(--psaw-ink); font-family: 'Work Sans', system-ui, sans-serif;
-}
-.psaw-box h2 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 20px; margin: 0; color: var(--psaw-ink); }
-.psaw-sub { font-size: 12px; color: var(--psaw-ink-dim); margin-top: 4px; line-height: 1.5; }
-.psaw-close { background: none; border: none; cursor: pointer; color: var(--psaw-ink-faint); font-size: 22px; flex-shrink: 0; }
-.psaw-section-title { font-size: 11px; font-weight: 700; color: var(--psaw-ink-faint); text-transform: uppercase; letter-spacing: 0.1em; margin: 20px 0 12px; }
-.psaw-section-title:first-of-type { margin-top: 0; }
-.psaw-field { margin-bottom: 16px; }
-.psaw-field-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
-.psaw-label { font-size: 12px; font-weight: 600; color: var(--psaw-ink-dim); text-transform: uppercase; letter-spacing: 0.05em; }
-.psaw-value { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-weight: 700; font-size: 13px; color: var(--psaw-accent-ink); flex-shrink: 0; }
-.psaw-box input[type=range] { width: 100%; display: block; accent-color: var(--psaw-accent); }
-.psaw-hint { font-size: 11px; color: var(--psaw-ink-faint); margin-top: 5px; line-height: 1.4; }
-.psaw-checkline { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--psaw-ink-dim); cursor: pointer; }
-.psaw-checkline input { accent-color: var(--psaw-accent); width: 14px; height: 14px; }
-.psaw-btn { padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Work Sans', sans-serif; }
-.psaw-btn-ghost { border: 1px solid var(--psaw-border); background: transparent; color: var(--psaw-ink-dim); }
-.psaw-btn-primary { border: none; background: var(--psaw-accent); color: var(--psaw-bg); }
-.psaw-btn-primary:disabled { background: var(--psaw-border); cursor: default; }
-`;
 
 // ── Growth Chart ─────────────────────────────────────────────────────────────
 function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings, onOpenProjectionSettings }: {
