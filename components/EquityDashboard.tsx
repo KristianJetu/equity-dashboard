@@ -1443,15 +1443,16 @@ function ProjectionSettingsModal({ settings, onClose, onSave }: {
     onClose();
   }
 
-  const field = (label: string, value: string, onChange: (v: string) => void, suffix = "", hint = "") => (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{label}</div>
-      <div className="flex items-center gap-2">
-        <input type="number" value={value} onChange={e => onChange(e.target.value)}
-          style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22" }} />
-        {suffix && <span style={{ fontSize: 13, color: "#9a9483" }}>{suffix}</span>}
+  const sliderField = (label: string, value: number, onChange: (v: number) => void, min: number, max: number, step: number, display: (v: number) => string, hint = "") => (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
+        <span style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontWeight: 700, fontSize: 13, color: "#1f3d2e", flexShrink: 0 }}>{display(value)}</span>
       </div>
-      {hint && <div style={{ fontSize: 11, color: "#9a9483", marginTop: 5 }}>{hint}</div>}
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        style={{ width: "100%", accentColor: "#1f3d2e", display: "block" }} />
+      {hint && <div style={{ fontSize: 11, color: "#9a9483", marginTop: 5, lineHeight: 1.4 }}>{hint}</div>}
     </div>
   );
 
@@ -1472,36 +1473,50 @@ function ProjectionSettingsModal({ settings, onClose, onSave }: {
         </div>
 
         {sectionTitle("Bankovní parametry")}
-        {field("Strop DSTI banky", String(Math.round(form.dstiCap * 100)), v => set("dstiCap", (Number(v) || 0) / 100), "%",
+        {sliderField("Strop DSTI banky", Math.round(form.dstiCap * 100), v => set("dstiCap", v / 100), 40, 80, 1, v => `${v} %`,
           "ČNB od 7/2023 nevyžaduje závazně. Reálně: Komerční banka 50 %, Česká spořitelna 55–60 %, Hypoteční banka (ČSOB) až 70 %.")}
-        {field("Strop DTI (násobek ročního příjmu)", String(form.dtiCap), v => set("dtiCap", Number(v) || 0), "×",
+        {sliderField("Strop DTI (násobek ročního příjmu)", form.dtiCap, v => set("dtiCap", v), 3, 12, 0.5, v => `${v.toFixed(1)}×`,
           "ČNB od 4/2026 doporučuje pro investiční hypotéky max. 7×.")}
-        {field("Uznání nájmu bankou", String(Math.round(form.rentRecognition * 100)), v => set("rentRecognition", (Number(v) || 0) / 100), "%",
+        {sliderField("Uznání nájmu bankou", Math.round(form.rentRecognition * 100), v => set("rentRecognition", v / 100), 40, 100, 5, v => `${v} %`,
           "Banky obvykle uznávají 40–70 % nájmu; dlouhodobé smlouvy (12+ měs.) bývají na horní hranici.")}
-        {field("Sazba nových úvěrů", String(form.newLoanRate * 100), v => set("newLoanRate", (Number(v) || 0) / 100), "%")}
-        {field("Stress-test přirážka", String(form.stressAdd * 100), v => set("stressAdd", (Number(v) || 0) / 100), "p.b.")}
-        {field("Max. věk na konci splatnosti", String(form.maxAge), v => set("maxAge", Number(v) || 70), "let")}
+        {sliderField("Sazba nových úvěrů", form.newLoanRate * 100, v => set("newLoanRate", v / 100), 2, 10, 0.01, v => `${v.toFixed(2)} %`)}
+        {sliderField("Stress-test přirážka", form.stressAdd * 100, v => set("stressAdd", v / 100), 0, 4, 0.1, v => `${v.toFixed(1)} p.b.`)}
+        {sliderField("Max. věk na konci splatnosti", form.maxAge, v => set("maxAge", v), 60, 80, 1, v => `${v} let`)}
 
         {sectionTitle("Růst v čase")}
-        {field("Růst platu", String(form.salaryGrowth * 100), v => set("salaryGrowth", (Number(v) || 0) / 100), "%/rok")}
-        {field("Růst nájmů", String(form.rentGrowth * 100), v => set("rentGrowth", (Number(v) || 0) / 100), "%/rok",
+        {sliderField("Růst platu", form.salaryGrowth * 100, v => set("salaryGrowth", v / 100), 0, 8, 0.1, v => `${v.toFixed(1)} %/rok`)}
+        {sliderField("Růst nájmů", form.rentGrowth * 100, v => set("rentGrowth", v / 100), 0, 10, 0.1, v => `${v.toFixed(1)} %/rok`,
           "Aktuální tržní růst nájmů v ČR běží kolem 5–6 % (místy až 10 %), ale trh se stabilizuje.")}
-        {field("Růst ceny další akvizice", String(form.priceGrowth * 100), v => set("priceGrowth", (Number(v) || 0) / 100), "%/rok")}
-        {field("Výnos nové nemovitosti", String(form.newYield * 100), v => set("newYield", (Number(v) || 0) / 100), "%/rok",
+        {sliderField("Růst ceny další akvizice", form.priceGrowth * 100, v => set("priceGrowth", v / 100), 0, 12, 0.1, v => `${v.toFixed(1)} %/rok`)}
+        {sliderField("Výnos nové nemovitosti", form.newYield * 100, v => set("newYield", v / 100), 2, 10, 0.1, v => `${v.toFixed(1)} %/rok`,
           "Předpokládaný hrubý nájemní výnos (roční nájem / cena) budoucí akvizice.")}
 
         {sectionTitle("Akvizice a vlastní kapitál")}
-        {field("Výchozí cena další akvizice", form.basePrice === null ? "" : String(form.basePrice), v => set("basePrice", v === "" ? null : Number(v)), "Kč",
-          "Nech prázdné pro automatický odhad z průměru posledních dvou hypoték.")}
-        {field("Min. rozestup mezi akvizicemi", String(form.cooldownMonths), v => set("cooldownMonths", Number(v) || 1), "měs.")}
-        {field("Počáteční hotovost na akvizici", String(form.initialCash), v => set("initialCash", Number(v) || 0), "Kč",
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.05em" }}>Výchozí cena další akvizice</span>
+            <span style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontWeight: 700, fontSize: 13, color: "#1f3d2e", flexShrink: 0 }}>{form.basePrice === null ? "auto" : `${fmt(form.basePrice)} Kč`}</span>
+          </div>
+          <label className="flex items-center gap-2" style={{ fontSize: 12, color: "#5c6359", marginBottom: form.basePrice === null ? 0 : 8, cursor: "pointer" }}>
+            <input type="checkbox" checked={form.basePrice === null} onChange={e => set("basePrice", e.target.checked ? null : 3400000)}
+              style={{ width: 14, height: 14, accentColor: "#1f3d2e" }} />
+            Automaticky (průměr posledních dvou hypoték)
+          </label>
+          {form.basePrice !== null && (
+            <input type="range" min={1000000} max={10000000} step={100000} value={form.basePrice}
+              onChange={e => set("basePrice", Number(e.target.value))}
+              style={{ width: "100%", accentColor: "#1f3d2e", display: "block" }} />
+          )}
+        </div>
+        {sliderField("Min. rozestup mezi akvizicemi", form.cooldownMonths, v => set("cooldownMonths", v), 3, 36, 1, v => `${v} měs.`)}
+        {sliderField("Počáteční hotovost na akvizici", form.initialCash, v => set("initialCash", v), 0, 5000000, 100000, v => `${fmt(v)} Kč`,
           "Jednorázová hotovost k dispozici teď — použije se jako vlastní kapitál do první koupě.")}
-        {field("Roční vklad vlastního kapitálu", String(form.annualCash), v => set("annualCash", Number(v) || 0), "Kč/rok",
+        {sliderField("Roční vklad vlastního kapitálu", form.annualCash, v => set("annualCash", v), 0, 3000000, 50000, v => `${fmt(v)} Kč/rok`,
           "Kolik vlastní hotovosti mimo cashflow z nájmů ročně přiléváš do investičního koloběhu.")}
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, marginBottom: 20 }}>
           <input type="checkbox" checked={form.includeDebts} onChange={e => set("includeDebts", e.target.checked)}
-            style={{ width: 16, height: 16 }} />
+            style={{ width: 16, height: 16, accentColor: "#1f3d2e" }} />
           <span style={{ fontSize: 13, color: "#1c2b22" }}>Počítat i současné osobní půjčky do DSTI/DTI</span>
         </div>
 
