@@ -1291,11 +1291,16 @@ const DEFAULT_PROJECTION_SETTINGS: ProjectionSettings = {
 
 // ── Optimistic scenario: simulate future acquisitions funded by a mix of own capital and
 // LTV-headroom refinancing, gated by DSTI/DTI tests derived from a real ČSOB mortgage offer.
-type SimPt = { ms: number; value: number; debt: number };
+type SimPt = { ms: number; value: number; debt: number; bought?: boolean };
+type ProjectionPurchase = { price: number; cash: number; loan: number; rent: number; payment: number };
+type ProjectionYearRow = {
+  year: number; age: number; value: number; debt: number; equity: number;
+  income: number; debtService: number; dsti: number; dti: number; surplus: number;
+  purchases: ProjectionPurchase[];
+};
 function simulateOptimisticAcquisitions(
   allPoints: SimPt[],
   nowMs: number,
-  conservativeRate: number,
   properties: Property[],
   mortgages: Mortgage[],
   debts: Debt[],
@@ -1305,7 +1310,7 @@ function simulateOptimisticAcquisitions(
   householdCostsStr: string,
   assumedLtvPctStr: string,
   settings: ProjectionSettings,
-): SimPt[] | null {
+): { points: SimPt[]; rows: ProjectionYearRow[] } | null {
   const birthYear = Number(birthYearStr);
   if (!birthYear) return null;
 
@@ -1358,6 +1363,8 @@ function simulateOptimisticAcquisitions(
   let monthIdx = 0;
 
   const result: SimPt[] = [];
+  const rows: ProjectionYearRow[] = [];
+  let yearPurchases: ProjectionPurchase[] = [];
   for (const base of allPoints) {
     if (base.ms <= nowMs) continue;
     monthIdx++;
@@ -1365,6 +1372,7 @@ function simulateOptimisticAcquisitions(
     prevMs = base.ms;
     const yearsFromNow = (base.ms - nowMs) / YEAR_MS;
     const age = age0 + yearsFromNow;
+    let boughtThisMonth = false;
 
     nextPurchasePrice *= Math.pow(1 + settings.priceGrowth, monthsElapsed / 12);
     cashPool += (settings.annualCash / 12) * monthsElapsed;
@@ -1415,30 +1423,96 @@ function simulateOptimisticAcquisitions(
         simProps.push({ startMs: base.ms, purchasePrice, rentMonthly: rentEstimate, loanAmount: loanNeeded, paymentMonthly: realPay, termMs: remainingTermYears * YEAR_MS });
         cashPool -= cashUsed;
         lastPurchaseMonth = monthIdx;
+        yearPurchases.push({ price: purchasePrice, cash: cashUsed, loan: loanNeeded, rent: rentEstimate, payment: realPay });
+        boughtThisMonth = true;
       }
     }
 
-    result.push({ ms: base.ms, value: totalValue, debt: totalDebt });
+    result.push({ ms: base.ms, value: totalValue, debt: totalDebt, bought: boughtThisMonth });
+
+    const recognizedIncomeNow = salary + settings.rentRecognition * (baseRentNow + simRentTotal) + debtsIncome;
+    const totalDebtSvcNow = baseMonthlyDebtService + simDebtServiceTotal + debtsService;
+    if (monthIdx % 12 === 0) {
+      rows.push({
+        year: new Date(nowMs).getFullYear() + monthIdx / 12,
+        age: Math.round(age),
+        value: totalValue, debt: totalDebt, equity: totalValue - totalDebt,
+        income: recognizedIncomeNow, debtService: totalDebtSvcNow,
+        dsti: recognizedIncomeNow > 0 ? totalDebtSvcNow / recognizedIncomeNow : 0,
+        dti: recognizedIncomeNow > 0 ? (totalDebt + debtsBalance) / (recognizedIncomeNow * 12) : 0,
+        surplus: recognizedIncomeNow - totalDebtSvcNow - costs0,
+        purchases: yearPurchases,
+      });
+      yearPurchases = [];
+    }
   }
-  return result;
+  return { points: result, rows };
 }
 
-// ── Projection Settings Modal ──────────────────────────────────────────────────
-function ProjectionSettingsModal({ settings, onClose, onSave }: {
+// Budoucí trajektorie bez akvizic (jen organický růst existujících nemovitostí + amortizace
+// existujících hypoték) — stejný vzorec jako "future" větev v GrowthChart, ale nezávislý na
+// jeho rozsahu grafu, aby si náhled v ProjectionPreviewModal mohl zvolit vlastní horizont.
+function buildFutureBaseline(properties: Property[], mortgages: Mortgage[], nowMs: number, horizonYears: number): SimPt[] {
+  const YEAR_MS = 365 * 86400000;
+  const totalMonths = Math.round(horizonYears * 12);
+  const points: SimPt[] = [];
+  for (let m = 1; m <= totalMonths; m++) {
+    const ms = nowMs + (m / 12) * YEAR_MS;
+    let value = 0, debt = 0;
+    for (const p of properties) {
+      const growth = (p.annual_growth_pct ?? 3) / 100;
+      value += p.estimated_value * Math.pow(1 + growth, (ms - nowMs) / YEAR_MS);
+      const mort = mortgages.find(mm => mm.property_id === p.id);
+      if (mort) {
+        const loanMs = mort.loan_start_date ? new Date(mort.loan_start_date).getTime() : (p.purchase_date ? new Date(p.purchase_date).getTime() : nowMs);
+        const termMs = (mort.loan_term_years ?? 30) * YEAR_MS;
+        const payoffMs = loanMs + termMs;
+        if (ms < payoffMs) {
+          const t = (ms - nowMs) / (payoffMs - nowMs || 1);
+          debt += Math.max(0, mort.outstanding_balance * (1 - t));
+        }
+      }
+    }
+    points.push({ ms, value, debt });
+  }
+  return points;
+}
+
+// ── Projection Preview Modal ───────────────────────────────────────────────────
+type ProjectionModalSave = {
+  birthYear: string; incomeEmployment: string; incomeOther: string; householdCosts: string; assumedLtvPct: string;
+  settings: ProjectionSettings;
+};
+function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, settings, onClose, onSave }: {
+  properties: Property[]; mortgages: Mortgage[]; debts: Debt[];
+  birthYear: string; incomeEmployment: string; incomeOther: string; householdCosts: string; assumedLtvPct: string;
   settings: ProjectionSettings;
   onClose: () => void;
-  onSave: (s: ProjectionSettings) => void;
+  onSave: (next: ProjectionModalSave) => void;
 }) {
-  const [form, setForm] = useState<ProjectionSettings>(settings);
+  type PreviewForm = ProjectionSettings & {
+    birthYear: string; incomeEmployment: string; incomeOther: string; householdCosts: string; assumedLtvPct: string;
+    horizonYears: number;
+  };
+  const [form, setForm] = useState<PreviewForm>({ ...settings, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, horizonYears: 5 });
   const [saving, setSaving] = useState(false);
 
-  function set<K extends keyof ProjectionSettings>(key: K, value: ProjectionSettings[K]) {
+  function set<K extends keyof PreviewForm>(key: K, value: PreviewForm[K]) {
     setForm(f => ({ ...f, [key]: value }));
   }
 
   async function handleSave() {
     setSaving(true);
-    await onSave(form);
+    await onSave({
+      birthYear: form.birthYear, incomeEmployment: form.incomeEmployment, incomeOther: form.incomeOther,
+      householdCosts: form.householdCosts, assumedLtvPct: form.assumedLtvPct,
+      settings: {
+        dstiCap: form.dstiCap, dtiCap: form.dtiCap, rentRecognition: form.rentRecognition, salaryGrowth: form.salaryGrowth,
+        rentGrowth: form.rentGrowth, priceGrowth: form.priceGrowth, newYield: form.newYield, newLoanRate: form.newLoanRate,
+        stressAdd: form.stressAdd, maxAge: form.maxAge, cooldownMonths: form.cooldownMonths, initialCash: form.initialCash,
+        annualCash: form.annualCash, basePrice: form.basePrice, includeDebts: form.includeDebts,
+      },
+    });
     setSaving(false);
     onClose();
   }
@@ -1457,71 +1531,206 @@ function ProjectionSettingsModal({ settings, onClose, onSave }: {
   );
 
   const sectionTitle = (t: string) => (
-    <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 8 }}>{t}</div>
+    <div style={{ fontSize: 11, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, marginTop: 16 }}>{t}</div>
   );
 
+  // ── Živý náhled ──────────────────────────────────────────────────────────
+  const nowMs = Date.now();
+  const ownedProps = properties.filter(p => p.ownership_type !== "manager");
+  const todayValue = ownedProps.reduce((s, p) => s + p.estimated_value, 0);
+  const todayDebt = mortgages.filter(m => ownedProps.some(p => p.id === m.property_id)).reduce((s, m) => s + m.outstanding_balance, 0);
+
+  const baseline = buildFutureBaseline(properties, mortgages, nowMs, form.horizonYears);
+  const sim = simulateOptimisticAcquisitions(baseline, nowMs, properties, mortgages, debts, form.birthYear, form.incomeEmployment, form.incomeOther, form.householdCosts, form.assumedLtvPct, form);
+  const rows = sim?.rows ?? [];
+  const chartPoints: SimPt[] = [{ ms: nowMs, value: todayValue, debt: todayDebt }, ...(sim?.points ?? [])];
+  const totalPurchases = rows.reduce((s, r) => s + r.purchases.length, 0);
+  const lastRow = rows[rows.length - 1];
+
+  const tiles: { k: string; v: string; accent?: boolean; warn?: boolean }[] = [
+    { k: "Majetek dnes", v: `${fmtMil(todayValue - todayDebt)} mil` },
+    { k: `Majetek za ${form.horizonYears} let`, v: lastRow ? `${fmtMil(lastRow.equity)} mil` : "—", accent: true },
+    { k: `Hodnota portfolia za ${form.horizonYears} let`, v: lastRow ? `${fmtMil(lastRow.value)} mil` : "—" },
+    { k: `Dluh za ${form.horizonYears} let`, v: lastRow ? `${fmtMil(lastRow.debt)} mil` : "—" },
+    { k: "Simulovaných akvizic", v: String(totalPurchases) },
+    { k: "DSTI / DTI na konci", v: lastRow ? `${Math.round(lastRow.dsti * 100)} % · ${lastRow.dti.toFixed(1)}×` : "—", warn: lastRow ? (lastRow.dsti > form.dstiCap || lastRow.dti > form.dtiCap) : false },
+  ];
+
+  // Malý statický graf (bez hoveru) — hodnota / dluh / majetek + tečkované značky akvizic
+  const CW = 640, CH = 200, CPL = 52, CPR = 14, CPT = 14, CPB = 24;
+  const chartMinMs = chartPoints[0]?.ms ?? nowMs;
+  const chartMaxMs = chartPoints[chartPoints.length - 1]?.ms ?? nowMs;
+  const chartMaxV = Math.max(...chartPoints.map(p => p.value), 1);
+  const cToX = (ms: number) => CPL + (ms - chartMinMs) / ((chartMaxMs - chartMinMs) || 1) * (CW - CPL - CPR);
+  const cToY = (v: number) => CPT + (1 - v / chartMaxV) * (CH - CPT - CPB);
+  const valuePts = chartPoints.map(p => `${cToX(p.ms).toFixed(1)},${cToY(p.value).toFixed(1)}`).join(" ");
+  const debtPts = chartPoints.map(p => `${cToX(p.ms).toFixed(1)},${cToY(p.debt).toFixed(1)}`).join(" ");
+  const eqPts = chartPoints.map(p => `${cToX(p.ms).toFixed(1)},${cToY(p.value - p.debt).toFixed(1)}`).join(" ");
+  const chartGridVals = [0.25, 0.5, 0.75, 1].map(f => f * chartMaxV);
+  const buyPts = chartPoints.filter(p => p.bought);
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)" }} onClick={onClose}>
-      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "clamp(18px, 5vw, 32px)", width: "min(560px, 92vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.22)" }}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)", padding: 16 }} onClick={onClose}>
+      <div style={{ background: "#f5f1e6", borderRadius: 16, padding: "clamp(18px, 3vw, 28px)", width: "min(1180px, 96vw)", maxHeight: "94vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.28)" }}
         onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-start mb-4">
           <div>
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 20, color: "#1c2b22" }}>Pokročilé nastavení projekce</div>
-            <div style={{ fontSize: 12, color: "#7c8378", marginTop: 4 }}>Ovlivňuje jen Optimistickou projekci v grafu "Jak rosteš v čase". Výchozí hodnoty vychází z reálné bankovní nabídky a aktuálních tržních dat (2026).</div>
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 20, color: "#1c2b22" }}>Projekce budoucích akvizic</div>
+            <div style={{ fontSize: 12, color: "#7c8378", marginTop: 4, maxWidth: 640, lineHeight: 1.5 }}>Simuluje, kdy by šlo koupit další nemovitost financovanou refinancováním portfolia (LTV) a bankovním income testem (DSTI/DTI) — bez nutnosti našetřit hotovost na zálohu. Uprav si vstupy a zkontroluj, jestli výsledek dává smysl.</div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9a9483", fontSize: 22, flexShrink: 0 }}>×</button>
         </div>
 
-        {sectionTitle("Bankovní parametry")}
-        {sliderField("Strop DSTI banky", Math.round(form.dstiCap * 100), v => set("dstiCap", v / 100), 40, 80, 1, v => `${v} %`,
-          "ČNB od 7/2023 nevyžaduje závazně. Reálně: Komerční banka 50 %, Česká spořitelna 55–60 %, Hypoteční banka (ČSOB) až 70 %.")}
-        {sliderField("Strop DTI (násobek ročního příjmu)", form.dtiCap, v => set("dtiCap", v), 3, 12, 0.5, v => `${v.toFixed(1)}×`,
-          "ČNB od 4/2026 doporučuje pro investiční hypotéky max. 7×.")}
-        {sliderField("Uznání nájmu bankou", Math.round(form.rentRecognition * 100), v => set("rentRecognition", v / 100), 40, 100, 5, v => `${v} %`,
-          "Banky obvykle uznávají 40–70 % nájmu; dlouhodobé smlouvy (12+ měs.) bývají na horní hranici.")}
-        {sliderField("Sazba nových úvěrů", form.newLoanRate * 100, v => set("newLoanRate", v / 100), 2, 10, 0.01, v => `${v.toFixed(2)} %`)}
-        {sliderField("Stress-test přirážka", form.stressAdd * 100, v => set("stressAdd", v / 100), 0, 4, 0.1, v => `${v.toFixed(1)} p.b.`)}
-        {sliderField("Max. věk na konci splatnosti", form.maxAge, v => set("maxAge", v), 60, 80, 1, v => `${v} let`)}
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+          {/* LEVÝ SLOUPEC — vstupy */}
+          <div style={{ flex: "0 0 300px", minWidth: 260 }}>
+            {sectionTitle("Osobní a příjmové vstupy")}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Rok narození</div>
+              <input type="number" value={form.birthYear} onChange={e => set("birthYear", e.target.value)} placeholder="např. 1988"
+                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d2cab4", background: "#fff", fontSize: 14, color: "#1c2b22", boxSizing: "border-box" }} />
+              {!form.birthYear && <div style={{ fontSize: 11, color: "#c0392b", marginTop: 5 }}>Bez roku narození nejde spočítat maximální délku úvěru — náhled vpravo zůstane prázdný.</div>}
+            </div>
+            {sliderField("Čistý příjem ze zaměstnání", Number(form.incomeEmployment) || 0, v => set("incomeEmployment", String(v)), 0, 200000, 1000, v => `${fmt(v)} Kč`)}
+            {sliderField("Čistý příjem z jiných zdrojů", Number(form.incomeOther) || 0, v => set("incomeOther", String(v)), 0, 100000, 1000, v => `${fmt(v)} Kč`)}
+            {sliderField("Měsíční životní náklady", Number(form.householdCosts) || 0, v => set("householdCosts", String(v)), 0, 60000, 500, v => `${fmt(v)} Kč`)}
+            <label className="flex items-center gap-2" style={{ fontSize: 12, color: "#5c6359", cursor: "pointer" }}>
+              <input type="checkbox" checked={form.includeDebts} onChange={e => set("includeDebts", e.target.checked)} style={{ width: 14, height: 14, accentColor: "#1f3d2e" }} />
+              Počítat i současné osobní půjčky do DSTI/DTI
+            </label>
 
-        {sectionTitle("Růst v čase")}
-        {sliderField("Růst platu", form.salaryGrowth * 100, v => set("salaryGrowth", v / 100), 0, 8, 0.1, v => `${v.toFixed(1)} %/rok`)}
-        {sliderField("Růst nájmů", form.rentGrowth * 100, v => set("rentGrowth", v / 100), 0, 10, 0.1, v => `${v.toFixed(1)} %/rok`,
-          "Aktuální tržní růst nájmů v ČR běží kolem 5–6 % (místy až 10 %), ale trh se stabilizuje.")}
-        {sliderField("Růst ceny další akvizice", form.priceGrowth * 100, v => set("priceGrowth", v / 100), 0, 12, 0.1, v => `${v.toFixed(1)} %/rok`)}
-        {sliderField("Výnos nové nemovitosti", form.newYield * 100, v => set("newYield", v / 100), 2, 10, 0.1, v => `${v.toFixed(1)} %/rok`,
-          "Předpokládaný hrubý nájemní výnos (roční nájem / cena) budoucí akvizice.")}
+            {sectionTitle("Bankovní parametry")}
+            {sliderField("Cílové LTV", Number(form.assumedLtvPct) || 70, v => set("assumedLtvPct", String(v)), 50, 90, 1, v => `${v} %`)}
+            {sliderField("Sazba nových úvěrů", form.newLoanRate * 100, v => set("newLoanRate", v / 100), 2, 10, 0.01, v => `${v.toFixed(2)} %`)}
+            {sliderField("Stress-test přirážka", form.stressAdd * 100, v => set("stressAdd", v / 100), 0, 4, 0.1, v => `${v.toFixed(1)} p.b.`)}
+            {sliderField("Uznání nájmu bankou", Math.round(form.rentRecognition * 100), v => set("rentRecognition", v / 100), 40, 100, 5, v => `${v} %`,
+              "Banky obvykle uznávají 40–70 % nájmu; dlouhodobé smlouvy (12+ měs.) bývají na horní hranici.")}
+            {sliderField("Max. věk na konci splatnosti", form.maxAge, v => set("maxAge", v), 60, 80, 1, v => `${v} let`)}
+            {sliderField("Strop DSTI banky", Math.round(form.dstiCap * 100), v => set("dstiCap", v / 100), 40, 80, 1, v => `${v} %`,
+              "ČNB od 7/2023 nevyžaduje závazně. Reálně: Komerční banka 50 %, Česká spořitelna 55–60 %, Hypoteční banka (ČSOB) až 70 %.")}
+            {sliderField("Strop DTI (násobek ročního příjmu)", form.dtiCap, v => set("dtiCap", v), 3, 12, 0.5, v => `${v.toFixed(1)}×`,
+              "ČNB od 4/2026 doporučuje pro investiční hypotéky max. 7×.")}
 
-        {sectionTitle("Akvizice a vlastní kapitál")}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.05em" }}>Výchozí cena další akvizice</span>
-            <span style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontWeight: 700, fontSize: 13, color: "#1f3d2e", flexShrink: 0 }}>{form.basePrice === null ? "auto" : `${fmt(form.basePrice)} Kč`}</span>
+            {sectionTitle("Růst v čase")}
+            {sliderField("Růst platu", form.salaryGrowth * 100, v => set("salaryGrowth", v / 100), 0, 8, 0.1, v => `${v.toFixed(1)} %/rok`)}
+            {sliderField("Růst nájmů", form.rentGrowth * 100, v => set("rentGrowth", v / 100), 0, 10, 0.1, v => `${v.toFixed(1)} %/rok`,
+              "Aktuální tržní růst nájmů v ČR běží kolem 5–6 % (místy až 10 %), ale trh se stabilizuje.")}
+            {sliderField("Růst ceny další akvizice", form.priceGrowth * 100, v => set("priceGrowth", v / 100), 0, 12, 0.1, v => `${v.toFixed(1)} %/rok`)}
+            {sliderField("Výnos nové nemovitosti", form.newYield * 100, v => set("newYield", v / 100), 2, 10, 0.1, v => `${v.toFixed(1)} %/rok`,
+              "Předpokládaný hrubý nájemní výnos (roční nájem / cena) budoucí akvizice.")}
+
+            {sectionTitle("Akvizice a vlastní kapitál")}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.05em" }}>Výchozí cena další akvizice</span>
+                <span style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontWeight: 700, fontSize: 13, color: "#1f3d2e", flexShrink: 0 }}>{form.basePrice === null ? "auto" : `${fmt(form.basePrice)} Kč`}</span>
+              </div>
+              <label className="flex items-center gap-2" style={{ fontSize: 12, color: "#5c6359", marginBottom: form.basePrice === null ? 0 : 8, cursor: "pointer" }}>
+                <input type="checkbox" checked={form.basePrice === null} onChange={e => set("basePrice", e.target.checked ? null : 3400000)}
+                  style={{ width: 14, height: 14, accentColor: "#1f3d2e" }} />
+                Automaticky (průměr posledních dvou hypoték)
+              </label>
+              {form.basePrice !== null && (
+                <input type="range" min={1000000} max={10000000} step={100000} value={form.basePrice}
+                  onChange={e => set("basePrice", Number(e.target.value))}
+                  style={{ width: "100%", accentColor: "#1f3d2e", display: "block" }} />
+              )}
+            </div>
+            {sliderField("Min. rozestup mezi akvizicemi", form.cooldownMonths, v => set("cooldownMonths", v), 3, 36, 1, v => `${v} měs.`)}
+            {sliderField("Počáteční hotovost na akvizici", form.initialCash, v => set("initialCash", v), 0, 5000000, 100000, v => `${fmt(v)} Kč`,
+              "Jednorázová hotovost k dispozici teď — použije se jako vlastní kapitál do první koupě.")}
+            {sliderField("Roční vklad vlastního kapitálu", form.annualCash, v => set("annualCash", v), 0, 3000000, 50000, v => `${fmt(v)} Kč/rok`,
+              "Kolik vlastní hotovosti mimo cashflow z nájmů ročně přiléváš do investičního koloběhu.")}
+            {sliderField("Horizont náhledu", form.horizonYears, v => set("horizonYears", v), 3, 20, 1, v => `${v} let`)}
           </div>
-          <label className="flex items-center gap-2" style={{ fontSize: 12, color: "#5c6359", marginBottom: form.basePrice === null ? 0 : 8, cursor: "pointer" }}>
-            <input type="checkbox" checked={form.basePrice === null} onChange={e => set("basePrice", e.target.checked ? null : 3400000)}
-              style={{ width: 14, height: 14, accentColor: "#1f3d2e" }} />
-            Automaticky (průměr posledních dvou hypoték)
-          </label>
-          {form.basePrice !== null && (
-            <input type="range" min={1000000} max={10000000} step={100000} value={form.basePrice}
-              onChange={e => set("basePrice", Number(e.target.value))}
-              style={{ width: "100%", accentColor: "#1f3d2e", display: "block" }} />
-          )}
-        </div>
-        {sliderField("Min. rozestup mezi akvizicemi", form.cooldownMonths, v => set("cooldownMonths", v), 3, 36, 1, v => `${v} měs.`)}
-        {sliderField("Počáteční hotovost na akvizici", form.initialCash, v => set("initialCash", v), 0, 5000000, 100000, v => `${fmt(v)} Kč`,
-          "Jednorázová hotovost k dispozici teď — použije se jako vlastní kapitál do první koupě.")}
-        {sliderField("Roční vklad vlastního kapitálu", form.annualCash, v => set("annualCash", v), 0, 3000000, 50000, v => `${fmt(v)} Kč/rok`,
-          "Kolik vlastní hotovosti mimo cashflow z nájmů ročně přiléváš do investičního koloběhu.")}
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, marginBottom: 20 }}>
-          <input type="checkbox" checked={form.includeDebts} onChange={e => set("includeDebts", e.target.checked)}
-            style={{ width: 16, height: 16, accentColor: "#1f3d2e" }} />
-          <span style={{ fontSize: 13, color: "#1c2b22" }}>Počítat i současné osobní půjčky do DSTI/DTI</span>
+          {/* PRAVÝ SLOUPEC — živý náhled */}
+          <div style={{ flex: "1 1 520px", minWidth: 420 }}>
+            {sectionTitle("Souhrn za horizont")}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+              {tiles.map(t => (
+                <div key={t.k} style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", padding: "12px 14px" }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: "#9a9483", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 5 }}>{t.k}</div>
+                  <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 700, color: t.warn ? "#c0392b" : t.accent ? "#1f3d2e" : "#1c2b22" }}>{t.v}</div>
+                </div>
+              ))}
+            </div>
+
+            {!form.birthYear ? (
+              <div style={{ textAlign: "center", color: "#9a9483", fontSize: 13, padding: "40px 20px", background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6" }}>
+                Vyplň rok narození vlevo, ať appka spočítá náhled.
+              </div>
+            ) : (
+              <>
+                <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", padding: "12px 14px 4px", marginBottom: 16 }}>
+                  <svg viewBox={`0 0 ${CW} ${CH}`} width="100%" height={CH} style={{ display: "block" }}>
+                    {chartGridVals.map((v, i) => (
+                      <g key={i}>
+                        <line x1={CPL} y1={cToY(v).toFixed(1)} x2={CW - CPR} y2={cToY(v).toFixed(1)} stroke="#e8e2d6" strokeWidth="1" />
+                        <text x={CPL - 6} y={cToY(v) + 3} textAnchor="end" fontSize="9" fill="#9a9483">{fmtMil(v)}M</text>
+                      </g>
+                    ))}
+                    {buyPts.map((p, i) => (
+                      <line key={i} x1={cToX(p.ms).toFixed(1)} y1={CPT} x2={cToX(p.ms).toFixed(1)} y2={CH - CPB} stroke="#c9a24b" strokeWidth="1" strokeDasharray="3 3" />
+                    ))}
+                    <polyline points={debtPts} fill="none" stroke="#b08c7a" strokeWidth="2" />
+                    <polyline points={valuePts} fill="none" stroke="#c39a3f" strokeWidth="2" />
+                    <polyline points={eqPts} fill="none" stroke="#1f3d2e" strokeWidth="2.6" />
+                    {buyPts.map((p, i) => (
+                      <circle key={i} cx={cToX(p.ms).toFixed(1)} cy={cToY(p.value - p.debt).toFixed(1)} r="4" fill="#c39a3f" stroke="#fff" strokeWidth="1.3" />
+                    ))}
+                  </svg>
+                  <div className="flex gap-4" style={{ fontSize: 11, fontWeight: 600, color: "#5c6359", padding: "0 0 10px" }}>
+                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 3, borderRadius: 2, background: "#c39a3f", display: "inline-block" }} />Hodnota portfolia</span>
+                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 3, borderRadius: 2, background: "#b08c7a", display: "inline-block" }} />Dluh</span>
+                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 3, borderRadius: 2, background: "#1f3d2e", display: "inline-block" }} />Majetek</span>
+                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 0, borderTop: "1px dashed #c9a24b", display: "inline-block" }} />Akvizice</span>
+                  </div>
+                </div>
+
+                <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e8e2d6", padding: "12px 14px", marginBottom: 16, overflowX: "auto" }}>
+                  <div style={{ fontSize: 10.5, color: "#9a9483", marginBottom: 8 }}>DSTI = splátky/uznaný příjem · DTI = celkový dluh/roční příjem · zůstatek = příjem − splátky (stress) − náklady</div>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead>
+                      <tr>
+                        {["Rok", "Věk", "Hodnota", "Dluh", "Majetek", "Příjem", "Splátky", "DSTI", "DTI", "Zůstatek", "Akvizice"].map(h => (
+                          <th key={h} style={{ textAlign: h === "Rok" ? "left" : "right", fontSize: 10, textTransform: "uppercase", color: "#9a9483", paddingBottom: 6, borderBottom: "1px solid #e8e2d6", whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(r => (
+                        <tr key={r.year} style={{ background: r.purchases.length ? "#f2f7f2" : undefined }}>
+                          <td style={{ padding: "6px 8px 6px 0", fontWeight: 600 }}>{r.year}</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{r.age}</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{fmtMil(r.value)} M</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{fmtMil(r.debt)} M</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{fmtMil(r.equity)} M</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{fmt(r.income)}</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{fmt(r.debtService)}</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px", color: r.dsti > form.dstiCap ? "#c0392b" : undefined }}>{Math.round(r.dsti * 100)} %</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px", color: r.dti > form.dtiCap ? "#c0392b" : undefined }}>{r.dti.toFixed(1)}×</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px" }}>{fmt(r.surplus)}</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px" }}>
+                            {r.purchases.length ? r.purchases.map((b, i) => (
+                              <span key={i} title={`Cena ${fmt(b.price)} Kč · hotovost ${fmt(b.cash)} Kč · nový dluh ${fmt(b.loan)} Kč · nájem ${fmt(b.rent)} Kč/měs`}
+                                style={{ display: "inline-block", marginLeft: 4, fontSize: 11, fontWeight: 700, color: "#1f3d2e", background: "#e4ecdf", borderRadius: 20, padding: "1px 7px", cursor: "help" }}>
+                                {fmtMil(b.price)} M
+                              </span>
+                            )) : <span style={{ color: "#c5bfb0" }}>—</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="flex gap-3">
-          <button onClick={() => setForm(DEFAULT_PROJECTION_SETTINGS)}
+        <div className="flex gap-3" style={{ marginTop: 12, paddingTop: 16, borderTop: "1px solid #e3ddcb" }}>
+          <button onClick={() => setForm(f => ({ ...DEFAULT_PROJECTION_SETTINGS, birthYear: f.birthYear, incomeEmployment: f.incomeEmployment, incomeOther: f.incomeOther, householdCosts: f.householdCosts, assumedLtvPct: f.assumedLtvPct, horizonYears: f.horizonYears }))}
             style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #d2cab4", background: "transparent", color: "#5c6359", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
             Výchozí hodnoty
           </button>
@@ -1642,12 +1851,12 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   // reálně simuluje jednotlivé budoucí akvizice financované z naspořeného kapitálu (viz
   // simulateOptimisticAcquisitions výše). Bez profilu spadne zpátky na jednoduché ×1,3 tempo.
   const dtiSimulation = scenario === "optimisticka" && dtiEnabled
-    ? simulateOptimisticAcquisitions(allPoints, nowMs, conservativeRate, properties, mortgages, debts, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings)
+    ? simulateOptimisticAcquisitions(allPoints, nowMs, properties, mortgages, debts, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings)
     : null;
   const chartPoints: Pt[] = !showProjection || scenario === "pesimisticka" || !todayPt
     ? allPoints
     : dtiSimulation
-    ? [...allPoints.filter(p => p.ms <= nowMs), ...dtiSimulation]
+    ? [...allPoints.filter(p => p.ms <= nowMs), ...dtiSimulation.points]
     : allPoints.map(p => p.ms <= nowMs ? p : {
         ms: p.ms,
         value: todayPt.value * Math.pow(1 + scenarioRate, (p.ms - nowMs) / (365 * 86400000)),
@@ -2730,10 +2939,25 @@ export default function EquityDashboard() {
     setSavingFinancialProfile(false);
   }
 
-  async function saveProjectionSettings(next: ProjectionSettings) {
-    setProjectionSettings(next);
+  async function saveProjectionModal(next: ProjectionModalSave) {
+    setBirthYear(next.birthYear);
+    setIncomeEmployment(next.incomeEmployment);
+    setIncomeOther(next.incomeOther);
+    setHouseholdCosts(next.householdCosts);
+    setAssumedLtvPct(next.assumedLtvPct);
+    setProjectionSettings(next.settings);
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) await supabase.from("profiles").upsert({ id: user.id, projection_settings: next });
+    if (user) {
+      await supabase.from("profiles").upsert({
+        id: user.id,
+        birth_year: next.birthYear ? Number(next.birthYear) : null,
+        income_employment: next.incomeEmployment ? Number(next.incomeEmployment) : null,
+        income_other: next.incomeOther ? Number(next.incomeOther) : null,
+        household_costs: next.householdCosts ? Number(next.householdCosts) : null,
+        assumed_ltv_pct: next.assumedLtvPct ? Number(next.assumedLtvPct) : 70,
+        projection_settings: next.settings,
+      });
+    }
   }
 
   type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -3134,12 +3358,15 @@ export default function EquityDashboard() {
         />
       )}
 
-      {/* Projection Settings Modal */}
+      {/* Projection Preview Modal */}
       {showProjectionSettingsModal && (
-        <ProjectionSettingsModal
+        <ProjectionPreviewModal
+          properties={properties} mortgages={mortgages} debts={debts}
+          birthYear={birthYear} incomeEmployment={incomeEmployment} incomeOther={incomeOther}
+          householdCosts={householdCosts} assumedLtvPct={assumedLtvPct}
           settings={projectionSettings}
           onClose={() => setShowProjectionSettingsModal(false)}
-          onSave={saveProjectionSettings}
+          onSave={saveProjectionModal}
         />
       )}
 
