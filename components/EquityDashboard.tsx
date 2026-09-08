@@ -2804,6 +2804,8 @@ export default function EquityDashboard() {
     for (const p of ownedProperties) {
       const propVals = valuations.filter(v => v.property_id === p.id);
       if (propVals.length < 2) continue;
+      const gapDays = (new Date(propVals[0].valuation_date).getTime() - new Date(propVals[1].valuation_date).getTime()) / 86400000;
+      if (gapDays > 90) continue;
       delta += propVals[0].value - propVals[1].value;
       propNames.push(p.name);
       if (!latestDate || propVals[0].valuation_date > latestDate) latestDate = propVals[0].valuation_date;
@@ -3237,7 +3239,8 @@ export default function EquityDashboard() {
                   : statusBadge(p.status, language);
                 const mortgage = isManaged ? undefined : mortgages.find((m) => m.property_id === p.id);
                 const propValuations = valuations.filter(v => v.property_id === p.id);
-                const valuationDelta = propValuations.length >= 2 ? propValuations[0].value - propValuations[1].value : null;
+                const valuationGapDays = propValuations.length >= 2 ? (new Date(propValuations[0].valuation_date).getTime() - new Date(propValuations[1].valuation_date).getTime()) / 86400000 : null;
+                const valuationDelta = propValuations.length >= 2 && valuationGapDays !== null && valuationGapDays <= 90 ? propValuations[0].value - propValuations[1].value : null;
                 const isDragOver = dragOverIndex === idx && dragIndex !== null && dragIndex !== idx;
                 return (
                   <div key={p.id}
