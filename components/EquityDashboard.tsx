@@ -1530,8 +1530,28 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
     </div>
   );
 
-  const sectionTitle = (t: string, first = false) => (
-    <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10.5, fontWeight: 700, color: "var(--ppm-text-faint)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 9, marginTop: first ? 0 : 13, borderTop: first ? "none" : "1px solid var(--ppm-border)", paddingTop: first ? 0 : 13 }}>{t}</div>
+  const panelStyle: React.CSSProperties = { background: "var(--ppm-panel)", border: "1px solid var(--ppm-border)", borderRadius: 12, padding: "16px 18px", marginBottom: 14 };
+  const panelHead = (title: string, sub: string) => (
+    <>
+      <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 15, color: "var(--ppm-text)", marginBottom: 3 }}>{title}</div>
+      <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11.5, color: "var(--ppm-text-faint)", marginBottom: 14 }}>{sub}</div>
+    </>
+  );
+
+  const [tip, setTip] = useState<{ x: number; y: number; below: boolean; text: string } | null>(null);
+  function showTip(e: React.SyntheticEvent, text: string) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const below = r.top < 160;
+    setTip({ x: r.left + r.width / 2, y: below ? r.bottom + 10 : r.top - 10, below, text });
+  }
+  function hideTip() { setTip(null); }
+  const IconBuilding = () => (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: -1.5, marginRight: 3 }}>
+      <path d="M6 21V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v16" />
+      <path d="M14 9h4a1 1 0 0 1 1 1v11" />
+      <path d="M9 8h.01M9 12h.01M9 16h.01" />
+      <line x1="3" y1="21" x2="21" y2="21" />
+    </svg>
   );
 
   // ── Živý náhled ──────────────────────────────────────────────────────────
@@ -1569,6 +1589,17 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
   const chartGridVals = [0.25, 0.5, 0.75, 1].map(f => f * chartMaxV);
   const buyPts = chartPoints.filter(p => p.bought);
 
+  const refRows = ownedProps.map(p => {
+    const propMortgages = mortgages.filter(m => m.property_id === p.id);
+    return {
+      name: p.name,
+      value: p.estimated_value,
+      rent: p.rent_amount || 0,
+      debt: propMortgages.reduce((s, m) => s + m.outstanding_balance, 0),
+      payment: propMortgages.reduce((s, m) => s + m.monthly_payment, 0),
+    };
+  });
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{
       background: "rgba(6,9,7,0.72)", padding: 16,
@@ -1588,89 +1619,94 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ppm-text-faint)", fontSize: 24, flexShrink: 0, lineHeight: 1 }}>×</button>
         </div>
 
-        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
           {/* LEVÝ SLOUPEC — vstupy */}
           <div style={{ flex: "0 0 320px", minWidth: 280 }}>
-            {sectionTitle("Osobní a příjmové vstupy", true)}
-            <div style={{ marginBottom: 11 }}>
-              <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "var(--ppm-text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Rok narození</div>
-              <input type="number" value={form.birthYear} onChange={e => set("birthYear", e.target.value)} placeholder="např. 1988"
-                style={{ width: "100%", padding: "7px 9px", borderRadius: 7, border: "1px solid var(--ppm-border)", background: "var(--ppm-panel)", fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 13, color: "var(--ppm-text)", boxSizing: "border-box" }} />
-              {!form.birthYear && <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10.5, color: "var(--ppm-negative)", marginTop: 4 }}>Bez roku narození nejde spočítat maximální délku úvěru — náhled vpravo zůstane prázdný.</div>}
-            </div>
-            {sliderField("Čistý příjem ze zaměstnání", Number(form.incomeEmployment) || 0, v => set("incomeEmployment", String(v)), 0, 200000, 1000, v => `${fmt(v)} Kč`)}
-            {sliderField("Čistý příjem z jiných zdrojů", Number(form.incomeOther) || 0, v => set("incomeOther", String(v)), 0, 100000, 1000, v => `${fmt(v)} Kč`)}
-            {sliderField("Měsíční životní náklady", Number(form.householdCosts) || 0, v => set("householdCosts", String(v)), 0, 60000, 500, v => `${fmt(v)} Kč`)}
-            <label className="flex items-center gap-2" style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11.5, color: "var(--ppm-text-dim)", cursor: "pointer" }}>
-              <input type="checkbox" checked={form.includeDebts} onChange={e => set("includeDebts", e.target.checked)} style={{ width: 13, height: 13, accentColor: "var(--ppm-accent)" }} />
-              Počítat i současné osobní půjčky do DSTI/DTI
-            </label>
-
-            {sectionTitle("Bankovní parametry")}
-            {sliderField("Cílové LTV", Number(form.assumedLtvPct) || 70, v => set("assumedLtvPct", String(v)), 50, 90, 1, v => `${v} %`)}
-            {sliderField("Sazba nových úvěrů", form.newLoanRate * 100, v => set("newLoanRate", v / 100), 2, 10, 0.01, v => `${v.toFixed(2)} %`)}
-            {sliderField("Stress-test přirážka", form.stressAdd * 100, v => set("stressAdd", v / 100), 0, 4, 0.1, v => `${v.toFixed(1)} p.b.`)}
-            {sliderField("Uznání nájmu bankou", Math.round(form.rentRecognition * 100), v => set("rentRecognition", v / 100), 40, 100, 5, v => `${v} %`,
-              "Banky obvykle uznávají 40–70 % nájmu; dlouhodobé smlouvy (12+ měs.) bývají na horní hranici.")}
-            {sliderField("Max. věk na konci splatnosti", form.maxAge, v => set("maxAge", v), 60, 80, 1, v => `${v} let`)}
-            {sliderField("Strop DSTI banky", Math.round(form.dstiCap * 100), v => set("dstiCap", v / 100), 40, 80, 1, v => `${v} %`,
-              "ČNB od 7/2023 nevyžaduje závazně. Reálně: Komerční banka 50 %, Česká spořitelna 55–60 %, Hypoteční banka (ČSOB) až 70 %.")}
-            {sliderField("Strop DTI (násobek ročního příjmu)", form.dtiCap, v => set("dtiCap", v), 3, 12, 0.5, v => `${v.toFixed(1)}×`,
-              "ČNB od 4/2026 doporučuje pro investiční hypotéky max. 7×.")}
-
-            {sectionTitle("Růst v čase")}
-            {sliderField("Růst platu", form.salaryGrowth * 100, v => set("salaryGrowth", v / 100), 0, 8, 0.1, v => `${v.toFixed(1)} %/rok`)}
-            {sliderField("Růst nájmů", form.rentGrowth * 100, v => set("rentGrowth", v / 100), 0, 10, 0.1, v => `${v.toFixed(1)} %/rok`,
-              "Aktuální tržní růst nájmů v ČR běží kolem 5–6 % (místy až 10 %), ale trh se stabilizuje.")}
-            {sliderField("Růst ceny další akvizice", form.priceGrowth * 100, v => set("priceGrowth", v / 100), 0, 12, 0.1, v => `${v.toFixed(1)} %/rok`)}
-            {sliderField("Výnos nové nemovitosti", form.newYield * 100, v => set("newYield", v / 100), 2, 10, 0.1, v => `${v.toFixed(1)} %/rok`,
-              "Předpokládaný hrubý nájemní výnos (roční nájem / cena) budoucí akvizice.")}
-
-            {sectionTitle("Akvizice a vlastní kapitál")}
-            <div style={{ marginBottom: 11 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-                <span style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "var(--ppm-text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Výchozí cena další akvizice</span>
-                <span style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontWeight: 600, fontSize: 12.5, color: "var(--ppm-accent)", flexShrink: 0 }}>{form.basePrice === null ? "auto" : `${fmt(form.basePrice)} Kč`}</span>
+            <div style={panelStyle}>
+              {panelHead("Osobní a příjmové vstupy", "Z profilu appky, doplň co chybí")}
+              <div style={{ marginBottom: 11 }}>
+                <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "var(--ppm-text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Rok narození</div>
+                <input type="number" value={form.birthYear} onChange={e => set("birthYear", e.target.value)} placeholder="např. 1988"
+                  style={{ width: "100%", padding: "7px 9px", borderRadius: 7, border: "1px solid var(--ppm-border)", background: "var(--ppm-panel-2)", fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 13, color: "var(--ppm-text)", boxSizing: "border-box" }} />
+                {!form.birthYear && <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10.5, color: "var(--ppm-negative)", marginTop: 4 }}>Bez roku narození nejde spočítat maximální délku úvěru — náhled vpravo zůstane prázdný.</div>}
               </div>
-              <label className="flex items-center gap-2" style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11.5, color: "var(--ppm-text-dim)", marginBottom: form.basePrice === null ? 0 : 6, cursor: "pointer" }}>
-                <input type="checkbox" checked={form.basePrice === null} onChange={e => set("basePrice", e.target.checked ? null : 3400000)}
-                  style={{ width: 13, height: 13, accentColor: "var(--ppm-accent)" }} />
-                Automaticky (průměr posledních dvou hypoték)
+              {sliderField("Čistý příjem ze zaměstnání", Number(form.incomeEmployment) || 0, v => set("incomeEmployment", String(v)), 0, 200000, 1000, v => `${fmt(v)} Kč`)}
+              {sliderField("Čistý příjem z jiných zdrojů", Number(form.incomeOther) || 0, v => set("incomeOther", String(v)), 0, 100000, 1000, v => `${fmt(v)} Kč`)}
+              {sliderField("Měsíční životní náklady", Number(form.householdCosts) || 0, v => set("householdCosts", String(v)), 0, 60000, 500, v => `${fmt(v)} Kč`)}
+              <label className="flex items-center gap-2" style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11.5, color: "var(--ppm-text-dim)", cursor: "pointer" }}>
+                <input type="checkbox" checked={form.includeDebts} onChange={e => set("includeDebts", e.target.checked)} style={{ width: 13, height: 13, accentColor: "var(--ppm-accent)" }} />
+                Počítat i současné osobní půjčky do DSTI/DTI
               </label>
-              {form.basePrice !== null && (
-                <input type="range" min={1000000} max={10000000} step={100000} value={form.basePrice}
-                  onChange={e => set("basePrice", Number(e.target.value))}
-                  style={{ width: "100%", accentColor: "var(--ppm-accent)", display: "block" }} />
-              )}
             </div>
-            {sliderField("Min. rozestup mezi akvizicemi", form.cooldownMonths, v => set("cooldownMonths", v), 3, 36, 1, v => `${v} měs.`)}
-            {sliderField("Počáteční hotovost na akvizici", form.initialCash, v => set("initialCash", v), 0, 5000000, 100000, v => `${fmt(v)} Kč`,
-              "Jednorázová hotovost k dispozici teď — použije se jako vlastní kapitál do první koupě.")}
-            {sliderField("Roční vklad vlastního kapitálu", form.annualCash, v => set("annualCash", v), 0, 3000000, 50000, v => `${fmt(v)} Kč/rok`,
-              "Kolik vlastní hotovosti mimo cashflow z nájmů ročně přiléváš do investičního koloběhu.")}
-            {sliderField("Horizont náhledu", form.horizonYears, v => set("horizonYears", v), 3, 20, 1, v => `${v} let`)}
+
+            <div style={panelStyle}>
+              {panelHead("Bankovní parametry", "LTV, sazby, uznání příjmů")}
+              {sliderField("Cílové LTV", Number(form.assumedLtvPct) || 70, v => set("assumedLtvPct", String(v)), 50, 90, 1, v => `${v} %`)}
+              {sliderField("Sazba nových úvěrů", form.newLoanRate * 100, v => set("newLoanRate", v / 100), 2, 10, 0.01, v => `${v.toFixed(2)} %`)}
+              {sliderField("Stress-test přirážka", form.stressAdd * 100, v => set("stressAdd", v / 100), 0, 4, 0.1, v => `${v.toFixed(1)} p.b.`)}
+              {sliderField("Uznání nájmu bankou", Math.round(form.rentRecognition * 100), v => set("rentRecognition", v / 100), 40, 100, 5, v => `${v} %`,
+                "Banky obvykle uznávají 40–70 % nájmu; dlouhodobé smlouvy (12+ měs.) bývají na horní hranici.")}
+              {sliderField("Max. věk na konci splatnosti", form.maxAge, v => set("maxAge", v), 60, 80, 1, v => `${v} let`)}
+              {sliderField("Strop DSTI banky", Math.round(form.dstiCap * 100), v => set("dstiCap", v / 100), 40, 80, 1, v => `${v} %`,
+                "ČNB od 7/2023 nevyžaduje závazně. Reálně: Komerční banka 50 %, Česká spořitelna 55–60 %, Hypoteční banka (ČSOB) až 70 %.")}
+              {sliderField("Strop DTI (násobek ročního příjmu)", form.dtiCap, v => set("dtiCap", v), 3, 12, 0.5, v => `${v.toFixed(1)}×`,
+                "ČNB od 4/2026 doporučuje pro investiční hypotéky max. 7×.")}
+            </div>
+
+            <div style={{ ...panelStyle, marginBottom: 0 }}>
+              {panelHead("Růst v čase", "Co žene simulaci dopředu")}
+              {sliderField("Růst platu", form.salaryGrowth * 100, v => set("salaryGrowth", v / 100), 0, 8, 0.1, v => `${v.toFixed(1)} %/rok`)}
+              {sliderField("Růst nájmů", form.rentGrowth * 100, v => set("rentGrowth", v / 100), 0, 10, 0.1, v => `${v.toFixed(1)} %/rok`,
+                "Aktuální tržní růst nájmů v ČR běží kolem 5–6 % (místy až 10 %), ale trh se stabilizuje.")}
+              <div style={{ marginBottom: 11 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "var(--ppm-text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Výchozí cena další akvizice</span>
+                  <span style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontWeight: 600, fontSize: 12.5, color: "var(--ppm-accent)", flexShrink: 0 }}>{form.basePrice === null ? "auto" : `${fmt(form.basePrice)} Kč`}</span>
+                </div>
+                <label className="flex items-center gap-2" style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11.5, color: "var(--ppm-text-dim)", marginBottom: form.basePrice === null ? 0 : 6, cursor: "pointer" }}>
+                  <input type="checkbox" checked={form.basePrice === null} onChange={e => set("basePrice", e.target.checked ? null : 3400000)}
+                    style={{ width: 13, height: 13, accentColor: "var(--ppm-accent)" }} />
+                  Automaticky (průměr posledních dvou hypoték)
+                </label>
+                {form.basePrice !== null && (
+                  <input type="range" min={1000000} max={10000000} step={100000} value={form.basePrice}
+                    onChange={e => set("basePrice", Number(e.target.value))}
+                    style={{ width: "100%", accentColor: "var(--ppm-accent)", display: "block" }} />
+                )}
+              </div>
+              {sliderField("Růst ceny další akvizice", form.priceGrowth * 100, v => set("priceGrowth", v / 100), 0, 12, 0.1, v => `${v.toFixed(1)} %/rok`)}
+              {sliderField("Výnos nové nemovitosti", form.newYield * 100, v => set("newYield", v / 100), 2, 10, 0.1, v => `${v.toFixed(1)} %/rok`,
+                "Předpokládaný hrubý nájemní výnos (roční nájem / cena) budoucí akvizice.")}
+              {sliderField("Počáteční hotovost na akvizici", form.initialCash, v => set("initialCash", v), 0, 5000000, 100000, v => `${fmt(v)} Kč`,
+                "Jednorázová hotovost k dispozici teď — použije se jako vlastní kapitál do první koupě.")}
+              {sliderField("Roční vklad vlastního kapitálu", form.annualCash, v => set("annualCash", v), 0, 3000000, 50000, v => `${fmt(v)} Kč/rok`,
+                "Kolik vlastní hotovosti mimo cashflow z nájmů ročně přiléváš do investičního koloběhu.")}
+              {sliderField("Horizont náhledu", form.horizonYears, v => set("horizonYears", v), 3, 20, 1, v => `${v} let`)}
+              {sliderField("Min. rozestup mezi akvizicemi", form.cooldownMonths, v => set("cooldownMonths", v), 3, 36, 1, v => `${v} měs.`,
+                "Bez tohoto omezení model jakmile jednou nastartuje, kupuje prakticky nepřetržitě.")}
+            </div>
           </div>
 
           {/* PRAVÝ SLOUPEC — živý náhled */}
           <div style={{ flex: "1 1 520px", minWidth: 420 }}>
-            {sectionTitle("Souhrn za horizont", true)}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 12 }}>
-              {tiles.map(t => (
-                <div key={t.k} style={{ background: "var(--ppm-panel)", borderRadius: 9, border: "1px solid var(--ppm-border)", padding: "10px 12px" }}>
-                  <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10, fontWeight: 700, color: "var(--ppm-text-faint)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{t.k}</div>
-                  <div style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 17, fontWeight: 600, color: t.warn ? "var(--ppm-negative)" : t.accent ? "var(--ppm-accent)" : "var(--ppm-text)" }}>{t.v}</div>
-                </div>
-              ))}
-            </div>
-
-            {!form.birthYear ? (
-              <div style={{ fontFamily: "'Work Sans', sans-serif", textAlign: "center", color: "var(--ppm-text-faint)", fontSize: 13, padding: "36px 20px", background: "var(--ppm-panel)", borderRadius: 9, border: "1px solid var(--ppm-border)" }}>
-                Vyplň rok narození vlevo, ať appka spočítá náhled.
+            <div style={panelStyle}>
+              {panelHead("Souhrn za horizont", `Simulace na ${form.horizonYears} let dopředu, na tvých skutečných datech`)}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: form.birthYear ? 16 : 0 }}>
+                {tiles.map(t => (
+                  <div key={t.k} style={{ background: "var(--ppm-panel-2)", borderRadius: 10, padding: "12px 14px" }}>
+                    <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10, fontWeight: 700, color: "var(--ppm-text-faint)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 5 }}>{t.k}</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 19, fontWeight: 600, color: t.warn ? "var(--ppm-negative)" : t.accent ? "var(--ppm-accent)" : "var(--ppm-text)" }}>{t.v}</div>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <>
-                <div style={{ background: "var(--ppm-panel)", borderRadius: 9, border: "1px solid var(--ppm-border)", padding: "10px 12px 3px", marginBottom: 12 }}>
-                  <svg viewBox={`0 0 ${CW} ${CH}`} width="100%" height={CH} style={{ display: "block" }}>
+
+              {!form.birthYear ? (
+                <div style={{ fontFamily: "'Work Sans', sans-serif", textAlign: "center", color: "var(--ppm-text-faint)", fontSize: 13, padding: "32px 20px 4px" }}>
+                  Vyplň rok narození vlevo, ať appka spočítá náhled.
+                </div>
+              ) : (
+                <>
+                  <svg viewBox={`0 0 ${CW} ${CH}`} width="100%" height={CH} style={{ display: "block", overflow: "visible" }}>
                     {chartGridVals.map((v, i) => (
                       <g key={i}>
                         <line x1={CPL} y1={cToY(v).toFixed(1)} x2={CW - CPR} y2={cToY(v).toFixed(1)} stroke="var(--ppm-border)" strokeWidth="1" />
@@ -1678,51 +1714,60 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
                       </g>
                     ))}
                     {buyPts.map((p, i) => (
-                      <line key={i} x1={cToX(p.ms).toFixed(1)} y1={CPT} x2={cToX(p.ms).toFixed(1)} y2={CH - CPB} stroke="var(--ppm-accent)" strokeWidth="1" strokeDasharray="3 3" />
+                      <line key={i} x1={cToX(p.ms).toFixed(1)} y1={CPT} x2={cToX(p.ms).toFixed(1)} y2={CH - CPB} stroke="var(--ppm-text-faint)" strokeWidth="1" strokeDasharray="3 3" />
                     ))}
                     <polyline points={debtPts} fill="none" stroke="var(--ppm-debt)" strokeWidth="2" />
                     <polyline points={valuePts} fill="none" stroke="var(--ppm-accent)" strokeWidth="2" />
                     <polyline points={eqPts} fill="none" stroke="var(--ppm-positive)" strokeWidth="2.6" />
                     {buyPts.map((p, i) => (
-                      <circle key={i} cx={cToX(p.ms).toFixed(1)} cy={cToY(p.value - p.debt).toFixed(1)} r="4" fill="var(--ppm-accent)" stroke="var(--ppm-bg)" strokeWidth="1.3" />
+                      <circle key={i} cx={cToX(p.ms).toFixed(1)} cy={cToY(p.value - p.debt).toFixed(1)} r="4" fill="var(--ppm-accent)" stroke="var(--ppm-panel)" strokeWidth="1.5" />
                     ))}
                   </svg>
-                  <div className="flex gap-4" style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10.5, fontWeight: 600, color: "var(--ppm-text-dim)", padding: "0 0 8px" }}>
-                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 3, borderRadius: 2, background: "var(--ppm-accent)", display: "inline-block" }} />Hodnota portfolia</span>
-                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 3, borderRadius: 2, background: "var(--ppm-debt)", display: "inline-block" }} />Dluh</span>
-                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 3, borderRadius: 2, background: "var(--ppm-positive)", display: "inline-block" }} />Majetek</span>
-                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 12, height: 0, borderTop: "1px dashed var(--ppm-accent)", display: "inline-block" }} />Akvizice</span>
+                  <div className="flex gap-4" style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, fontWeight: 500, color: "var(--ppm-text-dim)", marginTop: 10 }}>
+                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 13, height: 3, borderRadius: 2, background: "var(--ppm-accent)", display: "inline-block" }} />Hodnota portfolia</span>
+                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 13, height: 3, borderRadius: 2, background: "var(--ppm-debt)", display: "inline-block" }} />Dluh</span>
+                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 13, height: 3, borderRadius: 2, background: "var(--ppm-positive)", display: "inline-block" }} />Majetek</span>
+                    <span className="inline-flex items-center gap-[6px]"><span style={{ width: 11, height: 0, borderTop: "1px dashed var(--ppm-text-faint)", display: "inline-block" }} />Akvizice</span>
                   </div>
-                </div>
+                </>
+              )}
+            </div>
 
-                <div style={{ background: "var(--ppm-panel)", borderRadius: 9, border: "1px solid var(--ppm-border)", padding: "10px 12px", marginBottom: 12, overflowX: "auto" }}>
-                  <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 10, color: "var(--ppm-text-faint)", marginBottom: 7 }}>DSTI = splátky/uznaný příjem · DTI = celkový dluh/roční příjem · zůstatek = příjem − splátky (stress) − náklady</div>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 11.5 }}>
+            {form.birthYear && (
+              <div style={panelStyle}>
+                {panelHead("Rok po roce", "DSTI = splátky/uznaný příjem · DTI = celkový dluh/roční příjem · zůstatek = příjem − splátky (stress) − náklady")}
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 12 }}>
                     <thead>
                       <tr>
                         {["Rok", "Věk", "Hodnota", "Dluh", "Majetek", "Příjem", "Splátky", "DSTI", "DTI", "Zůstatek", "Akvizice"].map(h => (
-                          <th key={h} style={{ fontFamily: "'Work Sans', sans-serif", textAlign: h === "Rok" ? "left" : "right", fontSize: 9.5, textTransform: "uppercase", letterSpacing: "0.03em", color: "var(--ppm-text-faint)", paddingBottom: 5, borderBottom: "1px solid var(--ppm-border)", whiteSpace: "nowrap" }}>{h}</th>
+                          <th key={h} style={{ fontFamily: "'Work Sans', sans-serif", textAlign: h === "Rok" ? "left" : "right", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.03em", color: "var(--ppm-text-faint)", fontWeight: 600, paddingBottom: 7, borderBottom: "1px solid var(--ppm-border)", whiteSpace: "nowrap" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {rows.map(r => (
                         <tr key={r.year} style={{ background: r.purchases.length ? "var(--ppm-positive-soft)" : undefined }}>
-                          <td style={{ fontFamily: "'Work Sans', sans-serif", padding: "5px 8px 5px 0", fontWeight: 600, color: "var(--ppm-text)" }}>{r.year}</td>
-                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text)" }}>{r.age}</td>
-                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text)" }}>{fmtMil(r.value)} M</td>
-                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text)" }}>{fmtMil(r.debt)} M</td>
-                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text)" }}>{fmtMil(r.equity)} M</td>
-                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text-dim)" }}>{fmt(r.income)}</td>
-                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text-dim)" }}>{fmt(r.debtService)}</td>
-                          <td style={{ textAlign: "right", padding: "5px 8px", color: r.dsti > form.dstiCap ? "var(--ppm-negative)" : "var(--ppm-text-dim)" }}>{Math.round(r.dsti * 100)} %</td>
-                          <td style={{ textAlign: "right", padding: "5px 8px", color: r.dti > form.dtiCap ? "var(--ppm-negative)" : "var(--ppm-text-dim)" }}>{r.dti.toFixed(1)}×</td>
-                          <td style={{ textAlign: "right", padding: "5px 8px", color: "var(--ppm-text-dim)" }}>{fmt(r.surplus)}</td>
-                          <td style={{ textAlign: "right", padding: "5px 8px" }}>
+                          <td style={{ fontFamily: "'Work Sans', sans-serif", padding: "7px 8px 7px 0", fontWeight: 600, color: "var(--ppm-text)", borderBottom: "1px solid var(--ppm-border)" }}>{r.year}</td>
+                          <td style={{ textAlign: "right", padding: "7px 8px", color: "var(--ppm-text)", borderBottom: "1px solid var(--ppm-border)" }}>{r.age}</td>
+                          <td style={{ textAlign: "right", padding: "7px 8px", color: "var(--ppm-text)", borderBottom: "1px solid var(--ppm-border)" }}>{fmtMil(r.value)} M</td>
+                          <td style={{ textAlign: "right", padding: "7px 8px", color: "var(--ppm-text)", borderBottom: "1px solid var(--ppm-border)" }}>{fmtMil(r.debt)} M</td>
+                          <td style={{ textAlign: "right", padding: "7px 8px", color: "var(--ppm-text)", borderBottom: "1px solid var(--ppm-border)" }}>{fmtMil(r.equity)} M</td>
+                          <td style={{ textAlign: "right", padding: "7px 8px", color: "var(--ppm-text-dim)", borderBottom: "1px solid var(--ppm-border)" }}>{fmt(r.income)}</td>
+                          <td style={{ textAlign: "right", padding: "7px 8px", color: "var(--ppm-text-dim)", borderBottom: "1px solid var(--ppm-border)" }}>{fmt(r.debtService)}</td>
+                          <td style={{ textAlign: "right", padding: "7px 8px", color: r.dsti > form.dstiCap ? "var(--ppm-negative)" : "var(--ppm-text-dim)", borderBottom: "1px solid var(--ppm-border)" }}>{Math.round(r.dsti * 100)} %</td>
+                          <td style={{ textAlign: "right", padding: "7px 8px", color: r.dti > form.dtiCap ? "var(--ppm-negative)" : "var(--ppm-text-dim)", borderBottom: "1px solid var(--ppm-border)" }}>{r.dti.toFixed(1)}×</td>
+                          <td style={{ textAlign: "right", padding: "7px 8px", color: "var(--ppm-text-dim)", borderBottom: "1px solid var(--ppm-border)" }}>{fmt(r.surplus)}</td>
+                          <td style={{ textAlign: "right", padding: "7px 8px", borderBottom: "1px solid var(--ppm-border)" }}>
                             {r.purchases.length ? r.purchases.map((b, i) => (
-                              <span key={i} title={`Cena ${fmt(b.price)} Kč · hotovost ${fmt(b.cash)} Kč · nový dluh ${fmt(b.loan)} Kč · nájem ${fmt(b.rent)} Kč/měs`}
-                                style={{ display: "inline-block", marginLeft: 4, fontSize: 10.5, fontWeight: 600, color: "var(--ppm-accent)", background: "var(--ppm-accent-soft)", borderRadius: 20, padding: "1px 7px", cursor: "help" }}>
-                                {fmtMil(b.price)} M
+                              <span key={i}
+                                onMouseEnter={e => showTip(e, `Nová investice\n\nCena: ${fmt(b.price)} Kč\nZ toho vlastní hotovost: ${fmt(b.cash)} Kč\nNový dluh (refinancování): ${fmt(b.loan)} Kč\nOdhad nájmu: ${fmt(b.rent)} Kč/měs\nSplátka nového dluhu: ${fmt(b.payment)} Kč/měs`)}
+                                onMouseLeave={hideTip}
+                                tabIndex={0}
+                                onFocus={e => showTip(e, `Nová investice\n\nCena: ${fmt(b.price)} Kč\nZ toho vlastní hotovost: ${fmt(b.cash)} Kč\nNový dluh (refinancování): ${fmt(b.loan)} Kč\nOdhad nájmu: ${fmt(b.rent)} Kč/měs\nSplátka nového dluhu: ${fmt(b.payment)} Kč/měs`)}
+                                onBlur={hideTip}
+                                style={{ display: "inline-block", marginLeft: 4, fontFamily: "'Work Sans', sans-serif", fontSize: 10.5, fontWeight: 600, color: "var(--ppm-positive)", background: "var(--ppm-positive-soft)", borderRadius: 20, padding: "2px 8px", cursor: "help", borderBottom: "1px dotted var(--ppm-positive)" }}>
+                                <IconBuilding />{fmtMil(b.price)} M
                               </span>
                             )) : <span style={{ color: "var(--ppm-text-faint)" }}>—</span>}
                           </td>
@@ -1731,10 +1776,52 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
                     </tbody>
                   </table>
                 </div>
-              </>
+              </div>
+            )}
+
+            {refRows.length > 0 && (
+              <div style={{ ...panelStyle, marginBottom: 0 }}>
+                {panelHead("Vstupní portfolio", "Vlastněné nemovitosti (bez spravovaných) — základ simulace, aktuální stav")}
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead>
+                      <tr>
+                        {["Nemovitost", "Hodnota", "Nájem/měs", "Dluh", "Splátka/měs"].map(h => (
+                          <th key={h} style={{ fontFamily: "'Work Sans', sans-serif", textAlign: h === "Nemovitost" ? "left" : "right", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.03em", color: "var(--ppm-text-faint)", fontWeight: 600, paddingBottom: 7, borderBottom: "1px solid var(--ppm-border)", whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {refRows.map(r => (
+                        <tr key={r.name}>
+                          <td style={{ fontFamily: "'Work Sans', sans-serif", padding: "6px 8px 6px 0", color: "var(--ppm-text)", borderBottom: "1px solid var(--ppm-border)" }}>{r.name}</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px", fontFamily: "'IBM Plex Mono', ui-monospace, monospace", color: "var(--ppm-text-dim)", borderBottom: "1px solid var(--ppm-border)" }}>{fmt(r.value)} Kč</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px", fontFamily: "'IBM Plex Mono', ui-monospace, monospace", color: "var(--ppm-text-dim)", borderBottom: "1px solid var(--ppm-border)" }}>{r.rent ? `${fmt(r.rent)} Kč` : "—"}</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px", fontFamily: "'IBM Plex Mono', ui-monospace, monospace", color: "var(--ppm-text-dim)", borderBottom: "1px solid var(--ppm-border)" }}>{r.debt ? `${fmt(r.debt)} Kč` : "—"}</td>
+                          <td style={{ textAlign: "right", padding: "6px 8px", fontFamily: "'IBM Plex Mono', ui-monospace, monospace", color: "var(--ppm-text-dim)", borderBottom: "1px solid var(--ppm-border)" }}>{r.payment ? `${fmt(r.payment)} Kč` : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, color: "var(--ppm-text-faint)", marginTop: 14, lineHeight: 1.6, borderTop: "1px solid var(--ppm-border)", paddingTop: 12 }}>
+                  Nová akvizice se financuje kombinací vlastního kapitálu (počáteční + roční vklad výše) a zbytku jako navýšeného dluhu — refinancováním portfolia v rámci LTV, ne samostatnou hypotékou jen na tu jednu nemovitost. Musí zároveň projít testem LTV, DSTI i DTI (a osobními půjčkami, pokud jsou zapnuté). Osobní půjčky se v simulaci splácí lineárně (zbývá / splátka), ne podle skutečné amortizace.
+                </div>
+              </div>
             )}
           </div>
         </div>
+
+        {tip && (
+          <div style={{
+            position: "fixed", left: tip.x, top: tip.y, transform: `translate(-50%, ${tip.below ? "0" : "-100%"})`,
+            background: "var(--ppm-text)", color: "var(--ppm-bg)", padding: "9px 11px", borderRadius: 9,
+            fontFamily: "'Work Sans', sans-serif", fontSize: 11.5, fontWeight: 500, whiteSpace: "pre-line",
+            width: "max-content", maxWidth: 230, lineHeight: 1.55, boxShadow: "0 8px 24px rgba(0,0,0,0.45)", zIndex: 200, pointerEvents: "none",
+          }}>
+            {tip.text}
+          </div>
+        )}
 
         <div className="flex gap-3" style={{ marginTop: 10, paddingTop: 13, borderTop: "1px solid var(--ppm-border)" }}>
           <button onClick={() => setForm(f => ({ ...DEFAULT_PROJECTION_SETTINGS, birthYear: f.birthYear, incomeEmployment: f.incomeEmployment, incomeOther: f.incomeOther, householdCosts: f.householdCosts, assumedLtvPct: f.assumedLtvPct, horizonYears: f.horizonYears }))}
@@ -1950,7 +2037,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
       {showProjection && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: "inline-flex", background: "#e6e0d0", borderRadius: 16, padding: 2 }}>
-            {([["pesimisticka", "Pesimistická"], ["konzervativni", "Konzervativní"], ["optimisticka", "Optimistická"]] as const).map(([val, label]) => (
+            {([["pesimisticka", "Bez akvizic"], ["konzervativni", "Historické tempo"], ["optimisticka", "Simulace akvizic"]] as const).map(([val, label]) => (
               <button key={val} onClick={() => setScenario(val)}
                 style={{ padding: "7px 14px", borderRadius: 14, border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer",
                   background: scenario === val ? "#1f3d2e" : "transparent",
@@ -1961,11 +2048,11 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
           </div>
           <div style={{ fontSize: 11, color: "#9a9483", marginTop: 6, lineHeight: 1.5, display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
             <span>
-              {scenario === "pesimisticka" && "Pesimistická: každá nemovitost roste jen vlastním tempem (bez dalších nákupů) — žádná nová akvizice se nepředpokládá."}
-              {scenario === "konzervativni" && "Konzervativní: pokračování dosavadního tempa — portfolio roste stejným historickým ročním tempem, jaké dosud reálně dosahovalo (viz \"Průměrný roční růst hodnoty portfolia\" níže)."}
+              {scenario === "pesimisticka" && "Bez akvizic: každá nemovitost roste jen vlastním tempem (bez dalších nákupů) — žádná nová akvizice se nepředpokládá."}
+              {scenario === "konzervativni" && "Historické tempo: pokračování dosavadního tempa — portfolio roste stejným historickým ročním tempem, jaké dosud reálně dosahovalo (viz \"Průměrný roční růst hodnoty portfolia\" níže)."}
               {scenario === "optimisticka" && (dtiEnabled
-                ? "Optimistická: simuluje jednotlivé budoucí nákupy nemovitostí (financované kombinací vlastního kapitálu a refinancování portfolia), s ohledem na tvůj věk, příjem a bankovní testy DSTI/DTI/LTV (nastaveno v Nastavení → Finanční profil)."
-                : "Optimistická: historické tempo × 1,3 — pro přesnější odhad založený na tvém věku, příjmu a skutečné bonitě nastav Finanční profil v Nastavení.")}
+                ? "Simulace akvizic: simuluje jednotlivé budoucí nákupy nemovitostí (financované kombinací vlastního kapitálu a refinancování portfolia), s ohledem na tvůj věk, příjem a bankovní testy DSTI/DTI/LTV (nastaveno v Nastavení → Finanční profil)."
+                : "Simulace akvizic: historické tempo × 1,3 — pro přesnější odhad založený na tvém věku, příjmu a skutečné bonitě nastav Finanční profil v Nastavení.")}
             </span>
             {scenario === "optimisticka" && dtiEnabled && (
               <button onClick={onOpenProjectionSettings}
@@ -3406,7 +3493,7 @@ export default function EquityDashboard() {
                 <div style={{ flex: 1, paddingRight: 12 }}>
                   <div style={{ fontWeight: 600, fontSize: 14, color: "#1c2b22" }}>Finanční profil pro projekce</div>
                   <div style={{ fontSize: 12, color: "#7c8378", marginTop: 4 }}>
-                    Volitelné — použije se jen pro Optimistickou projekci v grafu "Jak rosteš v čase" (odhad, kolik dalších nemovitostí si ještě můžeš dovolit financovat). Nikde jinde se nepoužije.
+                    Volitelné — použije se jen pro Simulaci akvizic v grafu "Jak rosteš v čase" (odhad, kolik dalších nemovitostí si ještě můžeš dovolit financovat). Nikde jinde se nepoužije.
                   </div>
                 </div>
                 <button onClick={() => { const next = !dtiEnabled; setDtiEnabled(next); saveFinancialProfile({ dtiEnabled: next }); }}
