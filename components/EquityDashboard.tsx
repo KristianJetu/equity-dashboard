@@ -1578,19 +1578,19 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
       ["--ppm-positive" as string]: "#7cc493", ["--ppm-positive-soft" as string]: "rgba(124,196,147,0.13)",
       ["--ppm-negative" as string]: "#e0796a", ["--ppm-negative-soft" as string]: "rgba(224,121,106,0.13)", ["--ppm-debt" as string]: "#c9a06f",
     } as React.CSSProperties} onClick={onClose}>
-      <div style={{ background: "var(--ppm-bg)", borderRadius: 14, padding: "clamp(16px, 2.4vw, 22px)", width: "min(1180px, 96vw)", maxHeight: "94vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.5)", border: "1px solid var(--ppm-border)" }}
+      <div style={{ background: "var(--ppm-bg)", borderRadius: 16, padding: "clamp(22px, 2.6vw, 34px)", width: "min(1440px, 94vw)", maxHeight: "94vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.5)", border: "1px solid var(--ppm-border)" }}
         onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-start mb-3">
+        <div className="flex justify-between items-start mb-4">
           <div>
-            <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 21, color: "var(--ppm-text)" }}>Projekce budoucích akvizic</div>
-            <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, color: "var(--ppm-text-dim)", marginTop: 3, maxWidth: 640, lineHeight: 1.45 }}>Simuluje, kdy by šlo koupit další nemovitost financovanou refinancováním portfolia (LTV) a bankovním income testem (DSTI/DTI) — bez nutnosti našetřit hotovost na zálohu. Uprav si vstupy a zkontroluj, jestli výsledek dává smysl.</div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 24, color: "var(--ppm-text)" }}>Projekce budoucích akvizic</div>
+            <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 13, color: "var(--ppm-text-dim)", marginTop: 5, maxWidth: 720, lineHeight: 1.5 }}>Simuluje, kdy by šlo koupit další nemovitost financovanou refinancováním portfolia (LTV) a bankovním income testem (DSTI/DTI) — bez nutnosti našetřit hotovost na zálohu. Uprav si vstupy a zkontroluj, jestli výsledek dává smysl.</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ppm-text-faint)", fontSize: 22, flexShrink: 0, lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ppm-text-faint)", fontSize: 24, flexShrink: 0, lineHeight: 1 }}>×</button>
         </div>
 
-        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
           {/* LEVÝ SLOUPEC — vstupy */}
-          <div style={{ flex: "0 0 292px", minWidth: 260 }}>
+          <div style={{ flex: "0 0 320px", minWidth: 280 }}>
             {sectionTitle("Osobní a příjmové vstupy", true)}
             <div style={{ marginBottom: 11 }}>
               <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "var(--ppm-text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Rok narození</div>
