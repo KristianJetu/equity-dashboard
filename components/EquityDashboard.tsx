@@ -1702,7 +1702,7 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
                         {t("aktuálně máš", "you currently have")} <strong style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", color: "var(--ppm-text)" }}>{fmtMil(realEquityNow)} M</strong>
                         {" → "}
                         <strong style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", color: planDeltaNow >= 0 ? "var(--ppm-positive)" : "var(--ppm-negative)" }}>
-                          {planDeltaNow >= 0 ? "+" : ""}{fmt(planDeltaNow)} Kč {planDeltaNow >= 0 ? t("napřed", "ahead") : t("ve skluzu", "behind")}
+                          {planDeltaNow >= 0 ? "+" : ""}{fmt(planDeltaNow)} Kč {planDeltaNow >= 0 ? t("nad plánem", "above plan") : t("pod plánem", "below plan")}
                         </strong>
                       </>
                     ) : t("Plán ještě nemá žádné body k porovnání.", "The plan has no points to compare yet.")}
@@ -1715,7 +1715,7 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
                 </>
               ) : (
                 <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12.5, color: "var(--ppm-text-dim)" }}>
-                  {t("Zatím žádný uložený plán — ulož si aktuální předpoklady, ať můžeš za čas vidět, jestli jsi napřed nebo ve skluzu.", "No saved plan yet — save the current assumptions so you can later see whether you're ahead of or behind schedule.")}
+                  {t("Zatím žádný uložený plán — ulož si aktuální předpoklady, ať můžeš za čas vidět, jestli jsi nad plánem nebo pod plánem.", "No saved plan yet — save the current assumptions so you can later see whether you're above or below plan.")}
                 </div>
               )}
             </div>
@@ -2368,7 +2368,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
           {t("Podle plánu z", "According to the plan from")} {new Date(activePlan.created_at).toLocaleDateString(lang === "cs" ? "cs-CZ" : "en-US", { month: "short", year: "numeric" })}
           {" ("}{activePlan.label ?? t("bez názvu", "unnamed")}{"): "}
           <strong style={{ color: planDelta >= 0 ? "#4a7c59" : "#c0392b" }}>
-            {planDelta >= 0 ? "+" : ""}{fmt(planDelta)} Kč {planDelta >= 0 ? t("napřed", "ahead") : t("ve skluzu", "behind")}
+            {planDelta >= 0 ? "+" : ""}{fmt(planDelta)} Kč {planDelta >= 0 ? t("nad plánem", "above plan") : t("pod plánem", "below plan")}
           </strong>
         </div>
       )}
