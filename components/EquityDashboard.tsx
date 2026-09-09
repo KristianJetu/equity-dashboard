@@ -2033,6 +2033,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   const [range, setRange] = React.useState<"5" | "10" | "all">("all");
   const [scenario, setScenario] = React.useState<"pesimisticka" | "konzervativni" | "optimisticka">("konzervativni");
   const [showProjection, setShowProjection] = React.useState(false);
+  const [showPlanInfo, setShowPlanInfo] = React.useState(false);
   const svgRef = React.useRef<SVGSVGElement>(null);
 
   const W = 600, H = 240, PAD_L = 40, PAD_R = 16, PAD_T = 20, PAD_B = 30;
@@ -2388,12 +2389,28 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
       )}
       {/* Odchylka od uloženého plánu */}
       {scenario === "optimisticka" && activePlan && planDelta !== null && (
-        <div style={{ marginTop: 8, fontSize: 12, color: "#7c8378" }}>
-          {t("Podle plánu z", "According to the plan from")} {new Date(activePlan.created_at).toLocaleDateString(lang === "cs" ? "cs-CZ" : "en-US", { month: "short", year: "numeric" })}
-          {" ("}{activePlan.label ?? t("bez názvu", "unnamed")}{"): "}
-          <strong style={{ color: planDelta >= 0 ? "#4a7c59" : "#c0392b" }}>
-            {planDelta >= 0 ? "+" : ""}{fmt(planDelta)} Kč {planDelta >= 0 ? t("nad plánem", "above plan") : t("pod plánem", "below plan")}
-          </strong>
+        <div style={{ marginTop: 8, fontSize: 12, color: "#7c8378", position: "relative", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+          <span>
+            {t("Podle plánu z", "According to the plan from")} {new Date(activePlan.created_at).toLocaleDateString(lang === "cs" ? "cs-CZ" : "en-US", { month: "short", year: "numeric" })}
+            {" ("}{activePlan.label ?? t("bez názvu", "unnamed")}{"): "}
+            <strong style={{ color: planDelta >= 0 ? "#4a7c59" : "#c0392b" }}>
+              {planDelta >= 0 ? "+" : ""}{fmt(planDelta)} Kč {planDelta >= 0 ? t("nad plánem", "above plan") : t("pod plánem", "below plan")}
+            </strong>
+          </span>
+          <span
+            onMouseEnter={() => setShowPlanInfo(true)}
+            onMouseLeave={() => setShowPlanInfo(false)}
+            style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 15, height: 15, borderRadius: "50%", border: "1px solid #9a9483", color: "#9a9483", fontSize: 10, fontWeight: 700, fontStyle: "italic", cursor: "default", flexShrink: 0 }}>
+            i
+            {showPlanInfo && (
+              <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: 280, background: "#1c2b22", color: "#e6e0d0", borderRadius: 8, padding: "10px 12px", fontSize: 11.5, fontWeight: 400, lineHeight: 1.5, whiteSpace: "pre-line", boxShadow: "0 6px 20px rgba(0,0,0,0.25)", zIndex: 20 }}>
+                {t(
+                  "Srovnává tvoje aktuálně zadané hodnoty nemovitostí a dluhu s tím, co plán pro dnešek předpokládal. Plán počítá s postupným růstem každý měsíc, i když ty mezitím ocenění neaktualizuješ — záporné číslo tak často neznamená, že nemovitosti ztrácejí hodnotu, jen že je čas přidat nové ocenění.\n\nVýpočet: (aktuální hodnota nemovitostí − aktuální dluh) − (hodnota podle plánu k dnešku − dluh podle plánu k dnešku), interpolováno mezi dvěma nejbližšími uloženými měsíčními body plánu.",
+                  "Compares your currently entered property values and debt with what the plan predicted for today. The plan assumes steady growth every month even if you don't update valuations in the meantime — a negative number often doesn't mean the properties lost value, just that it's time to add a new valuation.\n\nCalculation: (current property value − current debt) − (plan's value for today − plan's debt for today), interpolated between the two nearest saved monthly points of the plan."
+                )}
+              </div>
+            )}
+          </span>
         </div>
       )}
       {/* Planned future acquisitions list (Simulace akvizic scenario) */}
