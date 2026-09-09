@@ -1292,7 +1292,7 @@ const DEFAULT_PROJECTION_SETTINGS: ProjectionSettings = {
 // ── Optimistic scenario: simulate future acquisitions funded by a mix of own capital and
 // LTV-headroom refinancing, gated by DSTI/DTI tests derived from a real ČSOB mortgage offer.
 type SimPt = { ms: number; value: number; debt: number; bought?: boolean };
-type ProjectionPurchase = { price: number; cash: number; loan: number; rent: number; payment: number };
+type ProjectionPurchase = { price: number; cash: number; loan: number; rent: number; payment: number; ms: number };
 type ProjectionYearRow = {
   year: number; age: number; value: number; debt: number; equity: number;
   income: number; debtService: number; dsti: number; dti: number; surplus: number;
@@ -1423,7 +1423,7 @@ function simulateOptimisticAcquisitions(
         simProps.push({ startMs: base.ms, purchasePrice, rentMonthly: rentEstimate, loanAmount: loanNeeded, paymentMonthly: realPay, termMs: remainingTermYears * YEAR_MS });
         cashPool -= cashUsed;
         lastPurchaseMonth = monthIdx;
-        yearPurchases.push({ price: purchasePrice, cash: cashUsed, loan: loanNeeded, rent: rentEstimate, payment: realPay });
+        yearPurchases.push({ price: purchasePrice, cash: cashUsed, loan: loanNeeded, rent: rentEstimate, payment: realPay, ms: base.ms });
         boughtThisMonth = true;
       }
     }
@@ -1956,14 +1956,20 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   const dtiSimulation = scenario === "optimisticka" && dtiEnabled
     ? simulateOptimisticAcquisitions(allPoints, nowMs, properties, mortgages, debts, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings)
     : null;
+  // Dluh v "Historickém tempu" (a ve fallbacku Simulace akvizic bez Finančního profilu):
+  // stejné historické tempo růstu hodnoty portfolia v realitě zahrnovalo i nové hypotéky na
+  // další akvizice, takže dluh nemůže zůstat na místě, zatímco hodnota roste exponenciálně —
+  // to by nadhodnocovalo budoucí vlastní kapitál. Místo aby dluh dál jen amortizoval podle
+  // stávajících hypoték, drží se do budoucna stejné LTV (dluh/hodnota), jaké má portfolio dnes.
+  const todayLtv = todayPt && todayPt.value > 0 ? todayPt.debt / todayPt.value : 0;
   const chartPoints: Pt[] = !showProjection || scenario === "pesimisticka" || !todayPt
     ? allPoints
     : dtiSimulation
     ? [...allPoints.filter(p => p.ms <= nowMs), ...dtiSimulation.points]
-    : allPoints.map(p => p.ms <= nowMs ? p : {
-        ms: p.ms,
-        value: todayPt.value * Math.pow(1 + scenarioRate, (p.ms - nowMs) / (365 * 86400000)),
-        debt: p.debt,
+    : allPoints.map(p => {
+        if (p.ms <= nowMs) return p;
+        const value = todayPt.value * Math.pow(1 + scenarioRate, (p.ms - nowMs) / (365 * 86400000));
+        return { ms: p.ms, value, debt: todayLtv * value };
       });
 
   const maxVal = Math.max(...chartPoints.map(p => p.value));
@@ -1994,6 +2000,9 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
       if (ms <= nowMs) { purchaseMarkers.push({ ms }); seenDates.add(p.purchase_date); }
     }
   }
+  const futurePurchases: ProjectionPurchase[] = dtiSimulation
+    ? dtiSimulation.rows.flatMap(r => r.purchases).sort((a, b) => a.ms - b.ms)
+    : [];
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     const svg = svgRef.current;
@@ -2110,6 +2119,16 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
               </g>
             );
           })}
+          {/* Future (simulated) purchase markers — hollow to distinguish from real past purchases */}
+          {futurePurchases.map((m, i) => {
+            const x = toX(m.ms);
+            return (
+              <g key={i}>
+                <line x1={x.toFixed(1)} y1={(H - PAD_B).toFixed(1)} x2={x.toFixed(1)} y2={(H - PAD_B + 6).toFixed(1)} stroke="#c39a3f" strokeWidth="1.5" strokeDasharray="2 2" opacity="0.7" />
+                <circle cx={x.toFixed(1)} cy={(H - PAD_B + 8).toFixed(1)} r="3" fill="none" stroke="#c39a3f" strokeWidth="1.5" opacity="0.8" />
+              </g>
+            );
+          })}
           {/* X axis labels */}
           {labelMs.map((ms, i) => (
             <text key={i} x={toX(ms).toFixed(1)} y={H - 6} textAnchor="middle" fontSize="9" fill="#9a9483">{new Date(ms).getFullYear()}</text>
@@ -2152,6 +2171,26 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
           {avgPortfolioGrowthPct !== null && (
             <span>{t("Průměrný roční růst hodnoty portfolia:", "Average annual portfolio value growth:")} <strong style={{ color: avgPortfolioGrowthPct >= 0 ? "#c39a3f" : "#c0392b" }}>{avgPortfolioGrowthPct >= 0 ? "+" : ""}{avgPortfolioGrowthPct.toFixed(1)} %</strong></span>
           )}
+        </div>
+      )}
+      {/* Planned future acquisitions list (Simulace akvizic scenario) */}
+      {scenario === "optimisticka" && futurePurchases.length > 0 && (
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #e6e0d0" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+            {t("Plánované akvizice", "Planned acquisitions")}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {futurePurchases.map((m, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, color: "#5c6359", background: "#f5f1e6", borderRadius: 8, padding: "8px 12px", flexWrap: "wrap" }}>
+                <span style={{ color: "#c39a3f", fontWeight: 700, minWidth: 78 }}>
+                  {t("cca", "approx.")} {String(new Date(m.ms).getMonth() + 1).padStart(2, "0")}/{new Date(m.ms).getFullYear()}
+                </span>
+                <span style={{ fontWeight: 600, minWidth: 110 }}>{fmt(m.price)} Kč</span>
+                <span style={{ color: "#9a9483" }}>{t("nájem", "rent")} ~{fmt(Math.round(m.rent))} Kč/měs</span>
+                <span style={{ color: "#9a9483" }}>{t("splátka", "payment")} ~{fmt(Math.round(m.payment))} Kč/měs</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
