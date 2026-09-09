@@ -2188,11 +2188,13 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   const planEquityPts = planOverlayPts.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value - p.debt).toFixed(1)}`).join(" ");
   const planNowVal = activePlan && scenario === "optimisticka" ? planValueAtMs(activePlan.points, nowMs) : null;
   const planEquityNow = planNowVal ? planNowVal.value - planNowVal.debt : null;
-  // allPoints je mřížka po ~30 dnech — todayPt je nejbližší budoucí bod, ne přesné "teď".
-  // Interpolací mezi sousedy dostaneme přesnou dnešní hodnotu, srovnatelnou s přesným snímkem uloženým v plánu.
-  const realNowVal = planValueAtMs(allPoints, nowMs);
-  const realEquityNow = realNowVal ? realNowVal.value - realNowVal.debt : null;
-  const planDelta = planEquityNow !== null && realEquityNow !== null ? realEquityNow - planEquityNow : null;
+  // Přímo ze skutečných dat (žádná mřížka/interpolace) — stejný výpočet jako todayValue/todayDebt
+  // v ProjectionPreviewModal při ukládání plánu, aby srovnání sedělo na stejnou definici "teď".
+  const ownedNowProps = properties.filter(p => p.ownership_type !== "manager");
+  const realValueNow = ownedNowProps.reduce((s, p) => s + p.estimated_value, 0);
+  const realDebtNow = mortgages.filter(m => ownedNowProps.some(p => p.id === m.property_id)).reduce((s, m) => s + m.outstanding_balance, 0);
+  const realEquityNow = realValueNow - realDebtNow;
+  const planDelta = planEquityNow !== null ? realEquityNow - planEquityNow : null;
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     const svg = svgRef.current;
