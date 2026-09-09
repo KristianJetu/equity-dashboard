@@ -2377,7 +2377,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
       )}
       {showProjection && todayPt && (scenario === "konzervativni" || (scenario === "optimisticka" && !dtiEnabled)) && (
         <div style={{ marginTop: 8, fontSize: 12, color: "#7c8378", position: "relative", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-          <span>{t("Jak se počítá odhad dluhu", "How the debt estimate is calculated")}</span>
+          <span>{t("Jak se počítá tahle projekce", "How this projection is calculated")}</span>
           <span
             onMouseEnter={() => setShowDebtFormulaInfo(true)}
             onMouseLeave={() => setShowDebtFormulaInfo(false)}
