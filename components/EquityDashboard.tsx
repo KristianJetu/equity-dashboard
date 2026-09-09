@@ -114,6 +114,21 @@ type Debt = {
   due_date?: string | null;
 };
 
+type ProjectionPlanSettings = {
+  profile: { birthYear: string; incomeEmployment: string; incomeOther: string; householdCosts: string; assumedLtvPct: string };
+  projection: ProjectionSettings;
+};
+type ProjectionPlan = {
+  id: string;
+  user_id: string;
+  label: string | null;
+  settings: ProjectionPlanSettings;
+  points: SimPt[];
+  status: "active" | "superseded" | "archived";
+  supersedes_id: string | null;
+  created_at: string;
+};
+
 const translations = {
   cs: {
     dashboard: "Dashboard",
@@ -1289,6 +1304,21 @@ const DEFAULT_PROJECTION_SETTINGS: ProjectionSettings = {
   cooldownMonths: 3, initialCash: 0, annualCash: 0, basePrice: null, includeDebts: true,
 };
 
+// Interpoluje hodnotu/dluh uloženého plánu k danému datu — pro srovnání "plán vs. realita".
+function planValueAtMs(points: SimPt[], ms: number): { value: number; debt: number } | null {
+  if (points.length === 0) return null;
+  if (ms <= points[0].ms) return { value: points[0].value, debt: points[0].debt };
+  if (ms >= points[points.length - 1].ms) return { value: points[points.length - 1].value, debt: points[points.length - 1].debt };
+  for (let i = 1; i < points.length; i++) {
+    if (points[i].ms >= ms) {
+      const a = points[i - 1], b = points[i];
+      const f = (ms - a.ms) / (b.ms - a.ms || 1);
+      return { value: a.value + (b.value - a.value) * f, debt: a.debt + (b.debt - a.debt) * f };
+    }
+  }
+  return null;
+}
+
 // ── Optimistic scenario: simulate future acquisitions funded by a mix of own capital and
 // LTV-headroom refinancing, gated by DSTI/DTI tests derived from a real ČSOB mortgage offer.
 type SimPt = { ms: number; value: number; debt: number; bought?: boolean };
@@ -1483,13 +1513,16 @@ type ProjectionModalSave = {
   birthYear: string; incomeEmployment: string; incomeOther: string; householdCosts: string; assumedLtvPct: string;
   settings: ProjectionSettings;
 };
-function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, settings, lang, onClose, onSave }: {
+function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, settings, lang, onClose, onSave, plans, onSavePlan, onArchivePlan }: {
   properties: Property[]; mortgages: Mortgage[]; debts: Debt[];
   birthYear: string; incomeEmployment: string; incomeOther: string; householdCosts: string; assumedLtvPct: string;
   settings: ProjectionSettings;
   lang: "cs" | "en";
   onClose: () => void;
   onSave: (next: ProjectionModalSave) => void;
+  plans: ProjectionPlan[];
+  onSavePlan: (settings: ProjectionPlanSettings, points: SimPt[], label?: string) => Promise<void>;
+  onArchivePlan: (id: string) => Promise<void>;
 }) {
   const t = (cs: string, en: string) => lang === "cs" ? cs : en;
   type PreviewForm = ProjectionSettings & {
@@ -1498,6 +1531,9 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
   };
   const [form, setForm] = useState<PreviewForm>({ ...settings, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, horizonYears: 5 });
   const [saving, setSaving] = useState(false);
+  const [savingPlan, setSavingPlan] = useState(false);
+  const [planLabelInput, setPlanLabelInput] = useState("");
+  const [showPlansList, setShowPlansList] = useState(false);
 
   function set<K extends keyof PreviewForm>(key: K, value: PreviewForm[K]) {
     setForm(f => ({ ...f, [key]: value }));
@@ -1591,6 +1627,35 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
   const chartGridVals = [0.25, 0.5, 0.75, 1].map(f => f * chartMaxV);
   const buyPts = chartPoints.filter(p => p.bought);
 
+  // ── Plán: uložení/aktualizace snímku aktuálního nastavení + trajektorie, pro pozdější srovnání s realitou ──
+  const currentPlanSettings: ProjectionPlanSettings = {
+    profile: { birthYear: form.birthYear, incomeEmployment: form.incomeEmployment, incomeOther: form.incomeOther, householdCosts: form.householdCosts, assumedLtvPct: form.assumedLtvPct },
+    projection: {
+      dstiCap: form.dstiCap, dtiCap: form.dtiCap, rentRecognition: form.rentRecognition, salaryGrowth: form.salaryGrowth,
+      rentGrowth: form.rentGrowth, priceGrowth: form.priceGrowth, newYield: form.newYield, newLoanRate: form.newLoanRate,
+      stressAdd: form.stressAdd, maxAge: form.maxAge, cooldownMonths: form.cooldownMonths, initialCash: form.initialCash,
+      annualCash: form.annualCash, basePrice: form.basePrice, includeDebts: form.includeDebts,
+    },
+  };
+  const activePlan = plans.find(p => p.status === "active") ?? null;
+  const planSettingsChanged = activePlan ? JSON.stringify(activePlan.settings) !== JSON.stringify(currentPlanSettings) : false;
+  const activePlanNow = activePlan ? planValueAtMs(activePlan.points, nowMs) : null;
+  const activePlanEquityNow = activePlanNow ? activePlanNow.value - activePlanNow.debt : null;
+  const realEquityNow = todayValue - todayDebt;
+  const planDeltaNow = activePlanEquityNow !== null ? realEquityNow - activePlanEquityNow : null;
+
+  async function handleSavePlan() {
+    setSavingPlan(true);
+    await onSavePlan(currentPlanSettings, sim?.points ?? [], planLabelInput.trim() || undefined);
+    setPlanLabelInput("");
+    setSavingPlan(false);
+  }
+
+  function loadPlanIntoForm(plan: ProjectionPlan) {
+    setForm(f => ({ ...f, ...plan.settings.projection, ...plan.settings.profile }));
+    setShowPlansList(false);
+  }
+
   const refRows = ownedProps.map(p => {
     const propMortgages = mortgages.filter(m => m.property_id === p.id);
     return {
@@ -1619,6 +1684,89 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
             <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 13, color: "var(--ppm-text-dim)", marginTop: 5, maxWidth: 720, lineHeight: 1.5 }}>{t("Simuluje, kdy by šlo koupit další nemovitost financovanou refinancováním portfolia (LTV) a bankovním income testem (DSTI/DTI) — bez nutnosti našetřit hotovost na zálohu. Uprav si vstupy a zkontroluj, jestli výsledek dává smysl.", "Simulates when you could buy another property financed by refinancing the portfolio (LTV) and a bank income test (DSTI/DTI) — without needing to save cash for a down payment. Adjust the inputs and check whether the result makes sense.")}</div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ppm-text-faint)", fontSize: 24, flexShrink: 0, lineHeight: 1 }}>×</button>
+        </div>
+
+        {/* Plán — uložení snímku a srovnání s realitou v čase */}
+        <div style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              {activePlan ? (
+                <>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 14.5, color: "var(--ppm-text)" }}>
+                    {t("Aktivní plán:", "Active plan:")} {activePlan.label ?? new Date(activePlan.created_at).toLocaleDateString(lang === "cs" ? "cs-CZ" : "en-US")}
+                  </div>
+                  <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, color: "var(--ppm-text-dim)", marginTop: 3 }}>
+                    {planDeltaNow !== null ? (
+                      <>
+                        {t("Podle plánu bys teď měl mít majetek", "According to the plan, your equity right now should be")} <strong style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", color: "var(--ppm-text)" }}>{fmtMil(activePlanEquityNow!)} M</strong>,{" "}
+                        {t("aktuálně máš", "you currently have")} <strong style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", color: "var(--ppm-text)" }}>{fmtMil(realEquityNow)} M</strong>
+                        {" → "}
+                        <strong style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", color: planDeltaNow >= 0 ? "var(--ppm-positive)" : "var(--ppm-negative)" }}>
+                          {planDeltaNow >= 0 ? "+" : ""}{fmt(planDeltaNow)} Kč {planDeltaNow >= 0 ? t("napřed", "ahead") : t("ve skluzu", "behind")}
+                        </strong>
+                      </>
+                    ) : t("Plán ještě nemá žádné body k porovnání.", "The plan has no points to compare yet.")}
+                  </div>
+                  {planSettingsChanged && (
+                    <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11.5, color: "var(--ppm-accent)", marginTop: 4 }}>
+                      {t("Aktuální nastavení se liší od uloženého plánu.", "Current settings differ from the saved plan.")}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12.5, color: "var(--ppm-text-dim)" }}>
+                  {t("Zatím žádný uložený plán — ulož si aktuální předpoklady, ať můžeš za čas vidět, jestli jsi napřed nebo ve skluzu.", "No saved plan yet — save the current assumptions so you can later see whether you're ahead of or behind schedule.")}
+                </div>
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <input value={planLabelInput} onChange={e => setPlanLabelInput(e.target.value)} placeholder={t("Název plánu (volitelné)", "Plan name (optional)")}
+                style={{ padding: "7px 9px", borderRadius: 7, border: "1px solid var(--ppm-border)", background: "var(--ppm-panel-2)", fontFamily: "'Work Sans', sans-serif", fontSize: 12, color: "var(--ppm-text)", width: 160 }} />
+              <button onClick={handleSavePlan} disabled={savingPlan || !form.birthYear}
+                style={{ fontFamily: "'Work Sans', sans-serif", padding: "8px 13px", borderRadius: 7, border: "none", background: savingPlan || !form.birthYear ? "var(--ppm-text-faint)" : "var(--ppm-accent)", color: "#141a12", fontSize: 12.5, fontWeight: 700, cursor: savingPlan || !form.birthYear ? "default" : "pointer", whiteSpace: "nowrap" }}>
+                {savingPlan ? t("Ukládám…", "Saving…") : activePlan ? t("Aktualizovat plán", "Update plan") : t("Uložit jako plán", "Save as plan")}
+              </button>
+              {plans.length > 0 && (
+                <button onClick={() => setShowPlansList(v => !v)}
+                  style={{ fontFamily: "'Work Sans', sans-serif", padding: "8px 11px", borderRadius: 7, border: "1px solid var(--ppm-border)", background: "transparent", color: "var(--ppm-text-dim)", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  {showPlansList ? t("Skrýt plány", "Hide plans") : t("Moje plány", "My plans")} ({plans.length})
+                </button>
+              )}
+            </div>
+          </div>
+          {showPlansList && (
+            <div style={{ borderTop: "1px solid var(--ppm-border)", paddingTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+              {plans.map(p => {
+                const pNow = planValueAtMs(p.points, nowMs);
+                const pDelta = pNow ? realEquityNow - (pNow.value - pNow.debt) : null;
+                return (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, fontFamily: "'Work Sans', sans-serif", color: "var(--ppm-text-dim)", background: "var(--ppm-panel-2)", borderRadius: 8, padding: "8px 11px", flexWrap: "wrap" }}>
+                    <span style={{ fontWeight: 700, color: "var(--ppm-text)", minWidth: 130 }}>{p.label ?? new Date(p.created_at).toLocaleDateString(lang === "cs" ? "cs-CZ" : "en-US")}</span>
+                    <span style={{ padding: "2px 7px", borderRadius: 10, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
+                      background: p.status === "active" ? "var(--ppm-positive-soft)" : "var(--ppm-panel)", color: p.status === "active" ? "var(--ppm-positive)" : "var(--ppm-text-faint)" }}>
+                      {p.status === "active" ? t("aktivní", "active") : p.status === "superseded" ? t("nahrazený", "superseded") : t("archivovaný", "archived")}
+                    </span>
+                    {pDelta !== null && (
+                      <span style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", color: pDelta >= 0 ? "var(--ppm-positive)" : "var(--ppm-negative)" }}>
+                        {pDelta >= 0 ? "+" : ""}{fmt(pDelta)} Kč
+                      </span>
+                    )}
+                    <div style={{ flex: 1 }} />
+                    <button onClick={() => loadPlanIntoForm(p)}
+                      style={{ fontFamily: "'Work Sans', sans-serif", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--ppm-border)", background: "transparent", color: "var(--ppm-text-dim)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                      {t("Načíst do formuláře", "Load into form")}
+                    </button>
+                    {p.status !== "archived" && (
+                      <button onClick={() => onArchivePlan(p.id)}
+                        style={{ fontFamily: "'Work Sans', sans-serif", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--ppm-border)", background: "transparent", color: "var(--ppm-text-faint)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                        {t("Archivovat", "Archive")}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
@@ -1852,10 +2000,11 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
 }
 
 // ── Growth Chart ─────────────────────────────────────────────────────────────
-function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings, lang, onOpenProjectionSettings }: {
+function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings, lang, onOpenProjectionSettings, activePlan }: {
   properties: Property[]; mortgages: Mortgage[]; debts: Debt[];
   dtiEnabled: boolean; birthYear: string; incomeEmployment: string; incomeOther: string; householdCosts: string; assumedLtvPct: string;
   projectionSettings: ProjectionSettings; lang: "cs" | "en"; onOpenProjectionSettings: () => void;
+  activePlan: ProjectionPlan | null;
 }) {
   const t = (cs: string, en: string) => lang === "cs" ? cs : en;
   const [hoverIdx, setHoverIdx] = React.useState<number | null>(null);
@@ -1957,11 +2106,19 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
     ? simulateOptimisticAcquisitions(allPoints, nowMs, properties, mortgages, debts, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings)
     : null;
   // Dluh v "Historickém tempu" (a ve fallbacku Simulace akvizic bez Finančního profilu):
-  // stejné historické tempo růstu hodnoty portfolia v realitě zahrnovalo i nové hypotéky na
-  // další akvizice, takže dluh nemůže zůstat na místě, zatímco hodnota roste exponenciálně —
-  // to by nadhodnocovalo budoucí vlastní kapitál. Místo aby dluh dál jen amortizoval podle
-  // stávajících hypoték, drží se do budoucna stejné LTV (dluh/hodnota), jaké má portfolio dnes.
-  const todayLtv = todayPt && todayPt.value > 0 ? todayPt.debt / todayPt.value : 0;
+  // držet LTV napořád na dnešní úrovni by bylo taky nepřesné — dnešní nízké LTV je dané tím,
+  // že staré hypotéky už léta amortizují, ale KAŽDÁ další akvizice (ať už "historickým tempem"
+  // nebo simulovaně) se financuje blízko cílového LTV z bankovních parametrů (typicky ~70 %),
+  // takže s dalším růstem přes nové akvizice se poměr dluh/hodnota postupně posouvá právě
+  // k tomuhle cílovému LTV, ne že by zůstal navěky na dnešních ~40 %.
+  // Vzorec: stávající dluh dál amortizuje normálně (p.debt ze základní trajektorie, jen
+  // stávající hypotéky bez nových akvizic) a každá koruna PŘÍRŮSTKU hodnoty nad dnešek se
+  // financuje z targetLtv % dluhu a (1-targetLtv) % vlastního kapitálu — přesně jako u
+  // skutečné akvizice:
+  //   debt(t) = p.debt(t) + targetLtv × (value(t) − hodnota_dnes)
+  // V t=dnes: p.debt = dluh_dnes a přírůstek je 0 → dluh přesně sedí na reálný dnešek.
+  // Pro t→∞ dluh_existujících hypoték doamortizuje k 0 a poměr dluh/hodnota se blíží targetLtv.
+  const targetLtv = (Number(assumedLtvPct) || 70) / 100;
   const chartPoints: Pt[] = !showProjection || scenario === "pesimisticka" || !todayPt
     ? allPoints
     : dtiSimulation
@@ -1969,7 +2126,8 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
     : allPoints.map(p => {
         if (p.ms <= nowMs) return p;
         const value = todayPt.value * Math.pow(1 + scenarioRate, (p.ms - nowMs) / (365 * 86400000));
-        return { ms: p.ms, value, debt: todayLtv * value };
+        const debt = p.debt + targetLtv * (value - todayPt.value);
+        return { ms: p.ms, value, debt };
       });
 
   const maxVal = Math.max(...chartPoints.map(p => p.value));
@@ -2003,6 +2161,16 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   const futurePurchases: ProjectionPurchase[] = dtiSimulation
     ? dtiSimulation.rows.flatMap(r => r.purchases).sort((a, b) => a.ms - b.ms)
     : [];
+
+  // Uložený plán — trajektorie i majetková delta oproti realitě, zobrazí se jen u scénáře "Simulace akvizic"
+  const planOverlayPts = activePlan && scenario === "optimisticka"
+    ? activePlan.points.filter(p => p.ms >= minMs && p.ms <= maxMs)
+    : [];
+  const planEquityPts = planOverlayPts.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value - p.debt).toFixed(1)}`).join(" ");
+  const planNowVal = activePlan && scenario === "optimisticka" ? planValueAtMs(activePlan.points, nowMs) : null;
+  const planEquityNow = planNowVal ? planNowVal.value - planNowVal.debt : null;
+  const realEquityNow = todayPt ? todayPt.value - todayPt.debt : null;
+  const planDelta = planEquityNow !== null && realEquityNow !== null ? realEquityNow - planEquityNow : null;
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     const svg = svgRef.current;
@@ -2049,6 +2217,11 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
                 <span style={{ width: 14, height: 3, borderRadius: 2, background: color, display: "inline-block" }} />{label}
               </span>
             ))}
+            {planOverlayPts.length > 1 && (
+              <span className="inline-flex items-center gap-[6px]">
+                <span style={{ width: 14, height: 0, borderTop: "1.5px dashed #9a9483", display: "inline-block" }} />{t("Plán", "Plan")}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -2104,6 +2277,9 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
           <polyline points={debtPts} fill="none" stroke="#b08c7a" strokeWidth="2" />
           <polyline points={valuePts} fill="none" stroke="#c39a3f" strokeWidth="2" />
           <polyline points={equityPts} fill="none" stroke="#1f3d2e" strokeWidth="3" />
+          {planOverlayPts.length > 1 && (
+            <polyline points={planEquityPts} fill="none" stroke="#9a9483" strokeWidth="1.5" strokeDasharray="5 3" />
+          )}
           {(() => {
             const tp = chartPoints.find(p => p.ms >= nowMs);
             if (!tp) return null;
@@ -2171,6 +2347,24 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
           {avgPortfolioGrowthPct !== null && (
             <span>{t("Průměrný roční růst hodnoty portfolia:", "Average annual portfolio value growth:")} <strong style={{ color: avgPortfolioGrowthPct >= 0 ? "#c39a3f" : "#c0392b" }}>{avgPortfolioGrowthPct >= 0 ? "+" : ""}{avgPortfolioGrowthPct.toFixed(1)} %</strong></span>
           )}
+        </div>
+      )}
+      {showProjection && todayPt && (scenario === "konzervativni" || (scenario === "optimisticka" && !dtiEnabled)) && (
+        <div style={{ marginTop: 4, fontSize: 10, color: "#b0aa99", lineHeight: 1.4 }}>
+          {t(
+            `Odhad dluhu: stávající hypotéky dál doamortizují, každá koruna růstu hodnoty nad dnešek se počítá jako ${Math.round(targetLtv * 100)} % dluh / ${100 - Math.round(targetLtv * 100)} % vlastní kapitál (cílové LTV z Bankovních parametrů) — zjednodušený odhad, ne simulace jednotlivých nákupů.`,
+            `Debt estimate: existing mortgages keep amortizing; each unit of value growth above today's is split ${Math.round(targetLtv * 100)}% debt / ${100 - Math.round(targetLtv * 100)}% equity (target LTV from Bank parameters) — a simplified estimate, not a purchase-by-purchase simulation.`
+          )}
+        </div>
+      )}
+      {/* Odchylka od uloženého plánu */}
+      {scenario === "optimisticka" && activePlan && planDelta !== null && (
+        <div style={{ marginTop: 8, fontSize: 12, color: "#7c8378" }}>
+          {t("Podle plánu z", "According to the plan from")} {new Date(activePlan.created_at).toLocaleDateString(lang === "cs" ? "cs-CZ" : "en-US", { month: "short", year: "numeric" })}
+          {" ("}{activePlan.label ?? t("bez názvu", "unnamed")}{"): "}
+          <strong style={{ color: planDelta >= 0 ? "#4a7c59" : "#c0392b" }}>
+            {planDelta >= 0 ? "+" : ""}{fmt(planDelta)} Kč {planDelta >= 0 ? t("napřed", "ahead") : t("ve skluzu", "behind")}
+          </strong>
         </div>
       )}
       {/* Planned future acquisitions list (Simulace akvizic scenario) */}
@@ -3023,6 +3217,7 @@ export default function EquityDashboard() {
   const [savingFinancialProfile, setSavingFinancialProfile] = useState(false);
   const [projectionSettings, setProjectionSettings] = useState<ProjectionSettings>(DEFAULT_PROJECTION_SETTINGS);
   const [showProjectionSettingsModal, setShowProjectionSettingsModal] = useState(false);
+  const [projectionPlans, setProjectionPlans] = useState<ProjectionPlan[]>([]);
   function t<K extends keyof typeof translations["cs"]>(key: K): typeof translations["cs"][K] {
     return translations[language][key] as typeof translations["cs"][K];
   }
@@ -3100,6 +3295,29 @@ export default function EquityDashboard() {
         projection_settings: next.settings,
       });
     }
+  }
+
+  async function saveProjectionPlan(settings: ProjectionPlanSettings, points: SimPt[], label?: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const prevActive = projectionPlans.find(p => p.status === "active") ?? null;
+    if (prevActive) {
+      await supabase.from("projection_plans").update({ status: "superseded" }).eq("id", prevActive.id);
+    }
+    const { data } = await supabase.from("projection_plans").insert({
+      user_id: user.id,
+      label: label || new Date().toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" }),
+      settings, points, status: "active", supersedes_id: prevActive?.id ?? null,
+    }).select().single();
+    setProjectionPlans(prev => [
+      ...(data ? [data as ProjectionPlan] : []),
+      ...prev.map(p => p.id === prevActive?.id ? { ...p, status: "superseded" as const } : p),
+    ]);
+  }
+
+  async function archiveProjectionPlan(id: string) {
+    await supabase.from("projection_plans").update({ status: "archived" }).eq("id", id);
+    setProjectionPlans(prev => prev.map(p => p.id === id ? { ...p, status: "archived" as const } : p));
   }
 
   type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -3210,19 +3428,21 @@ export default function EquityDashboard() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: props }, { data: morts }, { data: tens }, { data: dts }, { data: files }, { data: vals }] = await Promise.all([
+      const [{ data: props }, { data: morts }, { data: tens }, { data: dts }, { data: files }, { data: vals }, { data: plans }] = await Promise.all([
         supabase.from("properties").select("*").order("sort_order", { ascending: true }),
         supabase.from("mortgages").select("*"),
         supabase.from("tenants").select("*"),
         supabase.from("debts").select("*").order("created_at", { ascending: true }),
         supabase.from("property_files").select("*").order("sort_order", { ascending: true }).order("created_at", { ascending: true }),
         supabase.from("property_valuations").select("*").order("valuation_date", { ascending: false }),
+        supabase.from("projection_plans").select("*").order("created_at", { ascending: false }),
       ]);
       setProperties(props ?? []);
       setMortgages(morts ?? []);
       setTenants(tens ?? []);
       setDebts(dts ?? []);
       setValuations(vals ?? []);
+      setProjectionPlans(plans ?? []);
       const allFiles = files ?? [];
       setPropertyFiles(allFiles);
       // Generuj signed URLs pro obrázky (pro miniatury na kartách)
@@ -3510,6 +3730,9 @@ export default function EquityDashboard() {
           lang={language}
           onClose={() => setShowProjectionSettingsModal(false)}
           onSave={saveProjectionModal}
+          plans={projectionPlans}
+          onSavePlan={saveProjectionPlan}
+          onArchivePlan={archiveProjectionPlan}
         />
       )}
 
@@ -3779,7 +4002,8 @@ export default function EquityDashboard() {
           <GrowthChart properties={properties} mortgages={mortgages} debts={debts}
             dtiEnabled={dtiEnabled} birthYear={birthYear} incomeEmployment={incomeEmployment}
             incomeOther={incomeOther} householdCosts={householdCosts} assumedLtvPct={assumedLtvPct}
-            projectionSettings={projectionSettings} lang={language} onOpenProjectionSettings={() => setShowProjectionSettingsModal(true)} />
+            projectionSettings={projectionSettings} lang={language} onOpenProjectionSettings={() => setShowProjectionSettingsModal(true)}
+            activePlan={projectionPlans.find(p => p.status === "active") ?? null} />
         </section>
 
         {/* NEMOVITOSTI */}
