@@ -2351,10 +2351,15 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
       )}
       {showProjection && todayPt && (scenario === "konzervativni" || (scenario === "optimisticka" && !dtiEnabled)) && (
         <div style={{ marginTop: 4, fontSize: 10, color: "#b0aa99", lineHeight: 1.4 }}>
-          {t(
-            `Odhad dluhu: stávající hypotéky dál doamortizují, každá koruna růstu hodnoty nad dnešek se počítá jako ${Math.round(targetLtv * 100)} % dluh / ${100 - Math.round(targetLtv * 100)} % vlastní kapitál (cílové LTV z Bankovních parametrů) — zjednodušený odhad, ne simulace jednotlivých nákupů.`,
-            `Debt estimate: existing mortgages keep amortizing; each unit of value growth above today's is split ${Math.round(targetLtv * 100)}% debt / ${100 - Math.round(targetLtv * 100)}% equity (target LTV from Bank parameters) — a simplified estimate, not a purchase-by-purchase simulation.`
-          )}
+          <div>
+            {t(
+              `Odhad dluhu: stávající hypotéky dál doamortizují, každá koruna růstu hodnoty nad dnešek se počítá jako ${Math.round(targetLtv * 100)} % dluh / ${100 - Math.round(targetLtv * 100)} % vlastní kapitál (cílové LTV z Bankovních parametrů) — zjednodušený odhad, ne simulace jednotlivých nákupů.`,
+              `Debt estimate: existing mortgages keep amortizing; each unit of value growth above today's is split ${Math.round(targetLtv * 100)}% debt / ${100 - Math.round(targetLtv * 100)}% equity (target LTV from Bank parameters) — a simplified estimate, not a purchase-by-purchase simulation.`
+            )}
+          </div>
+          <div style={{ fontFamily: "ui-monospace, 'SF Mono', 'Cascadia Code', monospace", marginTop: 2 }}>
+            debt(t) = doamortizace_stávajících_hypoték(t) + {targetLtv.toFixed(2)} × (value(t) − {t("hodnota_dnes", "value_today")})
+          </div>
         </div>
       )}
       {/* Odchylka od uloženého plánu */}
