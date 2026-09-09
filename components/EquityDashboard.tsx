@@ -2128,28 +2128,25 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
     ? simulateOptimisticAcquisitions(allPoints, nowMs, properties, mortgages, debts, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings)
     : null;
   // Dluh v "Historickém tempu" (a ve fallbacku Simulace akvizic bez Finančního profilu):
-  // držet LTV napořád na dnešní úrovni by bylo taky nepřesné — dnešní nízké LTV je dané tím,
-  // že staré hypotéky už léta amortizují, ale KAŽDÁ další akvizice (ať už "historickým tempem"
-  // nebo simulovaně) se financuje blízko cílového LTV z bankovních parametrů (typicky ~70 %),
-  // takže s dalším růstem přes nové akvizice se poměr dluh/hodnota postupně posouvá právě
-  // k tomuhle cílovému LTV, ne že by zůstal navěky na dnešních ~40 %.
-  // Vzorec: stávající dluh dál amortizuje normálně (p.debt ze základní trajektorie, jen
-  // stávající hypotéky bez nových akvizic) a každá koruna PŘÍRŮSTKU hodnoty nad dnešek se
-  // financuje z targetLtv % dluhu a (1-targetLtv) % vlastního kapitálu — přesně jako u
-  // skutečné akvizice:
-  //   debt(t) = p.debt(t) + targetLtv × (value(t) − hodnota_dnes)
-  // V t=dnes: p.debt = dluh_dnes a přírůstek je 0 → dluh přesně sedí na reálný dnešek.
-  // Pro t→∞ dluh_existujících hypoték doamortizuje k 0 a poměr dluh/hodnota se blíží targetLtv.
-  const targetLtv = (Number(assumedLtvPct) || 70) / 100;
+  // nejjednodušší odhad založený čistě na historických datech — hodnota portfolia i majetek
+  // se do budoucna natáhnou KAŽDÝ svým vlastním historickým tempem (appka je oba počítá
+  // a zobrazuje pod grafem jako "Průměrný roční růst..."), dluh je jejich prostý rozdíl.
+  // Žádné LTV, žádná amortizace, žádný předpoklad o financování budoucích akvizic.
+  //   equity(t) = majetek_dnes × (1 + equityRate)^t
+  //   value(t)  = hodnota_dnes × (1 + scenarioRate)^t
+  //   debt(t)   = value(t) − equity(t)
+  const equityRate = scenario === "optimisticka" ? ((avgGrowthPct ?? 0) / 100) * 1.3 : (avgGrowthPct ?? 0) / 100;
+  const todayEquity = todayPt ? todayPt.value - todayPt.debt : 0;
   const chartPoints: Pt[] = !showProjection || scenario === "pesimisticka" || !todayPt
     ? allPoints
     : dtiSimulation
     ? [...allPoints.filter(p => p.ms <= nowMs), ...dtiSimulation.points]
     : allPoints.map(p => {
         if (p.ms <= nowMs) return p;
-        const value = todayPt.value * Math.pow(1 + scenarioRate, (p.ms - nowMs) / (365 * 86400000));
-        const debt = p.debt + targetLtv * (value - todayPt.value);
-        return { ms: p.ms, value, debt };
+        const yearsFromNow = (p.ms - nowMs) / (365 * 86400000);
+        const value = todayPt.value * Math.pow(1 + scenarioRate, yearsFromNow);
+        const equity = todayEquity * Math.pow(1 + equityRate, yearsFromNow);
+        return { ms: p.ms, value, debt: value - equity };
       });
 
   const maxVal = Math.max(...chartPoints.map(p => p.value));
@@ -2378,12 +2375,12 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
         <div style={{ marginTop: 4, fontSize: 10, color: "#b0aa99", lineHeight: 1.4 }}>
           <div>
             {t(
-              `Odhad dluhu: stávající hypotéky dál doamortizují, každá koruna růstu hodnoty nad dnešek se počítá jako ${Math.round(targetLtv * 100)} % dluh / ${100 - Math.round(targetLtv * 100)} % vlastní kapitál (cílové LTV z Bankovních parametrů) — zjednodušený odhad, ne simulace jednotlivých nákupů.`,
-              `Debt estimate: existing mortgages keep amortizing; each unit of value growth above today's is split ${Math.round(targetLtv * 100)}% debt / ${100 - Math.round(targetLtv * 100)}% equity (target LTV from Bank parameters) — a simplified estimate, not a purchase-by-purchase simulation.`
+              "Odhad dluhu: hodnota portfolia a majetek se do budoucna natáhnou každý svým vlastním historickým tempem (viz průměrný roční růst výše), dluh je jejich prostý rozdíl — žádné LTV ani amortizace se nepočítá.",
+              "Debt estimate: portfolio value and equity are each extrapolated at their own historical rate (see average annual growth above), and debt is simply the difference — no LTV or amortization involved."
             )}
           </div>
           <div style={{ fontFamily: "ui-monospace, 'SF Mono', 'Cascadia Code', monospace", marginTop: 2 }}>
-            debt(t) = doamortizace_stávajících_hypoték(t) + {targetLtv.toFixed(2)} × (value(t) − {t("hodnota_dnes", "value_today")})
+            equity(t) = {t("majetek_dnes", "equity_today")} × (1 + {(equityRate * 100).toFixed(1)}%)^t · value(t) = {t("hodnota_dnes", "value_today")} × (1 + {(scenarioRate * 100).toFixed(1)}%)^t · debt(t) = value(t) − equity(t)
           </div>
         </div>
       )}
