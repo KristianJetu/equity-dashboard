@@ -2418,7 +2418,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
             {showPlanInfo && (
-              <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: 280, background: "#1c2b22", color: "#e6e0d0", borderRadius: 8, padding: "10px 12px", fontSize: 11.5, fontWeight: 400, lineHeight: 1.5, whiteSpace: "pre-line", boxShadow: "0 6px 20px rgba(0,0,0,0.25)", zIndex: 20 }}>
+              <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", width: "min(280px, calc(100vw - 32px))", background: "#1c2b22", color: "#e6e0d0", borderRadius: 8, padding: "10px 12px", fontSize: 11.5, fontWeight: 400, lineHeight: 1.5, whiteSpace: "pre-line", boxShadow: "0 6px 20px rgba(0,0,0,0.25)", zIndex: 20 }}>
                 {t(
                   "Srovnává tvoje aktuálně zadané hodnoty nemovitostí a dluhu s tím, co plán pro dnešek předpokládal. Plán počítá s postupným růstem každý měsíc, i když ty mezitím ocenění neaktualizuješ — záporné číslo tak často neznamená, že nemovitosti ztrácejí hodnotu, jen že je čas přidat nové ocenění.\n\nVýpočet: (aktuální hodnota nemovitostí − aktuální dluh) − (hodnota podle plánu k dnešku − dluh podle plánu k dnešku), interpolováno mezi dvěma nejbližšími uloženými měsíčními body plánu.",
                   "Compares your currently entered property values and debt with what the plan predicted for today. The plan assumes steady growth every month even if you don't update valuations in the meantime — a negative number often doesn't mean the properties lost value, just that it's time to add a new valuation.\n\nCalculation: (current property value − current debt) − (plan's value for today − plan's debt for today), interpolated between the two nearest saved monthly points of the plan."
@@ -2441,8 +2441,8 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
                   {t("cca", "approx.")} {String(new Date(m.ms).getMonth() + 1).padStart(2, "0")}/{new Date(m.ms).getFullYear()}
                 </span>
                 <span style={{ fontWeight: 600, minWidth: 110 }}>{fmt(m.price)} Kč</span>
-                <span style={{ color: "#9a9483" }}>{t("nájem", "rent")} ~{fmt(Math.round(m.rent))} Kč/měs</span>
-                <span style={{ color: "#9a9483" }}>{t("splátka", "payment")} ~{fmt(Math.round(m.payment))} Kč/měs</span>
+                <span style={{ color: "#9a9483" }}>{t("nájem", "rent")} ~{fmt(Math.round(m.rent))} {t("Kč/měs", "Kč/mo")}</span>
+                <span style={{ color: "#9a9483" }}>{t("splátka", "payment")} ~{fmt(Math.round(m.payment))} {t("Kč/měs", "Kč/mo")}</span>
               </div>
             ))}
           </div>
