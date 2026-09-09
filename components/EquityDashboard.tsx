@@ -1513,7 +1513,7 @@ type ProjectionModalSave = {
   birthYear: string; incomeEmployment: string; incomeOther: string; householdCosts: string; assumedLtvPct: string;
   settings: ProjectionSettings;
 };
-function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, settings, lang, onClose, onSave, plans, onSavePlan, onArchivePlan }: {
+function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, settings, lang, onClose, onSave, plans, onSavePlan, onArchivePlan, onDeletePlan }: {
   properties: Property[]; mortgages: Mortgage[]; debts: Debt[];
   birthYear: string; incomeEmployment: string; incomeOther: string; householdCosts: string; assumedLtvPct: string;
   settings: ProjectionSettings;
@@ -1523,6 +1523,7 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
   plans: ProjectionPlan[];
   onSavePlan: (settings: ProjectionPlanSettings, points: SimPt[], label?: string) => Promise<void>;
   onArchivePlan: (id: string) => Promise<void>;
+  onDeletePlan: (id: string) => Promise<void>;
 }) {
   const t = (cs: string, en: string) => lang === "cs" ? cs : en;
   type PreviewForm = ProjectionSettings & {
@@ -1534,6 +1535,7 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
   const [savingPlan, setSavingPlan] = useState(false);
   const [planLabelInput, setPlanLabelInput] = useState("");
   const [showPlansList, setShowPlansList] = useState(false);
+  const [confirmDeletePlanId, setConfirmDeletePlanId] = useState<string | null>(null);
 
   function set<K extends keyof PreviewForm>(key: K, value: PreviewForm[K]) {
     setForm(f => ({ ...f, [key]: value }));
@@ -1760,6 +1762,24 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
                       <button onClick={() => onArchivePlan(p.id)}
                         style={{ fontFamily: "'Work Sans', sans-serif", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--ppm-border)", background: "transparent", color: "var(--ppm-text-faint)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
                         {t("Archivovat", "Archive")}
+                      </button>
+                    )}
+                    {confirmDeletePlanId === p.id ? (
+                      <>
+                        <span style={{ color: "var(--ppm-negative)", fontWeight: 600 }}>{t("Opravdu smazat?", "Really delete?")}</span>
+                        <button onClick={() => { onDeletePlan(p.id); setConfirmDeletePlanId(null); }}
+                          style={{ fontFamily: "'Work Sans', sans-serif", padding: "5px 9px", borderRadius: 6, border: "none", background: "var(--ppm-negative)", color: "#141a12", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                          {t("Ano, smazat", "Yes, delete")}
+                        </button>
+                        <button onClick={() => setConfirmDeletePlanId(null)}
+                          style={{ fontFamily: "'Work Sans', sans-serif", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--ppm-border)", background: "transparent", color: "var(--ppm-text-dim)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                          {t("Zrušit", "Cancel")}
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={() => setConfirmDeletePlanId(p.id)}
+                        style={{ fontFamily: "'Work Sans', sans-serif", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--ppm-border)", background: "transparent", color: "var(--ppm-negative)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                        {t("Smazat", "Delete")}
                       </button>
                     )}
                   </div>
@@ -3325,6 +3345,11 @@ export default function EquityDashboard() {
     setProjectionPlans(prev => prev.map(p => p.id === id ? { ...p, status: "archived" as const } : p));
   }
 
+  async function deleteProjectionPlan(id: string) {
+    await supabase.from("projection_plans").delete().eq("id", id);
+    setProjectionPlans(prev => prev.filter(p => p.id !== id));
+  }
+
   type ChatMessage = { role: "user" | "assistant"; content: string };
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
@@ -3738,6 +3763,7 @@ export default function EquityDashboard() {
           plans={projectionPlans}
           onSavePlan={saveProjectionPlan}
           onArchivePlan={archiveProjectionPlan}
+          onDeletePlan={deleteProjectionPlan}
         />
       )}
 
