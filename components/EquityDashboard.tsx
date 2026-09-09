@@ -2191,7 +2191,10 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   const planEquityPts = planOverlayPts.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value - p.debt).toFixed(1)}`).join(" ");
   const planNowVal = activePlan && scenario === "optimisticka" ? planValueAtMs(activePlan.points, nowMs) : null;
   const planEquityNow = planNowVal ? planNowVal.value - planNowVal.debt : null;
-  const realEquityNow = todayPt ? todayPt.value - todayPt.debt : null;
+  // allPoints je mřížka po ~30 dnech — todayPt je nejbližší budoucí bod, ne přesné "teď".
+  // Interpolací mezi sousedy dostaneme přesnou dnešní hodnotu, srovnatelnou s přesným snímkem uloženým v plánu.
+  const realNowVal = planValueAtMs(allPoints, nowMs);
+  const realEquityNow = realNowVal ? realNowVal.value - realNowVal.debt : null;
   const planDelta = planEquityNow !== null && realEquityNow !== null ? realEquityNow - planEquityNow : null;
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
