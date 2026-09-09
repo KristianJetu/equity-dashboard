@@ -2034,6 +2034,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   const [scenario, setScenario] = React.useState<"pesimisticka" | "konzervativni" | "optimisticka">("konzervativni");
   const [showProjection, setShowProjection] = React.useState(false);
   const [showPlanInfo, setShowPlanInfo] = React.useState(false);
+  const [showDebtFormulaInfo, setShowDebtFormulaInfo] = React.useState(false);
   const svgRef = React.useRef<SVGSVGElement>(null);
 
   const W = 600, H = 240, PAD_L = 40, PAD_R = 16, PAD_T = 20, PAD_B = 30;
@@ -2375,16 +2376,26 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
         </div>
       )}
       {showProjection && todayPt && (scenario === "konzervativni" || (scenario === "optimisticka" && !dtiEnabled)) && (
-        <div style={{ marginTop: 4, fontSize: 10, color: "#b0aa99", lineHeight: 1.4 }}>
-          <div>
-            {t(
-              `Odhad dluhu: hodnota portfolia a majetek se do budoucna natáhnou každý svým vlastním historickým tempem (viz průměrný roční růst výše), dluh je jejich prostý rozdíl — žádné LTV ani amortizace se nepočítá. Hodnota a majetek rostou přesně a napořád svým tempem (${(scenarioRate * 100).toFixed(1)} % a ${(equityRate * 100).toFixed(1)} %) — to je přímo z definice vzorce.`,
-              `Debt estimate: portfolio value and equity are each extrapolated at their own historical rate (see average annual growth above), and debt is simply the difference — no LTV or amortization involved. Value and equity grow exactly and permanently at their own rate (${(scenarioRate * 100).toFixed(1)}% and ${(equityRate * 100).toFixed(1)}%) — that follows directly from the formula's definition.`
+        <div style={{ marginTop: 8, fontSize: 12, color: "#7c8378", position: "relative", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+          <span>{t("Jak se počítá odhad dluhu", "How the debt estimate is calculated")}</span>
+          <span
+            onMouseEnter={() => setShowDebtFormulaInfo(true)}
+            onMouseLeave={() => setShowDebtFormulaInfo(false)}
+            style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "default", flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c8378" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.75 }}>
+              <circle cx="12" cy="12" r="9" />
+              <line x1="12" y1="16" x2="12" y2="11.5" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            {showDebtFormulaInfo && (
+              <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: 300, background: "#1c2b22", color: "#e6e0d0", borderRadius: 8, padding: "10px 12px", fontSize: 11.5, fontWeight: 400, lineHeight: 1.5, whiteSpace: "pre-line", boxShadow: "0 6px 20px rgba(0,0,0,0.25)", zIndex: 20 }}>
+                {t(
+                  `Hodnota portfolia a majetek se do budoucna natáhnou každý svým vlastním historickým tempem (viz průměrný roční růst výše), dluh je jejich prostý rozdíl — žádné LTV ani amortizace se nepočítá. Hodnota a majetek rostou přesně a napořád svým tempem (${(scenarioRate * 100).toFixed(1)} % a ${(equityRate * 100).toFixed(1)} %) — to je přímo z definice vzorce.\n\nequity(t) = majetek_dnes × (1 + ${(equityRate * 100).toFixed(1)}%)^t\nvalue(t) = hodnota_dnes × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\ndebt(t) = value(t) − equity(t)`,
+                  `Portfolio value and equity are each extrapolated at their own historical rate (see average annual growth above), and debt is simply the difference — no LTV or amortization involved. Value and equity grow exactly and permanently at their own rate (${(scenarioRate * 100).toFixed(1)}% and ${(equityRate * 100).toFixed(1)}%) — that follows directly from the formula's definition.\n\nequity(t) = equity_today × (1 + ${(equityRate * 100).toFixed(1)}%)^t\nvalue(t) = value_today × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\ndebt(t) = value(t) − equity(t)`
+                )}
+              </div>
             )}
-          </div>
-          <div style={{ fontFamily: "ui-monospace, 'SF Mono', 'Cascadia Code', monospace", marginTop: 2 }}>
-            equity(t) = {t("majetek_dnes", "equity_today")} × (1 + {(equityRate * 100).toFixed(1)}%)^t · value(t) = {t("hodnota_dnes", "value_today")} × (1 + {(scenarioRate * 100).toFixed(1)}%)^t · debt(t) = value(t) − equity(t)
-          </div>
+          </span>
         </div>
       )}
       {/* Odchylka od uloženého plánu */}
