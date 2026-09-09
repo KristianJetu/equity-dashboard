@@ -2378,8 +2378,8 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
         <div style={{ marginTop: 4, fontSize: 10, color: "#b0aa99", lineHeight: 1.4 }}>
           <div>
             {t(
-              "Odhad dluhu: hodnota portfolia a majetek se do budoucna natáhnou každý svým vlastním historickým tempem (viz průměrný roční růst výše), dluh je jejich prostý rozdíl — žádné LTV ani amortizace se nepočítá.",
-              "Debt estimate: portfolio value and equity are each extrapolated at their own historical rate (see average annual growth above), and debt is simply the difference — no LTV or amortization involved."
+              `Odhad dluhu: hodnota portfolia a majetek se do budoucna natáhnou každý svým vlastním historickým tempem (viz průměrný roční růst výše), dluh je jejich prostý rozdíl — žádné LTV ani amortizace se nepočítá. Hodnota a majetek rostou přesně a napořád svým tempem (${(scenarioRate * 100).toFixed(1)} % a ${(equityRate * 100).toFixed(1)} %) — to je přímo z definice vzorce.`,
+              `Debt estimate: portfolio value and equity are each extrapolated at their own historical rate (see average annual growth above), and debt is simply the difference — no LTV or amortization involved. Value and equity grow exactly and permanently at their own rate (${(scenarioRate * 100).toFixed(1)}% and ${(equityRate * 100).toFixed(1)}%) — that follows directly from the formula's definition.`
             )}
           </div>
           <div style={{ fontFamily: "ui-monospace, 'SF Mono', 'Cascadia Code', monospace", marginTop: 2 }}>
@@ -2400,8 +2400,12 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
           <span
             onMouseEnter={() => setShowPlanInfo(true)}
             onMouseLeave={() => setShowPlanInfo(false)}
-            style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 15, height: 15, borderRadius: "50%", border: "1px solid #9a9483", color: "#9a9483", fontSize: 10, fontWeight: 700, fontStyle: "italic", cursor: "default", flexShrink: 0 }}>
-            i
+            style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "default", flexShrink: 0, opacity: 0.75 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c8378" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9" />
+              <line x1="12" y1="16" x2="12" y2="11.5" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
             {showPlanInfo && (
               <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: 280, background: "#1c2b22", color: "#e6e0d0", borderRadius: 8, padding: "10px 12px", fontSize: 11.5, fontWeight: 400, lineHeight: 1.5, whiteSpace: "pre-line", boxShadow: "0 6px 20px rgba(0,0,0,0.25)", zIndex: 20 }}>
                 {t(
