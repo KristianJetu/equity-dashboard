@@ -1648,7 +1648,9 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
 
   async function handleSavePlan() {
     setSavingPlan(true);
-    await onSavePlan(currentPlanSettings, sim?.points ?? [], planLabelInput.trim() || undefined);
+    // Stejný dnešní kotvící bod jako u živého náhledu (chartPoints) — bez něj by srovnání
+    // k dnešnímu datu bralo jako "teď" až první simulovaný bod, který je ~1 měsíc dopředu.
+    await onSavePlan(currentPlanSettings, [{ ms: nowMs, value: todayValue, debt: todayDebt }, ...(sim?.points ?? [])], planLabelInput.trim() || undefined);
     setPlanLabelInput("");
     setSavingPlan(false);
   }
