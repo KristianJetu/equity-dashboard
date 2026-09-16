@@ -2062,12 +2062,11 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   const totalMs = maxMs - minMs;
 
   type Pt = { ms: number; value: number; debt: number };
-  const allPoints: Pt[] = [];
   const MONTHS = Math.round(totalMs / (30 * 86400000));
-  for (let i = 0; i <= MONTHS; i++) {
-    const ms = minMs + (i / MONTHS) * totalMs;
+
+  function valueDebtAt(ms: number, propsList: Property[]): { value: number; debt: number } {
     let value = 0, debt = 0;
-    for (const p of chartProperties) {
+    for (const p of propsList) {
       const growth = (p.annual_growth_pct ?? 3) / 100;
       const purchaseMs = p.purchase_date ? new Date(p.purchase_date).getTime() : nowMs;
       if (p.status === "planned") {
@@ -2122,8 +2121,20 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
         }
       }
     }
-    allPoints.push({ ms, value, debt });
+    return { value, debt };
   }
+
+  const allPoints: Pt[] = [];
+  for (let i = 0; i <= MONTHS; i++) {
+    const ms = minMs + (i / MONTHS) * totalMs;
+    allPoints.push({ ms, ...valueDebtAt(ms, chartProperties) });
+  }
+  // Referenční linka "bez plánovaných" — stejná časová osa, ale bez plánovaných nemovitostí,
+  // aby bylo v grafu vidět, o kolik ho přepínač "Vč. plánovaných" reálně zvedl (ne jen přeškáloval osu).
+  const realOnlyProperties = properties.filter(p => p.status !== "planned");
+  const realOnlyPoints: Pt[] = includePlanned
+    ? allPoints.map(pt => ({ ms: pt.ms, ...valueDebtAt(pt.ms, realOnlyProperties) }))
+    : allPoints;
 
   if (allPoints.length === 0) return null;
 
@@ -2186,6 +2197,16 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   const equityPts = chartPoints.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value - p.debt).toFixed(1)}`).join(" ");
   const equityFill = equityPts + ` ${toX(maxMs).toFixed(1)},${toY(minVal).toFixed(1)} ${toX(minMs).toFixed(1)},${toY(minVal).toFixed(1)}`;
   const todayX = toX(nowMs);
+
+  // Referenční linka "bez plánovaných" — jen od dneška dál (dřív jsou obě linky totožné) a jen
+  // pokud se skutečně liší, aby přepínač byl v grafu vidět jako přidaná vrstva, ne jen přeškálovaná osa.
+  const realOnlyFromToday = realOnlyPoints.filter(p => p.ms >= nowMs);
+  const showPlannedDelta = includePlanned && realOnlyFromToday.some((p, i) => {
+    const cp = chartPoints.find(c => c.ms === p.ms);
+    return cp && (Math.abs(cp.value - p.value) > 1 || Math.abs(cp.debt - p.debt) > 1);
+  });
+  const realOnlyValuePts = realOnlyFromToday.map(p => `${toX(p.ms).toFixed(1)},${toY(p.value).toFixed(1)}`).join(" ");
+  const realOnlyDebtPts = realOnlyFromToday.map(p => `${toX(p.ms).toFixed(1)},${toY(p.debt).toFixed(1)}`).join(" ");
 
   const startYear = new Date(minMs).getFullYear();
   const endYear = new Date(maxMs).getFullYear();
@@ -2280,6 +2301,11 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
                 <span style={{ width: 14, height: 0, borderTop: "1.5px dashed #9a9483", display: "inline-block" }} />{t("Plán", "Plan")}
               </span>
             )}
+            {showPlannedDelta && (
+              <span className="inline-flex items-center gap-[6px]">
+                <span style={{ width: 14, height: 0, borderTop: "1.5px dashed #c9a24b", opacity: 0.6, display: "inline-block" }} />{t("Bez plánovaných", "Without planned")}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -2332,6 +2358,12 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
           <text x={todayX + 4} y={PAD_T + 10} fontSize="9" fill="#c9a24b" fontWeight="600">{t("dnes", "today")}</text>
           {/* Chart lines */}
           <polygon points={equityFill} fill="url(#eqfill)" />
+          {showPlannedDelta && (
+            <>
+              <polyline points={realOnlyDebtPts} fill="none" stroke="#b08c7a" strokeWidth="1.5" strokeOpacity="0.5" strokeDasharray="3 2.5" />
+              <polyline points={realOnlyValuePts} fill="none" stroke="#c39a3f" strokeWidth="1.5" strokeOpacity="0.5" strokeDasharray="3 2.5" />
+            </>
+          )}
           <polyline points={debtPts} fill="none" stroke="#b08c7a" strokeWidth="2" />
           <polyline points={valuePts} fill="none" stroke="#c39a3f" strokeWidth="2" />
           <polyline points={equityPts} fill="none" stroke="#1f3d2e" strokeWidth="3" />
