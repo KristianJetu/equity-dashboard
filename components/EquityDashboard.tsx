@@ -2033,6 +2033,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   const [range, setRange] = React.useState<"5" | "10" | "all">("all");
   const [scenario, setScenario] = React.useState<"pesimisticka" | "konzervativni" | "optimisticka">("konzervativni");
   const [showProjection, setShowProjection] = React.useState(false);
+  const [includePlanned, setIncludePlanned] = React.useState(false);
   const [showPlanInfo, setShowPlanInfo] = React.useState(false);
   const [showDebtFormulaInfo, setShowDebtFormulaInfo] = React.useState(false);
   const svgRef = React.useRef<SVGSVGElement>(null);
@@ -2041,8 +2042,12 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   const nowMs = Date.now();
   const FUTURE_YEARS = 5;
 
+  // Graf standardně počítá jen s reálnými (nikoli plánovanými) nemovitostmi — plánované se
+  // připočtou jen po zapnutí přepínače "Vč. plánovaných" (viz níže), a to výhradně od dneška dál.
+  const chartProperties = includePlanned ? properties : properties.filter(p => p.status !== "planned");
+
   let earliestMs = nowMs;
-  for (const p of properties) {
+  for (const p of chartProperties) {
     if (p.purchase_date) {
       const ms = new Date(p.purchase_date).getTime();
       if (ms < earliestMs) earliestMs = ms;
@@ -2062,7 +2067,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   for (let i = 0; i <= MONTHS; i++) {
     const ms = minMs + (i / MONTHS) * totalMs;
     let value = 0, debt = 0;
-    for (const p of properties) {
+    for (const p of chartProperties) {
       const growth = (p.annual_growth_pct ?? 3) / 100;
       const purchaseMs = p.purchase_date ? new Date(p.purchase_date).getTime() : nowMs;
       if (p.status === "planned") {
@@ -2254,6 +2259,14 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
               <span style={{ position: "absolute", top: 1.5, left: showProjection ? 13 : 1.5, width: 11, height: 11, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
             </span>
             {t("Predikce do budoucna", "Future forecast")}
+          </button>
+          {/* Vč. plánovaných */}
+          <button onClick={() => setIncludePlanned(v => !v)}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "7px 12px", borderRadius: 16, border: `1.5px solid ${includePlanned ? "#1f3d2e" : "#d2cab4"}`, background: includePlanned ? "#1f3d2e" : "transparent", color: includePlanned ? "#f5f1e6" : "#5c6359", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+            <span style={{ width: 26, height: 14, borderRadius: 8, background: includePlanned ? "#c9a24b" : "#d2cab4", position: "relative", display: "inline-block", flexShrink: 0 }}>
+              <span style={{ position: "absolute", top: 1.5, left: includePlanned ? 13 : 1.5, width: 11, height: 11, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
+            </span>
+            {t("Vč. plánovaných", "Incl. planned")}
           </button>
           {/* Legend */}
           <div className="flex gap-4" style={{ fontSize: 11, fontWeight: 600, color: "#5c6359" }}>
