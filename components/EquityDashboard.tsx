@@ -2459,14 +2459,28 @@ function CashflowExtra({ properties, mortgages, debts, showPlanned, showDebtsInC
   const visibleProps = showPlanned ? properties : properties.filter(p => p.status !== "planned");
   const ownedProps = visibleProps.filter(p => p.ownership_type !== "manager");
   const managedProps = visibleProps.filter(p => p.ownership_type === "manager");
-  const totalRent = ownedProps.reduce((s, p) => s + (p.status === "rented" || (showPlanned && p.status === "planned") ? p.rent_amount : 0), 0);
-  const totalMortgage = mortgages.filter(m => ownedProps.some(p => p.id === m.property_id)).reduce((s, m) => s + m.monthly_payment, 0);
-  const totalInsurance = ownedProps.reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0), 0);
-  const totalCosts = ownedProps.reduce((s, p) => s + (p.monthly_costs ?? 0), 0);
+  const plannedOwned = ownedProps.filter(p => p.status === "planned");
+
+  const sumRent = (arr: Property[]) => arr.reduce((s, p) => s + (p.status === "rented" || (showPlanned && p.status === "planned") ? p.rent_amount : 0), 0);
+  const sumMortgage = (arr: Property[]) => mortgages.filter(m => arr.some(p => p.id === m.property_id)).reduce((s, m) => s + m.monthly_payment, 0);
+  const sumInsurance = (arr: Property[]) => arr.reduce((s, p) => s + (p.insurance_amount ? p.insurance_amount / 12 : 0), 0);
+  const sumCosts = (arr: Property[]) => arr.reduce((s, p) => s + (p.monthly_costs ?? 0), 0);
+
+  const totalRent = sumRent(ownedProps);
+  const totalMortgage = sumMortgage(ownedProps);
+  const totalInsurance = sumInsurance(ownedProps);
+  const totalCosts = sumCosts(ownedProps);
   const totalMgmtFee = managedProps.reduce((s, p) => s + (p.management_fee ?? 0), 0);
   const debtsIncome = showDebtsInCashflow ? debts.filter(d => d.direction === "they_owe").reduce((s, d) => s + (d.monthly_payment ?? 0), 0) : 0;
   const debtsExpense = showDebtsInCashflow ? debts.filter(d => d.direction === "i_owe").reduce((s, d) => s + (d.monthly_payment ?? 0), 0) : 0;
   const net = totalRent + debtsIncome - totalMortgage - totalInsurance - totalCosts - debtsExpense + totalMgmtFee;
+
+  // Plánovaná (dosud nekoupená) část jednotlivých kategorií — pro odlišení v grafu
+  const mortgagePlanned = sumMortgage(plannedOwned);
+  const insurancePlanned = sumInsurance(plannedOwned);
+  const costsPlanned = sumCosts(plannedOwned);
+  const rentPlanned = sumRent(plannedOwned);
+  const netPlanned = rentPlanned - mortgagePlanned - insurancePlanned - costsPlanned;
 
   const propCashflow = visibleProps.map(p => {
     const isManaged = p.ownership_type === "manager";
@@ -2480,21 +2494,40 @@ function CashflowExtra({ properties, mortgages, debts, showPlanned, showDebtsInC
 
   const cx = 80, cy = 80, R = 60, sw = 20;
   const circ = 2 * Math.PI * R;
+  const netTotal = Math.max(net, 0);
+  const netPlannedPortion = Math.max(0, Math.min(netPlanned, netTotal));
   const slices = [
-    { label: "Splátky hypoték", value: totalMortgage, color: "#b85c5c" },
-    { label: "Pojistky", value: Math.round(totalInsurance), color: "#c4a882" },
-    { label: "Náklady", value: totalCosts, color: "#a89070" },
-    { label: "Splátky půjček", value: debtsExpense, color: "#8a6d8f" },
-    { label: "Čistý příjem", value: Math.max(net, 0), color: "#1f3d2e" },
-  ].filter(s => s.value > 0);
+    { label: "Splátky hypoték", value: totalMortgage, planned: mortgagePlanned, color: "#b85c5c" },
+    { label: "Pojistky", value: Math.round(totalInsurance), planned: Math.round(insurancePlanned), color: "#c4a882" },
+    { label: "Náklady", value: totalCosts, planned: costsPlanned, color: "#a89070" },
+    { label: "Splátky půjček", value: debtsExpense, planned: 0, color: "#8a6d8f" },
+    { label: "Čistý příjem", value: netTotal, planned: netPlannedPortion, color: "#1f3d2e" },
+  ].filter(s => s.value > 0).map(s => ({ ...s, real: s.value - s.planned }));
   const total = slices.reduce((s, sl) => s + sl.value, 0) || 1;
 
+  // Dva oblouky na kategorii: plný (reálné) + čárkovaný (plánované), aby byl v grafu vidět rozdíl
+  function dashPatternFor(arcLen: number) {
+    const dash = 5, gap = 3.5;
+    const pattern: number[] = [];
+    let used = 0;
+    while (used + dash < arcLen) { pattern.push(dash, gap); used += dash + gap; }
+    pattern.push(Math.max(arcLen - used, 0));
+    pattern.push(Math.max(circ - arcLen, 0));
+    return pattern.join(" ");
+  }
   let acc = 0;
-  const donutSlices = slices.map(sl => {
-    const dashLen = (sl.value / total) * circ;
-    const startAngle = (acc / total) * 360 - 90;
-    acc += sl.value;
-    return { ...sl, dashLen, gap: circ - dashLen, startAngle };
+  const donutArcs: { key: string; color: string; dashLen: number; startAngle: number; dashed: boolean }[] = [];
+  slices.forEach(sl => {
+    if (sl.real > 0) {
+      const dashLen = (sl.real / total) * circ;
+      donutArcs.push({ key: sl.label + "-real", color: sl.color, dashLen, startAngle: (acc / total) * 360 - 90, dashed: false });
+      acc += sl.real;
+    }
+    if (sl.planned > 0) {
+      const dashLen = (sl.planned / total) * circ;
+      donutArcs.push({ key: sl.label + "-planned", color: sl.color, dashLen, startAngle: (acc / total) * 360 - 90, dashed: true });
+      acc += sl.planned;
+    }
   });
 
   return (
@@ -2504,10 +2537,10 @@ function CashflowExtra({ properties, mortgages, debts, showPlanned, showDebtsInC
         <div style={{ flexShrink: 0 }}>
           <svg width={160} height={160} viewBox="0 0 160 160">
             <circle cx={cx} cy={cy} r={R} fill="none" stroke="#e0d9c8" strokeWidth={sw} />
-            {donutSlices.map(sl => (
-              <circle key={sl.label} cx={cx} cy={cy} r={R}
+            {donutArcs.map(sl => (
+              <circle key={sl.key} cx={cx} cy={cy} r={R}
                 fill="none" stroke={sl.color} strokeWidth={sw}
-                strokeDasharray={`${sl.dashLen} ${sl.gap}`}
+                strokeDasharray={sl.dashed ? dashPatternFor(sl.dashLen) : `${sl.dashLen} ${circ - sl.dashLen}`}
                 transform={`rotate(${sl.startAngle} ${cx} ${cy})`}
               />
             ))}
@@ -2524,12 +2557,23 @@ function CashflowExtra({ properties, mortgages, debts, showPlanned, showDebtsInC
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#7c8378", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Kam jdou příjmy</div>
           {slices.map(sl => (
-            <div key={sl.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
-              <div style={{ width: 10, height: 10, borderRadius: "50%", background: sl.color, flexShrink: 0 }} />
-              <span style={{ fontSize: 13, color: "#5c6359", flex: 1 }}>{sl.label}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: sl.label === "Čistý příjem" ? "#1f3d2e" : "#b85c5c" }}>
-                {sl.label === "Čistý příjem" ? "+" : "−"}{fmt(sl.value)} Kč
-              </span>
+            <div key={sl.label} style={{ marginBottom: 7 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: sl.color, flexShrink: 0 }} />
+                <span style={{ fontSize: 13, color: "#5c6359", flex: 1 }}>{sl.label}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: sl.label === "Čistý příjem" ? "#1f3d2e" : "#b85c5c" }}>
+                  {sl.label === "Čistý příjem" ? "+" : "−"}{fmt(sl.value)} Kč
+                </span>
+              </div>
+              {sl.planned > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2, paddingLeft: 2 }}>
+                  <svg width="10" height="10" style={{ flexShrink: 0 }}><line x1="0" y1="5" x2="10" y2="5" stroke={sl.color} strokeWidth="2" strokeDasharray="2.5 2" /></svg>
+                  <span style={{ fontSize: 11, color: "#9a9483", flex: 1 }}>z toho plánované</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#9a9483" }}>
+                    {sl.label === "Čistý příjem" ? "+" : "−"}{fmt(sl.planned)} Kč
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </div>
