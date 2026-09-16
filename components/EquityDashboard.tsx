@@ -2505,27 +2505,18 @@ function CashflowExtra({ properties, mortgages, debts, showPlanned, showDebtsInC
   ].filter(s => s.value > 0).map(s => ({ ...s, real: s.value - s.planned }));
   const total = slices.reduce((s, sl) => s + sl.value, 0) || 1;
 
-  // Dva oblouky na kategorii: plný (reálné) + čárkovaný (plánované), aby byl v grafu vidět rozdíl
-  function dashPatternFor(arcLen: number) {
-    const dash = 5, gap = 3.5;
-    const pattern: number[] = [];
-    let used = 0;
-    while (used + dash < arcLen) { pattern.push(dash, gap); used += dash + gap; }
-    pattern.push(Math.max(arcLen - used, 0));
-    pattern.push(Math.max(circ - arcLen, 0));
-    return pattern.join(" ");
-  }
+  // Dva oblouky na kategorii: plný (reálné) + zesvětlený (plánované), aby byl v grafu vidět rozdíl
   let acc = 0;
-  const donutArcs: { key: string; color: string; dashLen: number; startAngle: number; dashed: boolean }[] = [];
+  const donutArcs: { key: string; color: string; dashLen: number; startAngle: number; planned: boolean }[] = [];
   slices.forEach(sl => {
     if (sl.real > 0) {
       const dashLen = (sl.real / total) * circ;
-      donutArcs.push({ key: sl.label + "-real", color: sl.color, dashLen, startAngle: (acc / total) * 360 - 90, dashed: false });
+      donutArcs.push({ key: sl.label + "-real", color: sl.color, dashLen, startAngle: (acc / total) * 360 - 90, planned: false });
       acc += sl.real;
     }
     if (sl.planned > 0) {
       const dashLen = (sl.planned / total) * circ;
-      donutArcs.push({ key: sl.label + "-planned", color: sl.color, dashLen, startAngle: (acc / total) * 360 - 90, dashed: true });
+      donutArcs.push({ key: sl.label + "-planned", color: sl.color, dashLen, startAngle: (acc / total) * 360 - 90, planned: true });
       acc += sl.planned;
     }
   });
@@ -2539,8 +2530,8 @@ function CashflowExtra({ properties, mortgages, debts, showPlanned, showDebtsInC
             <circle cx={cx} cy={cy} r={R} fill="none" stroke="#e0d9c8" strokeWidth={sw} />
             {donutArcs.map(sl => (
               <circle key={sl.key} cx={cx} cy={cy} r={R}
-                fill="none" stroke={sl.color} strokeWidth={sw}
-                strokeDasharray={sl.dashed ? dashPatternFor(sl.dashLen) : `${sl.dashLen} ${circ - sl.dashLen}`}
+                fill="none" stroke={sl.color} strokeWidth={sw} strokeOpacity={sl.planned ? 0.35 : 1}
+                strokeDasharray={`${sl.dashLen} ${circ - sl.dashLen}`}
                 transform={`rotate(${sl.startAngle} ${cx} ${cy})`}
               />
             ))}
@@ -2567,7 +2558,7 @@ function CashflowExtra({ properties, mortgages, debts, showPlanned, showDebtsInC
               </div>
               {sl.planned > 0 && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2, paddingLeft: 2 }}>
-                  <svg width="10" height="10" style={{ flexShrink: 0 }}><line x1="0" y1="5" x2="10" y2="5" stroke={sl.color} strokeWidth="2" strokeDasharray="2.5 2" /></svg>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: sl.color, opacity: 0.35, flexShrink: 0 }} />
                   <span style={{ fontSize: 11, color: "#9a9483", flex: 1 }}>z toho plánované</span>
                   <span style={{ fontSize: 11, fontWeight: 600, color: "#9a9483" }}>
                     {sl.label === "Čistý příjem" ? "+" : "−"}{fmt(sl.planned)} Kč
