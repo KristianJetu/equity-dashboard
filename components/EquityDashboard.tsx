@@ -2065,7 +2065,14 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
     for (const p of properties) {
       const growth = (p.annual_growth_pct ?? 3) / 100;
       const purchaseMs = p.purchase_date ? new Date(p.purchase_date).getTime() : nowMs;
-      if (!p.purchase_date) {
+      if (p.status === "planned") {
+        // Plánovaná (dosud nekoupená) nemovitost nesmí zpětně vstupovat do historie — jinak by se
+        // její hodnota nafoukla do minulosti, zatímco dluh (viz níže) by se objevil až dnes, což
+        // vytváří falešný skok/propad majetku přesně u dnešního data. Existuje tedy až od "dnes".
+        if (ms >= nowMs) {
+          value += p.estimated_value * Math.pow(1 + growth, (ms - nowMs) / (365 * 86400000));
+        }
+      } else if (!p.purchase_date) {
         value += ms <= nowMs ? p.estimated_value : p.estimated_value * Math.pow(1 + growth, (ms - nowMs) / (365 * 86400000));
       } else {
         const purchasePrice = p.purchase_price ?? p.estimated_value;
@@ -2080,20 +2087,32 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
       }
       const mort = mortgages.find(m => m.property_id === p.id);
       if (mort) {
-        const loanMs = mort.loan_start_date ? new Date(mort.loan_start_date).getTime() : purchaseMs;
-        if (ms >= loanMs) {
-          const loanAmt = mort.loan_amount ?? mort.outstanding_balance;
-          const termMs = (mort.loan_term_years ?? 30) * 365 * 86400000;
-          const payoffMs = loanMs + termMs;
-          if (ms <= nowMs) {
-            // Interpolate between the loan amount at drawdown and the actual current balance —
-            // real mortgages front-load interest, so a pure linear-amortization model would
-            // understate today's balance if it ignored the real outstanding_balance.
-            const t = Math.min(1, (ms - loanMs) / (nowMs - loanMs || 1));
-            debt += Math.max(0, loanAmt + t * (mort.outstanding_balance - loanAmt));
-          } else if (ms < payoffMs) {
-            const t = (ms - nowMs) / (payoffMs - nowMs || 1);
-            debt += Math.max(0, mort.outstanding_balance * (1 - t));
+        if (p.status === "planned") {
+          if (ms >= nowMs) {
+            const loanAmt = mort.loan_amount ?? mort.outstanding_balance;
+            const termMs = (mort.loan_term_years ?? 30) * 365 * 86400000;
+            const payoffMs = nowMs + termMs;
+            if (ms < payoffMs) {
+              const t = (ms - nowMs) / (payoffMs - nowMs || 1);
+              debt += Math.max(0, loanAmt * (1 - t));
+            }
+          }
+        } else {
+          const loanMs = mort.loan_start_date ? new Date(mort.loan_start_date).getTime() : purchaseMs;
+          if (ms >= loanMs) {
+            const loanAmt = mort.loan_amount ?? mort.outstanding_balance;
+            const termMs = (mort.loan_term_years ?? 30) * 365 * 86400000;
+            const payoffMs = loanMs + termMs;
+            if (ms <= nowMs) {
+              // Interpolate between the loan amount at drawdown and the actual current balance —
+              // real mortgages front-load interest, so a pure linear-amortization model would
+              // understate today's balance if it ignored the real outstanding_balance.
+              const t = Math.min(1, (ms - loanMs) / (nowMs - loanMs || 1));
+              debt += Math.max(0, loanAmt + t * (mort.outstanding_balance - loanAmt));
+            } else if (ms < payoffMs) {
+              const t = (ms - nowMs) / (payoffMs - nowMs || 1);
+              debt += Math.max(0, mort.outstanding_balance * (1 - t));
+            }
           }
         }
       }
