@@ -2156,6 +2156,14 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   const avgPortfolioGrowthPct = firstValPt && todayPt && firstValPt.ms < todayPt.ms
     ? (Math.pow(todayPt.value / firstValPt.value, 1 / ((todayPt.ms - firstValPt.ms) / (365 * 86400000))) - 1) * 100
     : null;
+  // Stejná metoda CAGR jako u majetku/hodnoty portfolia výše, jen pro dluh — "Historické tempo"
+  // implicitně počítá s podobnými budoucími akvizicemi jako dosud (viz komentář u scénářů níže),
+  // takže dluh má dál růst tempem, jakým rostl historicky (financování akvizic), ne se umořovat
+  // k nule jako u "Bez akvizic".
+  const firstDebtPt = allPoints.find(p => p.debt > 0);
+  const avgDebtGrowthPct = firstDebtPt && todayPt && firstDebtPt.ms < todayPt.ms
+    ? (Math.pow(todayPt.debt / firstDebtPt.debt, 1 / ((todayPt.ms - firstDebtPt.ms) / (365 * 86400000))) - 1) * 100
+    : null;
 
   // Future projection scenarios. "Pesimistická" keeps the original per-property projection
   // (each property compounds at its own annual_growth_pct — i.e. organic appreciation only,
@@ -2171,16 +2179,14 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
     ? simulateOptimisticAcquisitions(allPoints, nowMs, properties, mortgages, debts, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings)
     : null;
   // Dluh v "Historickém tempu" (a ve fallbacku Simulace akvizic bez Finančního profilu):
-  // nejjednodušší odhad založený čistě na historických datech — hodnota portfolia i majetek
-  // se do budoucna natáhnou KAŽDÝ svým vlastním historickým tempem (appka je oba počítá
-  // a zobrazuje pod grafem jako "Průměrný roční růst..."), dluh je jejich prostý rozdíl.
-  // Žádné LTV, žádná amortizace, žádný předpoklad o financování budoucích akvizic.
-  //   equity(t) = majetek_dnes × (1 + equityRate)^t
+  // hodnota portfolia i dluh se do budoucna natáhnou KAŽDÝ svým vlastním historickým tempem
+  // (appka obě počítá a zobrazuje pod grafem jako "Průměrný roční růst..."), majetek je jejich
+  // prostý rozdíl. Žádné LTV, žádný explicitní model jednotlivých budoucích akvizic — ale dluh
+  // roste, protože historicky taky rostl (financování akvizic), místo aby se čistě umořoval.
   //   value(t)  = hodnota_dnes × (1 + scenarioRate)^t
-  //   debt(t)   = skutečná amortizace existujících hypoték (stejný vzorec jako v allPoints výše,
-  //               žádná vlastní exponenciála) — CAGR majetku je extrémně citlivý na malý počáteční
-  //               vlastní kapitál hned po koupi na páku, takže natahovat ho samostatně exponenciálně
-  //               dokázalo vystřelit do absurdních čísel (viz komentář výše u avgGrowthPct).
+  //   debt(t)   = dluh_dnes × (1 + debtRate)^t
+  //   equity(t) = value(t) − debt(t)
+  const debtRate = scenario === "optimisticka" ? ((avgDebtGrowthPct ?? 0) / 100) * 1.3 : (avgDebtGrowthPct ?? 0) / 100;
   const chartPoints: Pt[] = !showProjection || scenario === "pesimisticka" || !todayPt
     ? allPoints
     : dtiSimulation
@@ -2189,7 +2195,8 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
         if (p.ms <= nowMs) return p;
         const yearsFromNow = (p.ms - nowMs) / (365 * 86400000);
         const value = todayPt.value * Math.pow(1 + scenarioRate, yearsFromNow);
-        return { ms: p.ms, value, debt: p.debt };
+        const debt = todayPt.debt * Math.pow(1 + debtRate, yearsFromNow);
+        return { ms: p.ms, value, debt };
       });
 
   const maxVal = Math.max(...chartPoints.map(p => p.value));
@@ -2460,8 +2467,8 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
             {showDebtFormulaInfo && (
               <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: 300, background: "#1c2b22", color: "#e6e0d0", borderRadius: 8, padding: "10px 12px", fontSize: 11.5, fontWeight: 400, lineHeight: 1.5, whiteSpace: "pre-line", boxShadow: "0 6px 20px rgba(0,0,0,0.25)", zIndex: 20 }}>
                 {t(
-                  `Hodnota portfolia se do budoucna natáhne historickým tempem (${(scenarioRate * 100).toFixed(1)} % ročně, viz průměrný roční růst výše). Dluh se dál splácí podle skutečné amortizace existujících hypoték (stejný odhad jako u "Bez akvizic") — žádná vlastní exponenciála pro majetek, protože ten je hned po koupi na páku typicky malý a jeho samostatný CAGR by natažením do budoucna dokázal vystřelit do nesmyslných čísel. Majetek je pak prostě rozdíl.\n\nvalue(t) = hodnota_dnes × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\ndebt(t) = amortizovaný zůstatek existujících hypoték\nequity(t) = value(t) − debt(t)`,
-                  `Portfolio value is extrapolated at the historical rate (${(scenarioRate * 100).toFixed(1)}% per year, see average annual growth above). Debt keeps amortizing per the existing mortgages' real schedule (same estimate as "No acquisitions") — no separate exponential for equity, since equity right after a leveraged purchase is typically small and extrapolating its own CAGR forward could shoot off to absurd numbers. Equity is then simply the difference.\n\nvalue(t) = value_today × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\ndebt(t) = amortized balance of existing mortgages\nequity(t) = value(t) − debt(t)`
+                  `Hodnota portfolia i dluh se do budoucna natáhnou každý svým vlastním historickým tempem (${(scenarioRate * 100).toFixed(1)} % a ${(debtRate * 100).toFixed(1)} % ročně, viz průměrný roční růst výše) — dluh roste, protože historicky taky rostl (financování akvizic), ne že by se čistě umořoval. Majetek je pak prostě rozdíl. Žádná vlastní exponenciála pro majetek, protože ten je hned po koupi na páku typicky malý a jeho samostatný CAGR by natažením do budoucna dokázal vystřelit do nesmyslných čísel.\n\nvalue(t) = hodnota_dnes × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\ndebt(t) = dluh_dnes × (1 + ${(debtRate * 100).toFixed(1)}%)^t\nequity(t) = value(t) − debt(t)`,
+                  `Portfolio value and debt are each extrapolated at their own historical rate (${(scenarioRate * 100).toFixed(1)}% and ${(debtRate * 100).toFixed(1)}% per year, see average annual growth above) — debt keeps growing because it historically did too (acquisition financing), not paying itself down to zero. Equity is then simply the difference. No separate exponential for equity, since equity right after a leveraged purchase is typically small and extrapolating its own CAGR forward could shoot off to absurd numbers.\n\nvalue(t) = value_today × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\ndebt(t) = debt_today × (1 + ${(debtRate * 100).toFixed(1)}%)^t\nequity(t) = value(t) − debt(t)`
                 )}
               </div>
             )}
