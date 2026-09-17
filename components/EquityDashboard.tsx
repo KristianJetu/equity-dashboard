@@ -2305,7 +2305,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
         )}
         {showPlannedDelta && (
           <span className="inline-flex items-center gap-[6px]">
-            <span style={{ width: 14, height: 0, borderTop: "1.5px dashed #c9a24b", opacity: 0.6, display: "inline-block" }} />{t("Bez plánovaných", "Without planned")}
+            <span style={{ width: 14, height: 0, borderTop: "3px dotted #c9a24b", opacity: 0.6, display: "inline-block" }} />{t("Bez plánovaných", "Without planned")}
           </span>
         )}
       </div>
@@ -2360,8 +2360,8 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
           <polygon points={equityFill} fill="url(#eqfill)" />
           {showPlannedDelta && (
             <>
-              <polyline points={realOnlyDebtPts} fill="none" stroke="#b08c7a" strokeWidth="1.5" strokeOpacity="0.5" strokeDasharray="3 2.5" />
-              <polyline points={realOnlyValuePts} fill="none" stroke="#c39a3f" strokeWidth="1.5" strokeOpacity="0.5" strokeDasharray="3 2.5" />
+              <polyline points={realOnlyDebtPts} fill="none" stroke="#b08c7a" strokeWidth="1.5" strokeOpacity="0.6" strokeDasharray="0.1 4.5" strokeLinecap="round" />
+              <polyline points={realOnlyValuePts} fill="none" stroke="#c39a3f" strokeWidth="1.5" strokeOpacity="0.6" strokeDasharray="0.1 4.5" strokeLinecap="round" />
             </>
           )}
           <polyline points={debtPts} fill="none" stroke="#b08c7a" strokeWidth="2" />
