@@ -2259,7 +2259,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
 
   return (
     <div style={{ padding: "34px 4px 8px" }}>
-      <div className="eq-chart-header flex justify-between items-center mb-3">
+      <div className="eq-chart-header flex justify-between items-center mb-2" style={{ flexWrap: "wrap", rowGap: 10 }}>
         <div className="eq-chart-title" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22" }}>{t("Jak rosteš v čase", "How you grow over time")}</div>
         <div className="flex items-center gap-4" style={{ flexWrap: "wrap", justifyContent: "flex-end" }}>
           {/* Range switcher */}
@@ -2289,25 +2289,25 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
             </span>
             {t("Vč. plánovaných", "Incl. planned")}
           </button>
-          {/* Legend */}
-          <div className="flex gap-4" style={{ fontSize: 11, fontWeight: 600, color: "#5c6359" }}>
-            {([{ color: "#1f3d2e", label: t("Majetek", "Equity") }, { color: "#c39a3f", label: t("Hodnota portfolia", "Portfolio value") }, { color: "#b08c7a", label: t("Dluh", "Debt") }] as {color:string;label:string}[]).map(({ color, label }) => (
-              <span key={label} className="inline-flex items-center gap-[6px]">
-                <span style={{ width: 14, height: 3, borderRadius: 2, background: color, display: "inline-block" }} />{label}
-              </span>
-            ))}
-            {planOverlayPts.length > 1 && (
-              <span className="inline-flex items-center gap-[6px]">
-                <span style={{ width: 14, height: 0, borderTop: "1.5px dashed #9a9483", display: "inline-block" }} />{t("Plán", "Plan")}
-              </span>
-            )}
-            {showPlannedDelta && (
-              <span className="inline-flex items-center gap-[6px]">
-                <span style={{ width: 14, height: 0, borderTop: "1.5px dashed #c9a24b", opacity: 0.6, display: "inline-block" }} />{t("Bez plánovaných", "Without planned")}
-              </span>
-            )}
-          </div>
         </div>
+      </div>
+      {/* Legend — vlastní řádek, ať se nepřepočítává zalomení titulku/tlačítek při zapnutí/vypnutí přepínačů */}
+      <div className="flex gap-4 justify-end mb-3" style={{ flexWrap: "wrap", fontSize: 11, fontWeight: 600, color: "#5c6359" }}>
+        {([{ color: "#1f3d2e", label: t("Majetek", "Equity") }, { color: "#c39a3f", label: t("Hodnota portfolia", "Portfolio value") }, { color: "#b08c7a", label: t("Dluh", "Debt") }] as {color:string;label:string}[]).map(({ color, label }) => (
+          <span key={label} className="inline-flex items-center gap-[6px]">
+            <span style={{ width: 14, height: 3, borderRadius: 2, background: color, display: "inline-block" }} />{label}
+          </span>
+        ))}
+        {planOverlayPts.length > 1 && (
+          <span className="inline-flex items-center gap-[6px]">
+            <span style={{ width: 14, height: 0, borderTop: "1.5px dashed #9a9483", display: "inline-block" }} />{t("Plán", "Plan")}
+          </span>
+        )}
+        {showPlannedDelta && (
+          <span className="inline-flex items-center gap-[6px]">
+            <span style={{ width: 14, height: 0, borderTop: "1.5px dashed #c9a24b", opacity: 0.6, display: "inline-block" }} />{t("Bez plánovaných", "Without planned")}
+          </span>
+        )}
       </div>
       {showProjection && (
         <div style={{ marginBottom: 14 }}>
