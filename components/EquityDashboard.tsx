@@ -2102,7 +2102,13 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
             }
           }
         } else {
-          const loanMs = mort.loan_start_date ? new Date(mort.loan_start_date).getTime() : purchaseMs;
+          // Datum čerpání bývá administrativně o pár dní/týdnů později než datum koupě (hotovost
+          // vs. vklad úvěru) — na měsíčním rozlišení grafu by tenhle drobný posun vytvořil falešný
+          // "cliff": první bod bez dluhu (plná hodnota), další hned s celým dluhem. Pokud je posun
+          // menší než ~2 měsíce, bereme čerpání jako současné s koupí; skutečně pozdější úvěry
+          // (refinancování měsíce/roky po koupi) se tím nemění.
+          const rawLoanMs = mort.loan_start_date ? new Date(mort.loan_start_date).getTime() : purchaseMs;
+          const loanMs = rawLoanMs > purchaseMs && rawLoanMs - purchaseMs < 60 * 86400000 ? purchaseMs : rawLoanMs;
           if (ms >= loanMs) {
             const loanAmt = mort.loan_amount ?? mort.outstanding_balance;
             const termMs = (mort.loan_term_years ?? 30) * 365 * 86400000;
