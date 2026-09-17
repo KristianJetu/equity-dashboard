@@ -2156,14 +2156,21 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   const avgPortfolioGrowthPct = firstValPt && todayPt && firstValPt.ms < todayPt.ms
     ? (Math.pow(todayPt.value / firstValPt.value, 1 / ((todayPt.ms - firstValPt.ms) / (365 * 86400000))) - 1) * 100
     : null;
-  // Stejná metoda CAGR jako u majetku/hodnoty portfolia výše, jen pro dluh — "Historické tempo"
-  // implicitně počítá s podobnými budoucími akvizicemi jako dosud (viz komentář u scénářů níže),
-  // takže dluh má dál růst tempem, jakým rostl historicky (financování akvizic), ne se umořovat
-  // k nule jako u "Bez akvizic".
-  const firstDebtPt = allPoints.find(p => p.debt > 0);
-  const avgDebtGrowthPct = firstDebtPt && todayPt && firstDebtPt.ms < todayPt.ms
-    ? (Math.pow(todayPt.debt / firstDebtPt.debt, 1 / ((todayPt.ms - firstDebtPt.ms) / (365 * 86400000))) - 1) * 100
-    : null;
+  // Rozklad budoucího přírůstku hodnoty na dvě složky, aby dluh rostl jen z té části, co
+  // odpovídá novým (pákovaným) akvizicím — ne z organického zdražení už vlastněných nemovitostí,
+  // které žádný nový dluh nepřináší. Používá se v "Historickém tempu" níže.
+  const NEW_ACQUISITION_LTV = 0.8;
+  const NEW_ACQUISITION_LOAN_TERM_YEARS = 30;
+  const organicValueAt = (yearsFromNow: number) => {
+    let v = 0;
+    for (const p of properties) {
+      if (p.ownership_type === "manager" || p.status === "planned") continue;
+      const growth = (p.annual_growth_pct ?? 3) / 100;
+      v += p.estimated_value * Math.pow(1 + growth, yearsFromNow);
+    }
+    return v;
+  };
+  const organicValueToday = organicValueAt(0);
 
   // Future projection scenarios. "Pesimistická" keeps the original per-property projection
   // (each property compounds at its own annual_growth_pct — i.e. organic appreciation only,
@@ -2178,15 +2185,44 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   const dtiSimulation = scenario === "optimisticka" && dtiEnabled
     ? simulateOptimisticAcquisitions(allPoints, nowMs, properties, mortgages, debts, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings)
     : null;
+  // Kumulativní hodnota "nových akvizic" k danému roku (přírůstek hodnoty minus organický růst).
+  const newAcquisitionsValueAt = (yearsFromNow: number) => {
+    if (!todayPt) return 0;
+    const value = todayPt.value * Math.pow(1 + scenarioRate, yearsFromNow);
+    const organicGrowth = organicValueAt(yearsFromNow) - organicValueToday;
+    return Math.max(0, (value - todayPt.value) - organicGrowth);
+  };
+  // Dluh z nových akvizic se počítá po ročních kohortách, aby se nekomplikovalo na měsíční
+  // rozlišení: co přibude za hodnotu nových akvizic v daném roce, se zapůjčí na
+  // NEW_ACQUISITION_LTV a od té chvíle se to samo lineárně amortizuje po
+  // NEW_ACQUISITION_LOAN_TERM_YEARS — stejně jako se počítá amortizace u stávajících hypoték.
+  const newAcquisitionDebtAt = (yearsFromNow: number) => {
+    let debt = 0;
+    const fullYears = Math.floor(yearsFromNow);
+    let prevCumValue = 0;
+    for (let cohortYear = 1; cohortYear <= fullYears; cohortYear++) {
+      const cumValue = newAcquisitionsValueAt(cohortYear);
+      const cohortDebt = NEW_ACQUISITION_LTV * (cumValue - prevCumValue);
+      prevCumValue = cumValue;
+      const cohortAge = yearsFromNow - cohortYear;
+      debt += Math.max(0, cohortDebt * (1 - cohortAge / NEW_ACQUISITION_LOAN_TERM_YEARS));
+    }
+    const partialCohortValue = newAcquisitionsValueAt(yearsFromNow) - prevCumValue;
+    debt += NEW_ACQUISITION_LTV * Math.max(0, partialCohortValue);
+    return debt;
+  };
   // Dluh v "Historickém tempu" (a ve fallbacku Simulace akvizic bez Finančního profilu):
-  // hodnota portfolia i dluh se do budoucna natáhnou KAŽDÝ svým vlastním historickým tempem
-  // (appka obě počítá a zobrazuje pod grafem jako "Průměrný roční růst..."), majetek je jejich
-  // prostý rozdíl. Žádné LTV, žádný explicitní model jednotlivých budoucích akvizic — ale dluh
-  // roste, protože historicky taky rostl (financování akvizic), místo aby se čistě umořoval.
-  //   value(t)  = hodnota_dnes × (1 + scenarioRate)^t
-  //   debt(t)   = dluh_dnes × (1 + debtRate)^t
-  //   equity(t) = value(t) − debt(t)
-  const debtRate = scenario === "optimisticka" ? ((avgDebtGrowthPct ?? 0) / 100) * 1.3 : (avgDebtGrowthPct ?? 0) / 100;
+  // hodnota portfolia se natáhne historickým tempem jako dřív, ale přírůstek se rozdělí na
+  // organický (zdražení už vlastněných nemovitostí — bez nového dluhu) a zbytek, který se bere
+  // jako nové akvizice financované na NEW_ACQUISITION_LTV (80 %) a od svého roku vzniku se
+  // amortizují — stávající hypotéky se dál amortizují samy (viz allPoints/valueDebtAt výše).
+  // Majetek je pak prostý rozdíl hodnoty a dluhu.
+  //   value(t)          = hodnota_dnes × (1 + scenarioRate)^t
+  //   organický_růst(t) = Σ [hodnota_i_dnes × (1 + tempo_i)^t] − organický_základ_dnes
+  //   nové_akvizice(t)  = max(0, (value(t) − hodnota_dnes) − organický_růst(t))
+  //   debt(t)           = amortizovaný_zůstatek_stávajících_hypoték(t)
+  //                      + Σ (roční kohorty nových akvizic × NEW_ACQUISITION_LTV, každá vlastní amortizací)
+  //   equity(t)         = value(t) − debt(t)
   const chartPoints: Pt[] = !showProjection || scenario === "pesimisticka" || !todayPt
     ? allPoints
     : dtiSimulation
@@ -2195,7 +2231,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
         if (p.ms <= nowMs) return p;
         const yearsFromNow = (p.ms - nowMs) / (365 * 86400000);
         const value = todayPt.value * Math.pow(1 + scenarioRate, yearsFromNow);
-        const debt = todayPt.debt * Math.pow(1 + debtRate, yearsFromNow);
+        const debt = p.debt + newAcquisitionDebtAt(yearsFromNow);
         return { ms: p.ms, value, debt };
       });
 
@@ -2467,8 +2503,8 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
             {showDebtFormulaInfo && (
               <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: 300, background: "#1c2b22", color: "#e6e0d0", borderRadius: 8, padding: "10px 12px", fontSize: 11.5, fontWeight: 400, lineHeight: 1.5, whiteSpace: "pre-line", boxShadow: "0 6px 20px rgba(0,0,0,0.25)", zIndex: 20 }}>
                 {t(
-                  `Hodnota portfolia i dluh se do budoucna natáhnou každý svým vlastním historickým tempem (${(scenarioRate * 100).toFixed(1)} % a ${(debtRate * 100).toFixed(1)} % ročně, viz průměrný roční růst výše) — dluh roste, protože historicky taky rostl (financování akvizic), ne že by se čistě umořoval. Majetek je pak prostě rozdíl. Žádná vlastní exponenciála pro majetek, protože ten je hned po koupi na páku typicky malý a jeho samostatný CAGR by natažením do budoucna dokázal vystřelit do nesmyslných čísel.\n\nvalue(t) = hodnota_dnes × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\ndebt(t) = dluh_dnes × (1 + ${(debtRate * 100).toFixed(1)}%)^t\nequity(t) = value(t) − debt(t)`,
-                  `Portfolio value and debt are each extrapolated at their own historical rate (${(scenarioRate * 100).toFixed(1)}% and ${(debtRate * 100).toFixed(1)}% per year, see average annual growth above) — debt keeps growing because it historically did too (acquisition financing), not paying itself down to zero. Equity is then simply the difference. No separate exponential for equity, since equity right after a leveraged purchase is typically small and extrapolating its own CAGR forward could shoot off to absurd numbers.\n\nvalue(t) = value_today × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\ndebt(t) = debt_today × (1 + ${(debtRate * 100).toFixed(1)}%)^t\nequity(t) = value(t) − debt(t)`
+                  `Hodnota portfolia se natáhne historickým tempem (${(scenarioRate * 100).toFixed(1)} % ročně, viz průměrný roční růst výše). Přírůstek hodnoty se rozdělí na dvě části: organické zdražení nemovitostí, co už vlastníš (roste tempem, jaké má nastavené každá zvlášť, žádný nový dluh), a zbytek, který se bere jako nové akvizice financované na ${(NEW_ACQUISITION_LTV * 100).toFixed(0)} % úvěr (LTV). Každý rok, kdy přibude nová akvizice, se jí založí vlastní ${NEW_ACQUISITION_LOAN_TERM_YEARS}letá amortizace (stejně jako u stávajících hypoték) — dluh z nových akvizic se tedy taky postupně splácí, ne že by jen narůstal. Majetek je pak prostý rozdíl hodnoty a celkového (stávajícího + nového) dluhu.\n\nvalue(t) = hodnota_dnes × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\nnové_akvizice(t) = (value(t) − hodnota_dnes) − organický_růst(t)\ndebt(t) = amortizace(stávající úvěry) + Σ amortizace(roční kohorty × ${(NEW_ACQUISITION_LTV * 100).toFixed(0)}%)\nequity(t) = value(t) − debt(t)`,
+                  `Portfolio value is extrapolated at the historical rate (${(scenarioRate * 100).toFixed(1)}% per year, see average annual growth above). The value increase is split into two parts: organic appreciation of properties you already own (grows at each one's own rate, no new debt), and the remainder, treated as new acquisitions financed at ${(NEW_ACQUISITION_LTV * 100).toFixed(0)}% loan (LTV). Each year a new acquisition is added, it gets its own ${NEW_ACQUISITION_LOAN_TERM_YEARS}-year amortization (same as existing mortgages) — so new-acquisition debt is paid down over time too, not just accumulating. Equity is then simply the difference between value and the total (existing + new) debt.\n\nvalue(t) = value_today × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\nnew_acquisitions(t) = (value(t) − value_today) − organic_growth(t)\ndebt(t) = amortized(existing loans) + Σ amortized(yearly cohorts × ${(NEW_ACQUISITION_LTV * 100).toFixed(0)}%)\nequity(t) = value(t) − debt(t)`
                 )}
               </div>
             )}
