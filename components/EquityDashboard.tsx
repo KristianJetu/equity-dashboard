@@ -2177,9 +2177,10 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
   // Žádné LTV, žádná amortizace, žádný předpoklad o financování budoucích akvizic.
   //   equity(t) = majetek_dnes × (1 + equityRate)^t
   //   value(t)  = hodnota_dnes × (1 + scenarioRate)^t
-  //   debt(t)   = value(t) − equity(t)
-  const equityRate = scenario === "optimisticka" ? ((avgGrowthPct ?? 0) / 100) * 1.3 : (avgGrowthPct ?? 0) / 100;
-  const todayEquity = todayPt ? todayPt.value - todayPt.debt : 0;
+  //   debt(t)   = skutečná amortizace existujících hypoték (stejný vzorec jako v allPoints výše,
+  //               žádná vlastní exponenciála) — CAGR majetku je extrémně citlivý na malý počáteční
+  //               vlastní kapitál hned po koupi na páku, takže natahovat ho samostatně exponenciálně
+  //               dokázalo vystřelit do absurdních čísel (viz komentář výše u avgGrowthPct).
   const chartPoints: Pt[] = !showProjection || scenario === "pesimisticka" || !todayPt
     ? allPoints
     : dtiSimulation
@@ -2188,8 +2189,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
         if (p.ms <= nowMs) return p;
         const yearsFromNow = (p.ms - nowMs) / (365 * 86400000);
         const value = todayPt.value * Math.pow(1 + scenarioRate, yearsFromNow);
-        const equity = todayEquity * Math.pow(1 + equityRate, yearsFromNow);
-        return { ms: p.ms, value, debt: value - equity };
+        return { ms: p.ms, value, debt: p.debt };
       });
 
   const maxVal = Math.max(...chartPoints.map(p => p.value));
@@ -2460,8 +2460,8 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
             {showDebtFormulaInfo && (
               <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: 300, background: "#1c2b22", color: "#e6e0d0", borderRadius: 8, padding: "10px 12px", fontSize: 11.5, fontWeight: 400, lineHeight: 1.5, whiteSpace: "pre-line", boxShadow: "0 6px 20px rgba(0,0,0,0.25)", zIndex: 20 }}>
                 {t(
-                  `Hodnota portfolia a majetek se do budoucna natáhnou každý svým vlastním historickým tempem (viz průměrný roční růst výše), dluh je jejich prostý rozdíl — žádné LTV ani amortizace se nepočítá. Hodnota a majetek rostou přesně a napořád svým tempem (${(scenarioRate * 100).toFixed(1)} % a ${(equityRate * 100).toFixed(1)} %) — to je přímo z definice vzorce.\n\nequity(t) = majetek_dnes × (1 + ${(equityRate * 100).toFixed(1)}%)^t\nvalue(t) = hodnota_dnes × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\ndebt(t) = value(t) − equity(t)`,
-                  `Portfolio value and equity are each extrapolated at their own historical rate (see average annual growth above), and debt is simply the difference — no LTV or amortization involved. Value and equity grow exactly and permanently at their own rate (${(scenarioRate * 100).toFixed(1)}% and ${(equityRate * 100).toFixed(1)}%) — that follows directly from the formula's definition.\n\nequity(t) = equity_today × (1 + ${(equityRate * 100).toFixed(1)}%)^t\nvalue(t) = value_today × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\ndebt(t) = value(t) − equity(t)`
+                  `Hodnota portfolia se do budoucna natáhne historickým tempem (${(scenarioRate * 100).toFixed(1)} % ročně, viz průměrný roční růst výše). Dluh se dál splácí podle skutečné amortizace existujících hypoték (stejný odhad jako u "Bez akvizic") — žádná vlastní exponenciála pro majetek, protože ten je hned po koupi na páku typicky malý a jeho samostatný CAGR by natažením do budoucna dokázal vystřelit do nesmyslných čísel. Majetek je pak prostě rozdíl.\n\nvalue(t) = hodnota_dnes × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\ndebt(t) = amortizovaný zůstatek existujících hypoték\nequity(t) = value(t) − debt(t)`,
+                  `Portfolio value is extrapolated at the historical rate (${(scenarioRate * 100).toFixed(1)}% per year, see average annual growth above). Debt keeps amortizing per the existing mortgages' real schedule (same estimate as "No acquisitions") — no separate exponential for equity, since equity right after a leveraged purchase is typically small and extrapolating its own CAGR forward could shoot off to absurd numbers. Equity is then simply the difference.\n\nvalue(t) = value_today × (1 + ${(scenarioRate * 100).toFixed(1)}%)^t\ndebt(t) = amortized balance of existing mortgages\nequity(t) = value(t) − debt(t)`
                 )}
               </div>
             )}
