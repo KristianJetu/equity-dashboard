@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/auth";
+import Recommendations from "@/components/Recommendations";
+import type { RecommendationInput } from "@/lib/recommendations/types";
 
 type Property = {
   id: string;
@@ -282,6 +284,10 @@ const NAV_ITEMS = [
   {
     id: "dashboard", title: "Dashboard",
     icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" /></svg>,
+  },
+  {
+    id: "doporuceni", title: "Doporučení",
+    icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z" /></svg>,
   },
   {
     id: "nemovitosti", title: "Nemovitosti",
@@ -3396,7 +3402,7 @@ function TodoistSection() {
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function EquityDashboard() {
-  const SECTION_IDS = ["dashboard", "nemovitosti", "platby", "najemnici", "komunikace", "asistent", "dluhy", "nastaveni"];
+  const SECTION_IDS = ["dashboard", "doporuceni", "nemovitosti", "platby", "najemnici", "komunikace", "asistent", "dluhy", "nastaveni"];
 
   const supabase = createClient();
   const [properties, setProperties] = useState<Property[]>([]);
@@ -3564,6 +3570,13 @@ export default function EquityDashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [debts, setDebts] = useState<Debt[]>([]);
+  const recommendationInput = useMemo<RecommendationInput>(() => {
+    const num = (v: string) => (v.trim() !== "" && !Number.isNaN(Number(v)) ? Number(v) : null);
+    return {
+      properties, mortgages, payments, debts,
+      profile: { incomeEmployment: num(incomeEmployment), incomeOther: num(incomeOther), householdCosts: num(householdCosts) },
+    };
+  }, [properties, mortgages, payments, debts, incomeEmployment, incomeOther, householdCosts]);
   const [debtModal, setDebtModal] = useState<{ open: boolean; debt: Debt | null }>({ open: false, debt: null });
   const [addPaymentModal, setAddPaymentModal] = useState<{ open: boolean; propertyId?: string; month?: string }>({ open: false });
   const [copied, setCopied] = useState(false);
@@ -4219,6 +4232,12 @@ export default function EquityDashboard() {
             incomeOther={incomeOther} householdCosts={householdCosts} assumedLtvPct={assumedLtvPct}
             projectionSettings={projectionSettings} lang={language} onOpenProjectionSettings={() => setShowProjectionSettingsModal(true)}
             activePlan={projectionPlans.find(p => p.status === "active") ?? null} />
+        </section>
+
+        {/* DOPORUČENÍ */}
+        <section id="doporuceni" style={{ marginTop: 38, scrollMarginTop: 28 }}>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Doporučení</div>
+          <Recommendations input={recommendationInput} propertyName={(id) => properties.find(p => p.id === id)?.name ?? null} />
         </section>
 
         {/* NEMOVITOSTI */}
