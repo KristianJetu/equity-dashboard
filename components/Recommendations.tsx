@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { buildRecommendations } from "@/lib/recommendations/engine";
 import { applyState, snoozeUntil, type RecState } from "@/lib/recommendations/state";
 import type { Category, Recommendation, RecommendationInput, Severity } from "@/lib/recommendations/types";
@@ -59,6 +59,10 @@ export default function Recommendations({ input, propertyName, states, onSetStat
   const [showMethod, setShowMethod] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const methodRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (showMethod) methodRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [showMethod]);
 
   const today = useMemo(() => new Date(), []);
   const { visible: all, hidden } = useMemo(
@@ -113,7 +117,7 @@ export default function Recommendations({ input, propertyName, states, onSetStat
   );
 
   const method = showMethod && (
-    <div style={{ marginTop: 8, background: "#fffdf6", border: "1px solid #d9d3c0", borderRadius: 10, padding: "12px 14px", overflowX: "auto" }}>
+    <div ref={methodRef} style={{ marginTop: 8, background: "#fffdf6", border: "1px solid #d9d3c0", borderRadius: 10, padding: "12px 14px", overflowX: "auto" }}>
       <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
         <div style={{ fontWeight: 700, color: "#1c2b22", fontSize: 13, flex: 1 }}>Podrobná metodika</div>
         <button type="button" onClick={() => setShowMethod(false)}
