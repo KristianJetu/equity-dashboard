@@ -47,10 +47,19 @@ Menu ⋯ na kartě: *Odložit na 30 dní*, *Odložit na 90 dní*, *Zahodit*; skr
 `id`, `user_id`, `rec_id`, `state` (`snoozed`/`dismissed`), `snoozed_until` (date), `fingerprint`, `created_at`; unikát (`user_id`, `rec_id`); RLS `user_id = auth.uid()` na SELECT/INSERT/UPDATE/DELETE. Migrace `supabase-migration-recommendation-state.sql` (spuštěna 2026-09-22). Anonymní SELECT vrací `[]`, anonymní INSERT je blokován RLS. Zápis stavu je v `EquityDashboard.tsx` (`setRecommendationState`, `restoreRecommendation`); chyba zápisu se jen loguje do konzole.
 
 ## Zobrazení
-Výchozí stav je **sbalený** (řádek s počty). Ikona **i** = krátký popover + odkaz na podrobnou metodiku (tabulka pravidel dole v rozbaleném seznamu, konstanta `METHOD_ROWS`). Při změně pravidla nebo prahu je potřeba upravit i `METHOD_ROWS`.
+Výchozí stav je **sbalený** (řádek s počty). Ikona **i** = krátký popover + odkaz na podrobnou metodiku (tabulka pravidel, konstanta `METHOD_ROWS`). Při změně pravidla nebo prahu je potřeba upravit i `METHOD_ROWS`.
+
+**Metodika je nezávislá na stavu `open`** — zobrazí se i když je seznam doporučení sbalený (`{method}` se renderuje vždy hned pod hlavičkou, mimo blok `{open && (...)}`). Dřív byla součástí rozbaleného seznamu, takže klik na "Podrobná metodika →" ze sbaleného stavu nic nezobrazil (oprava `2cfd1e8`). Po otevření metodiky stránka automaticky scrolluje na tabulku (`methodRef` + `scrollIntoView`, commit `279fc2e`), protože sekce Doporučení bývá níž na stránce.
 
 ## Ověření
 Pravidla lze spustit nad zálohou: `npx tsc lib/recommendations/*.ts --outDir <tmp> --module commonjs --target es2020` a vstup sestavit z `backups/backup-*.json` jen pro jedno `user_id` (záloha obsahuje data všech uživatelů!).
+
+## Závěrečná kontrola (2026-09-22)
+Před uzavřením fáze 1 provedena zpětná kontrola:
+- **Bezpečnost:** anonymní SELECT vrací `[]`, anonymní INSERT odmítnut RLS (`42501`). Navíc otestováno na reálném řádku (vytvořeném přes service role jen pro test, poté smazaném): anonymní UPDATE i DELETE vrátí úspěch, ale 0 ovlivněných řádků — RLS `user_id = auth.uid()` funguje na všech čtyřech operacích. `user_id` se v kódu vždy bere z `supabase.auth.getUser()`.
+- **Pravidla:** znovu pročteno `rules.ts`, `metrics.ts`, `engine.ts`, `state.ts` — bez nálezu. Drobnost bez dopadu: `today` se v komponentě počítá jen při načtení stránky, takže "za X dní" se přes půlnoc aktualizuje až po obnovení.
+- **Náklady na AI:** modul nepoužívá Claude/AI vůbec — pravidla jsou čistý TypeScript v prohlížeči, texty jsou statické šablony v kódu. Nulový dopad na Anthropic API účet (na rozdíl od `parse-email`, `suggest-reply` a `chat`, které Claude Haiku volají).
+- **Aktualizace po úpravě dat:** doporučení se přepočítají hned po uložení změny v modalu nemovitosti/hypotéky (`onSaved` znovu načte data z DB), bez obnovení stránky. Odložené/zahozené doporučení se vrátí až při změně jeho "otisku situace" (termínu), ne při jakékoliv úpravě dat — to je záměr.
 
 ## Nápady na fázi 2
 Skóre nemovitostí a žebříček, karta 3 nejdůležitějších doporučení na hlavní obrazovce, pravidla A1/A2/A4 (nejlepší nemovitost, volný kapitál, koncentrace), historie (C6, L4), AI shrnutí, email, nastavitelné prahy, anglické texty.
