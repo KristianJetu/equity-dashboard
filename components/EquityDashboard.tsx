@@ -2394,7 +2394,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
           </div>
         </div>
       )}
-      <div className="eq-chart-wrap" style={{ position: "relative", ...(hideValues ? { filter: "blur(9px)", userSelect: "none" } : {}) }}>
+      <div className="eq-chart-wrap" style={{ position: "relative", ...(hideValues ? { filter: "blur(6px)", userSelect: "none" } : {}) }}>
         <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width="100%" height="250"
           style={{ display: "block", overflow: "visible", cursor: "crosshair" }}
           onMouseMove={handleMouseMove} onMouseLeave={() => setHoverIdx(null)}>
@@ -2486,7 +2486,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
       </div>
       {/* Avg annual growth stat */}
       {(avgGrowthPct !== null || avgPortfolioGrowthPct !== null) && (
-        <div style={{ marginTop: 10, display: "flex", gap: 24, fontSize: 12, color: "#7c8378", flexWrap: "wrap", ...(hideValues ? { filter: "blur(5px)", userSelect: "none" } : {}) }}>
+        <div style={{ marginTop: 10, display: "flex", gap: 24, fontSize: 12, color: "#7c8378", flexWrap: "wrap", ...(hideValues ? { filter: "blur(4px)", userSelect: "none" } : {}) }}>
           {avgGrowthPct !== null && (
             <span>{t("Průměrný roční růst majetku:", "Average annual equity growth:")} <strong style={{ color: avgGrowthPct >= 0 ? "#4a7c59" : "#c0392b" }}>{avgGrowthPct >= 0 ? "+" : ""}{avgGrowthPct.toFixed(1)} %</strong></span>
           )}
@@ -2524,7 +2524,7 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
           <span>
             {t("Podle plánu z", "According to the plan from")} {new Date(activePlan.created_at).toLocaleDateString(lang === "cs" ? "cs-CZ" : "en-US", { month: "short", year: "numeric" })}
             {" ("}{activePlan.label ?? t("bez názvu", "unnamed")}{"): "}
-            <strong style={{ color: planDelta >= 0 ? "#4a7c59" : "#c0392b", ...(hideValues ? { filter: "blur(5px)", userSelect: "none" } : {}) }}>
+            <strong style={{ color: planDelta >= 0 ? "#4a7c59" : "#c0392b", ...(hideValues ? { filter: "blur(4px)", userSelect: "none" } : {}) }}>
               {planDelta >= 0 ? "+" : ""}{fmt(planDelta)} Kč {planDelta >= 0 ? t("nad plánem", "above plan") : t("pod plánem", "below plan")}
             </strong>
           </span>
@@ -4187,11 +4187,11 @@ export default function EquityDashboard() {
                     )}
                   </div>
                   <div className="eq-equity-number" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontVariantNumeric: "tabular-nums", fontSize: 90, lineHeight: 0.94, letterSpacing: "-0.02em", color: "#f5f1e6", marginTop: 14 }}>
-                    <span style={hideValues ? { filter: "blur(14px)", userSelect: "none" } : undefined}>{fmtMil(displayEquity)}</span><span style={{ fontSize: 36, color: "#9db8a6", fontWeight: 600 }}> mil Kč</span>
+                    <span style={hideValues ? { filter: "blur(8px)", userSelect: "none" } : undefined}>{fmtMil(displayEquity)}</span><span style={{ fontSize: 36, color: "#9db8a6", fontWeight: 600 }}> mil Kč</span>
                   </div>
                   {showDebtsBalance && debtsBalance !== 0 && (
                     <div style={{ fontSize: 13, color: "#cfe0d4", marginTop: 6 }}>
-                      <span style={hideValues ? { filter: "blur(6px)", userSelect: "none" } : undefined}>{debtsBalance >= 0 ? "+" : "−"}{fmtMil(Math.abs(debtsBalance))}</span> mil Kč {t("bilanceZDluhy")}
+                      <span style={hideValues ? { filter: "blur(4px)", userSelect: "none" } : undefined}>{debtsBalance >= 0 ? "+" : "−"}{fmtMil(Math.abs(debtsBalance))}</span> mil Kč {t("bilanceZDluhy")}
                     </div>
                   )}
                   <div className="eq-equity-row flex items-center gap-[14px] mt-[22px]">
@@ -4200,18 +4200,18 @@ export default function EquityDashboard() {
                         ? (ownedProperties.length === 1 ? "nemovitost" : ownedProperties.length < 5 ? "nemovitosti" : "nemovitostí")
                         : (ownedProperties.length === 1 ? "property" : "properties")}
                     </span>
-                    <span style={{ fontSize: 15, color: "#cfe0d4", fontWeight: 500 }}>{t("hodnotaPortfolia")} <span style={hideValues ? { filter: "blur(6px)", userSelect: "none" } : undefined}>{fmtMil(totalValue)}</span> mil Kč</span>
+                    <span style={{ fontSize: 15, color: "#cfe0d4", fontWeight: 500 }}>{t("hodnotaPortfolia")} <span style={hideValues ? { filter: "blur(4px)", userSelect: "none" } : undefined}>{fmtMil(totalValue)}</span> mil Kč</span>
                   </div>
                   {valuationGrowth && (
                     <div style={{ fontSize: 13, color: valuationGrowth.delta >= 0 ? "#9db8a6" : "#e0a8a0", marginTop: 8, fontWeight: 600 }}>
-                      <span style={hideValues ? { filter: "blur(6px)", userSelect: "none" } : undefined}>{valuationGrowth.delta >= 0 ? "▲ +" : "▼ "}{fmt(Math.abs(valuationGrowth.delta))} Kč</span> od posledního ocenění ({monthLabel(valuationGrowth.date)}, {valuationGrowth.propNames.join(", ")})
+                      <span style={hideValues ? { filter: "blur(4px)", userSelect: "none" } : undefined}>{valuationGrowth.delta >= 0 ? "▲ +" : "▼ "}{fmt(Math.abs(valuationGrowth.delta))} Kč</span> od posledního ocenění ({monthLabel(valuationGrowth.date)}, {valuationGrowth.propNames.join(", ")})
                     </div>
                   )}
                   {totalDebt > 0 && (
                     <div className="eq-header-progress" style={{ marginTop: 26, maxWidth: 440 }}>
                       <div className="flex justify-between items-baseline mb-[9px]" style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9db8a6" }}>
                         <span>{t("vlastniKapital")}</span>
-                        <span style={{ color: "#e7c773", ...(hideValues ? { filter: "blur(6px)", userSelect: "none" } : {}) }}>{Math.round((equity / totalValue) * 100)} %</span>
+                        <span style={{ color: "#e7c773", ...(hideValues ? { filter: "blur(4px)", userSelect: "none" } : {}) }}>{Math.round((equity / totalValue) * 100)} %</span>
                       </div>
                       <div style={{ height: 9, borderRadius: 6, background: "rgba(255,255,255,.14)", overflow: "hidden" }}>
                         <div style={{ width: `${Math.min(100, (equity / totalValue) * 100)}%`, height: "100%", background: "linear-gradient(90deg,#9db8a6,#c9a24b)" }} />
@@ -4222,12 +4222,12 @@ export default function EquityDashboard() {
                 <div className="eq-header-stats text-right flex flex-col gap-[22px]" style={{ paddingTop: 6 }}>
                   <div>
                     <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>{t("hodnotaPortfolia")}</div>
-                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5, ...(hideValues ? { filter: "blur(9px)", userSelect: "none" } : {}) }}>{fmtMil(totalValue)} mil Kč</div>
+                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5, ...(hideValues ? { filter: "blur(6px)", userSelect: "none" } : {}) }}>{fmtMil(totalValue)} mil Kč</div>
                   </div>
                   {totalDebt > 0 && (
                     <div>
                       <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>{t("uveryNaNemovitosti")}</div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5, ...(hideValues ? { filter: "blur(9px)", userSelect: "none" } : {}) }}>{fmtMil(totalDebt)} mil Kč</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5, ...(hideValues ? { filter: "blur(6px)", userSelect: "none" } : {}) }}>{fmtMil(totalDebt)} mil Kč</div>
                     </div>
                   )}
                   <div>
