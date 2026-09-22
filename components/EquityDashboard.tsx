@@ -3,7 +3,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/auth";
 import Recommendations from "@/components/Recommendations";
-import type { RecommendationInput } from "@/lib/recommendations/types";
+import type { Recommendation, RecommendationInput } from "@/lib/recommendations/types";
+import type { RecState } from "@/lib/recommendations/state";
 
 type Property = {
   id: string;
@@ -3577,6 +3578,21 @@ export default function EquityDashboard() {
       profile: { incomeEmployment: num(incomeEmployment), incomeOther: num(incomeOther), householdCosts: num(householdCosts) },
     };
   }, [properties, mortgages, payments, debts, incomeEmployment, incomeOther, householdCosts]);
+  const [recStates, setRecStates] = useState<RecState[]>([]);
+  async function setRecommendationState(rec: Recommendation, state: "snoozed" | "dismissed", until: string | null) {
+    const next: RecState = { rec_id: rec.id, state, snoozed_until: until, fingerprint: rec.fingerprint };
+    setRecStates(prev => [...prev.filter(s => s.rec_id !== rec.id), next]);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase.from("recommendation_state").upsert({ user_id: user.id, ...next }, { onConflict: "user_id,rec_id" });
+    if (error) console.error("recommendation_state:", error.message);
+  }
+  async function restoreRecommendation(recId: string) {
+    setRecStates(prev => prev.filter(s => s.rec_id !== recId));
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("recommendation_state").delete().eq("user_id", user.id).eq("rec_id", recId);
+  }
   const [debtModal, setDebtModal] = useState<{ open: boolean; debt: Debt | null }>({ open: false, debt: null });
   const [addPaymentModal, setAddPaymentModal] = useState<{ open: boolean; propertyId?: string; month?: string }>({ open: false });
   const [copied, setCopied] = useState(false);
@@ -3670,6 +3686,8 @@ export default function EquityDashboard() {
       setDebts(dts ?? []);
       setValuations(vals ?? []);
       setProjectionPlans(plans ?? []);
+      const { data: recStateRows } = await supabase.from("recommendation_state").select("rec_id, state, snoozed_until, fingerprint");
+      setRecStates((recStateRows ?? []) as RecState[]);
       const allFiles = files ?? [];
       setPropertyFiles(allFiles);
       // Generuj signed URLs pro obrázky (pro miniatury na kartách)
@@ -4236,7 +4254,8 @@ export default function EquityDashboard() {
 
         {/* DOPORUČENÍ */}
         <section id="doporuceni" style={{ marginTop: 38, scrollMarginTop: 28 }}>
-          <Recommendations input={recommendationInput} propertyName={(id) => properties.find(p => p.id === id)?.name ?? null} />
+          <Recommendations input={recommendationInput} propertyName={(id) => properties.find(p => p.id === id)?.name ?? null}
+            states={recStates} onSetState={setRecommendationState} onRestore={restoreRecommendation} />
         </section>
 
         {/* NEMOVITOSTI */}

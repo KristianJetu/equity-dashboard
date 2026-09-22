@@ -13,7 +13,7 @@ import {
 } from "./metrics";
 import type { Recommendation, RecommendationInput } from "./types";
 
-type Rec = Omit<Recommendation, "dueDate" | "daysLeft"> & { dueDate?: string | null; daysLeft?: number | null };
+type Rec = Omit<Recommendation, "dueDate" | "daysLeft" | "fingerprint"> & { dueDate?: string | null; daysLeft?: number | null };
 type Rule = (input: RecommendationInput, today: Date) => Rec[];
 
 const owned = (i: RecommendationInput) => i.properties.filter((p) => !isManaged(p) && p.status !== "planned");

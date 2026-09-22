@@ -10,6 +10,7 @@ export function buildRecommendations(input: RecommendationInput): Recommendation
   const list: Recommendation[] = RULES.flatMap((rule) => rule(input, today)).map((r) => ({
     ...r,
     dueDate: r.dueDate ?? null,
+    fingerprint: r.dueDate ?? "",
     daysLeft: r.daysLeft ?? (r.dueDate ? daysUntil(r.dueDate, today) : null),
   }));
 

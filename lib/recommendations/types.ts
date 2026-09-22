@@ -74,4 +74,6 @@ export type Recommendation = {
   impactCzkMonth: number | null;
   dueDate: string | null;
   daysLeft: number | null;
+  /** Otisk situace (termín apod.); při změně se odložené/zahozené doporučení ukáže znovu. */
+  fingerprint: string;
 };
