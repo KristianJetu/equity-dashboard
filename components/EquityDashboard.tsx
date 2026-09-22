@@ -4236,7 +4236,6 @@ export default function EquityDashboard() {
 
         {/* DOPORUČENÍ */}
         <section id="doporuceni" style={{ marginTop: 38, scrollMarginTop: 28 }}>
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 19, fontWeight: 600, color: "#1c2b22", marginBottom: 14 }}>Doporučení</div>
           <Recommendations input={recommendationInput} propertyName={(id) => properties.find(p => p.id === id)?.name ?? null} />
         </section>
 
