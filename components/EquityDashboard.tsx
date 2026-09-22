@@ -2029,11 +2029,11 @@ function ProjectionPreviewModal({ properties, mortgages, debts, birthYear, incom
 }
 
 // ── Growth Chart ─────────────────────────────────────────────────────────────
-function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings, lang, onOpenProjectionSettings, activePlan, hideValues }: {
+function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, incomeEmployment, incomeOther, householdCosts, assumedLtvPct, projectionSettings, lang, onOpenProjectionSettings, activePlan, hideValues, onToggleHideValues }: {
   properties: Property[]; mortgages: Mortgage[]; debts: Debt[];
   dtiEnabled: boolean; birthYear: string; incomeEmployment: string; incomeOther: string; householdCosts: string; assumedLtvPct: string;
   projectionSettings: ProjectionSettings; lang: "cs" | "en"; onOpenProjectionSettings: () => void;
-  activePlan: ProjectionPlan | null; hideValues: boolean;
+  activePlan: ProjectionPlan | null; hideValues: boolean; onToggleHideValues: () => void;
 }) {
   const t = (cs: string, en: string) => lang === "cs" ? cs : en;
   const [hoverIdx, setHoverIdx] = React.useState<number | null>(null);
@@ -2394,7 +2394,14 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
           </div>
         </div>
       )}
-      <div className="eq-chart-wrap" style={{ position: "relative", ...(hideValues ? { filter: "blur(6px)", userSelect: "none" } : {}) }}>
+      <div className="eq-chart-wrap" style={{ position: "relative" }}>
+        {hideValues && (
+          <div onClick={onToggleHideValues} role="button" title={t("Zobrazit graf", "Show chart")}
+            style={{ position: "absolute", inset: 0, zIndex: 15, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, background: "#ece6d8", borderRadius: 10, cursor: "pointer" }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9a9483" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.6 21.6 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.6 21.6 0 0 1-2.94 4.24M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#9a9483" }}>{t("Hodnoty grafu jsou skryté — klepnutím zobrazíš", "Chart values are hidden — tap to show")}</span>
+          </div>
+        )}
         <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width="100%" height="250"
           style={{ display: "block", overflow: "visible", cursor: "crosshair" }}
           onMouseMove={handleMouseMove} onMouseLeave={() => setHoverIdx(null)}>
@@ -2486,12 +2493,12 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
       </div>
       {/* Avg annual growth stat */}
       {(avgGrowthPct !== null || avgPortfolioGrowthPct !== null) && (
-        <div style={{ marginTop: 10, display: "flex", gap: 24, fontSize: 12, color: "#7c8378", flexWrap: "wrap", ...(hideValues ? { filter: "blur(4px)", userSelect: "none" } : {}) }}>
+        <div style={{ marginTop: 10, display: "flex", gap: 24, fontSize: 12, color: "#7c8378", flexWrap: "wrap" }}>
           {avgGrowthPct !== null && (
-            <span>{t("Průměrný roční růst majetku:", "Average annual equity growth:")} <strong style={{ color: avgGrowthPct >= 0 ? "#4a7c59" : "#c0392b" }}>{avgGrowthPct >= 0 ? "+" : ""}{avgGrowthPct.toFixed(1)} %</strong></span>
+            <span>{t("Průměrný roční růst majetku:", "Average annual equity growth:")} <strong style={{ color: avgGrowthPct >= 0 ? "#4a7c59" : "#c0392b" }}>{hideValues ? "••" : `${avgGrowthPct >= 0 ? "+" : ""}${avgGrowthPct.toFixed(1)} %`}</strong></span>
           )}
           {avgPortfolioGrowthPct !== null && (
-            <span>{t("Průměrný roční růst hodnoty portfolia:", "Average annual portfolio value growth:")} <strong style={{ color: avgPortfolioGrowthPct >= 0 ? "#c39a3f" : "#c0392b" }}>{avgPortfolioGrowthPct >= 0 ? "+" : ""}{avgPortfolioGrowthPct.toFixed(1)} %</strong></span>
+            <span>{t("Průměrný roční růst hodnoty portfolia:", "Average annual portfolio value growth:")} <strong style={{ color: avgPortfolioGrowthPct >= 0 ? "#c39a3f" : "#c0392b" }}>{hideValues ? "••" : `${avgPortfolioGrowthPct >= 0 ? "+" : ""}${avgPortfolioGrowthPct.toFixed(1)} %`}</strong></span>
           )}
         </div>
       )}
@@ -2524,8 +2531,8 @@ function GrowthChart({ properties, mortgages, debts, dtiEnabled, birthYear, inco
           <span>
             {t("Podle plánu z", "According to the plan from")} {new Date(activePlan.created_at).toLocaleDateString(lang === "cs" ? "cs-CZ" : "en-US", { month: "short", year: "numeric" })}
             {" ("}{activePlan.label ?? t("bez názvu", "unnamed")}{"): "}
-            <strong style={{ color: planDelta >= 0 ? "#4a7c59" : "#c0392b", ...(hideValues ? { filter: "blur(4px)", userSelect: "none" } : {}) }}>
-              {planDelta >= 0 ? "+" : ""}{fmt(planDelta)} Kč {planDelta >= 0 ? t("nad plánem", "above plan") : t("pod plánem", "below plan")}
+            <strong style={{ color: planDelta >= 0 ? "#4a7c59" : "#c0392b" }}>
+              {hideValues ? "••• •" : `${planDelta >= 0 ? "+" : ""}${fmt(planDelta)} Kč`} {planDelta >= 0 ? t("nad plánem", "above plan") : t("pod plánem", "below plan")}
             </strong>
           </span>
           <span
@@ -4187,11 +4194,11 @@ export default function EquityDashboard() {
                     )}
                   </div>
                   <div className="eq-equity-number" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontVariantNumeric: "tabular-nums", fontSize: 90, lineHeight: 0.94, letterSpacing: "-0.02em", color: "#f5f1e6", marginTop: 14 }}>
-                    <span style={hideValues ? { filter: "blur(8px)", userSelect: "none" } : undefined}>{fmtMil(displayEquity)}</span><span style={{ fontSize: 36, color: "#9db8a6", fontWeight: 600 }}> mil Kč</span>
+                    {hideValues ? <span style={{ letterSpacing: 6 }}>••• •</span> : <span>{fmtMil(displayEquity)}</span>}<span style={{ fontSize: 36, color: "#9db8a6", fontWeight: 600 }}> mil Kč</span>
                   </div>
                   {showDebtsBalance && debtsBalance !== 0 && (
                     <div style={{ fontSize: 13, color: "#cfe0d4", marginTop: 6 }}>
-                      <span style={hideValues ? { filter: "blur(4px)", userSelect: "none" } : undefined}>{debtsBalance >= 0 ? "+" : "−"}{fmtMil(Math.abs(debtsBalance))}</span> mil Kč {t("bilanceZDluhy")}
+                      {hideValues ? <span style={{ letterSpacing: 3 }}>•• •</span> : <span>{debtsBalance >= 0 ? "+" : "−"}{fmtMil(Math.abs(debtsBalance))}</span>} mil Kč {t("bilanceZDluhy")}
                     </div>
                   )}
                   <div className="eq-equity-row flex items-center gap-[14px] mt-[22px]">
@@ -4200,21 +4207,21 @@ export default function EquityDashboard() {
                         ? (ownedProperties.length === 1 ? "nemovitost" : ownedProperties.length < 5 ? "nemovitosti" : "nemovitostí")
                         : (ownedProperties.length === 1 ? "property" : "properties")}
                     </span>
-                    <span style={{ fontSize: 15, color: "#cfe0d4", fontWeight: 500 }}>{t("hodnotaPortfolia")} <span style={hideValues ? { filter: "blur(4px)", userSelect: "none" } : undefined}>{fmtMil(totalValue)}</span> mil Kč</span>
+                    <span style={{ fontSize: 15, color: "#cfe0d4", fontWeight: 500 }}>{t("hodnotaPortfolia")} {hideValues ? <span style={{ letterSpacing: 3 }}>•• •</span> : <span>{fmtMil(totalValue)}</span>} mil Kč</span>
                   </div>
                   {valuationGrowth && (
                     <div style={{ fontSize: 13, color: valuationGrowth.delta >= 0 ? "#9db8a6" : "#e0a8a0", marginTop: 8, fontWeight: 600 }}>
-                      <span style={hideValues ? { filter: "blur(4px)", userSelect: "none" } : undefined}>{valuationGrowth.delta >= 0 ? "▲ +" : "▼ "}{fmt(Math.abs(valuationGrowth.delta))} Kč</span> od posledního ocenění ({monthLabel(valuationGrowth.date)}, {valuationGrowth.propNames.join(", ")})
+                      {hideValues ? <span style={{ letterSpacing: 3 }}>▲ •• •</span> : <span>{valuationGrowth.delta >= 0 ? "▲ +" : "▼ "}{fmt(Math.abs(valuationGrowth.delta))} Kč</span>} od posledního ocenění ({monthLabel(valuationGrowth.date)}, {valuationGrowth.propNames.join(", ")})
                     </div>
                   )}
                   {totalDebt > 0 && (
                     <div className="eq-header-progress" style={{ marginTop: 26, maxWidth: 440 }}>
                       <div className="flex justify-between items-baseline mb-[9px]" style={{ fontWeight: 600, fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9db8a6" }}>
                         <span>{t("vlastniKapital")}</span>
-                        <span style={{ color: "#e7c773", ...(hideValues ? { filter: "blur(4px)", userSelect: "none" } : {}) }}>{Math.round((equity / totalValue) * 100)} %</span>
+                        <span style={{ color: "#e7c773" }}>{hideValues ? "••" : Math.round((equity / totalValue) * 100)} %</span>
                       </div>
                       <div style={{ height: 9, borderRadius: 6, background: "rgba(255,255,255,.14)", overflow: "hidden" }}>
-                        <div style={{ width: `${Math.min(100, (equity / totalValue) * 100)}%`, height: "100%", background: "linear-gradient(90deg,#9db8a6,#c9a24b)" }} />
+                        <div style={{ width: `${hideValues ? 60 : Math.min(100, (equity / totalValue) * 100)}%`, height: "100%", background: "linear-gradient(90deg,#9db8a6,#c9a24b)" }} />
                       </div>
                     </div>
                   )}
@@ -4222,12 +4229,12 @@ export default function EquityDashboard() {
                 <div className="eq-header-stats text-right flex flex-col gap-[22px]" style={{ paddingTop: 6 }}>
                   <div>
                     <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>{t("hodnotaPortfolia")}</div>
-                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5, ...(hideValues ? { filter: "blur(6px)", userSelect: "none" } : {}) }}>{fmtMil(totalValue)} mil Kč</div>
+                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{hideValues ? <span style={{ letterSpacing: 3 }}>•• •</span> : <>{fmtMil(totalValue)} mil Kč</>}</div>
                   </div>
                   {totalDebt > 0 && (
                     <div>
                       <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7f9d8a" }}>{t("uveryNaNemovitosti")}</div>
-                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5, ...(hideValues ? { filter: "blur(6px)", userSelect: "none" } : {}) }}>{fmtMil(totalDebt)} mil Kč</div>
+                      <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#f5f1e6", marginTop: 5 }}>{hideValues ? <span style={{ letterSpacing: 3 }}>•• •</span> : <>{fmtMil(totalDebt)} mil Kč</>}</div>
                     </div>
                   )}
                   <div>
@@ -4270,7 +4277,7 @@ export default function EquityDashboard() {
             dtiEnabled={dtiEnabled} birthYear={birthYear} incomeEmployment={incomeEmployment}
             incomeOther={incomeOther} householdCosts={householdCosts} assumedLtvPct={assumedLtvPct}
             projectionSettings={projectionSettings} lang={language} onOpenProjectionSettings={() => setShowProjectionSettingsModal(true)}
-            activePlan={projectionPlans.find(p => p.status === "active") ?? null} hideValues={hideValues} />
+            activePlan={projectionPlans.find(p => p.status === "active") ?? null} hideValues={hideValues} onToggleHideValues={toggleHideValues} />
         </section>
 
         {/* DOPORUČENÍ */}
