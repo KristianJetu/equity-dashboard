@@ -33,7 +33,7 @@ Aplikace pro správu portfolia nemovitostí. Majitel vidí přehled nemovitostí
 - `payments` — platby nájmu (property_id, month, rent_received, status, sender_name, ...)
 - `tenants` — nájemníci a čísla účtů pro automatické párování plateb (id, account_number unique, name, property_id, notes)
 - `messages` — historie komunikace s nájemníky, ručně kopírované zprávy + AI návrh odpovědi (migrace `supabase-migration-messages.sql`)
-- `debts` — sekce Půjčky · `property_files` + Storage bucket `property-files` · `property_valuations` · `projection_plans`
+- `debts` — sekce Půjčky · `property_files` + Storage bucket `property-files` · `property_valuations` · `projection_plans` · `recommendation_state` (odložená/zahozená doporučení)
 
 ## Autentizace
 - Supabase Auth (email + heslo); nového uživatele zve admin přes Supabase Dashboard
@@ -53,10 +53,12 @@ Aplikace pro správu portfolia nemovitostí. Majitel vidí přehled nemovitostí
 - `docs/projekce.md` — graf "Jak rosteš v čase", tři scénáře, simulace akvizic, finanční profil, pokročilé nastavení, plány k porovnání s realitou (`projection_plans`)
 - `docs/platby.md` — email parsing detailně, ruční evidence plateb, kalendář, RLS na `payments`, bezpečnostní incident 2026-09-09/16, oprava 2026-09-21, sekce Nájemníci
 - `docs/pujcky-cashflow.md` — sekce Půjčky (`debts`), cashflow přepínače
+- `docs/doporuceni.md` — modul Doporučení: pravidla a prahy (`lib/recommendations/`), odložit/zahodit/obnovit, `recommendation_state`
 - `docs/zaloha-a-provoz.md` — záloha DB, přidání uživatele, Supabase nastavení (Site URL, redirecty)
 
 ## Klíčové soubory
 - `components/EquityDashboard.tsx` — hlavní komponenta dashboardu
+- `lib/recommendations/` + `components/Recommendations.tsx` — modul Doporučení (čistá logika pravidel + UI)
 - `app/onboarding/page.tsx` — 7-krokový wizard pro nové uživatele
 - `app/login/page.tsx`, `app/set-password/page.tsx`, `app/auth/callback/route.ts` — přihlášení a pozvánky
 - `app/api/parse-email/route.ts` — aktivní endpoint pro Google Apps Script
