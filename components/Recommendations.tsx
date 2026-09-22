@@ -103,7 +103,7 @@ export default function Recommendations({ input, propertyName, states, onSetStat
           </div>
           <div style={{ marginTop: 6, color: "#7c8378" }}>Přesnost závisí na úplnosti dat, chybějící údaje hlásí sekce „Data k opravě“.</div>
           <button type="button"
-            onClick={() => { setOpen(true); setShowMethod(true); setShowInfo(false); }}
+            onClick={() => { setShowMethod(true); setShowInfo(false); }}
             style={{ marginTop: 8, background: "none", border: "none", padding: 0, color: "#1f3d2e", fontWeight: 600, fontSize: 13, cursor: "pointer", textDecoration: "underline" }}>
             Podrobná metodika →
           </button>
@@ -112,9 +112,41 @@ export default function Recommendations({ input, propertyName, states, onSetStat
     </div>
   );
 
+  const method = showMethod && (
+    <div style={{ marginTop: 8, background: "#fffdf6", border: "1px solid #d9d3c0", borderRadius: 10, padding: "12px 14px", overflowX: "auto" }}>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ fontWeight: 700, color: "#1c2b22", fontSize: 13, flex: 1 }}>Podrobná metodika</div>
+        <button type="button" onClick={() => setShowMethod(false)}
+          style={{ background: "none", border: "none", color: "#7c8378", fontSize: 12, cursor: "pointer" }}>Zavřít ✕</button>
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, color: "#3a4a40" }}>
+        <thead>
+          <tr style={{ textAlign: "left", color: "#7c8378" }}>
+            {["Oblast", "Co se hlídá", "Kdy se zobrazí", "Závažnost"].map((h) => <th key={h} style={{ padding: "4px 8px", fontWeight: 600 }}>{h}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {METHOD_ROWS.map((row, i) => (
+            <tr key={i} style={{ borderTop: "1px solid #ece6d3", verticalAlign: "top" }}>
+              <td style={{ padding: "5px 8px", fontWeight: 600, color: "#1f3d2e", whiteSpace: "nowrap" }}>{row[0]}</td>
+              <td style={{ padding: "5px 8px" }}>{row[1]}</td>
+              <td style={{ padding: "5px 8px" }}>{row[2]}</td>
+              <td style={{ padding: "5px 8px", whiteSpace: "nowrap" }}>{row[3]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ fontSize: 12, color: "#7c8378", marginTop: 8, lineHeight: 1.5 }}>
+        Odhad dopadu refixace počítá se zvýšením sazby o 2 procentní body z aktuálního zůstatku. Nemovitosti ve správě se do cashflow počítají jen provizí.
+        Odložené doporučení s termínem se vrátí nejpozději 14 dní před termínem; zahozené se ukáže znovu, když se termín změní.
+      </div>
+    </div>
+  );
+
   return (
     <div>
       {header}
+      {method}
       {open && (
         <div style={{ marginTop: 14 }}>
           {all.length === 0 ? (
@@ -185,36 +217,6 @@ export default function Recommendations({ input, propertyName, states, onSetStat
             </div>
           )}
 
-          <div>
-            <div onClick={() => setShowMethod((v) => !v)} style={{ fontSize: 13, fontWeight: 700, color: "#1f3d2e", cursor: "pointer" }}>
-              Podrobná metodika {showMethod ? "▾" : "▸"}
-            </div>
-            {showMethod && (
-              <div style={{ marginTop: 8, background: "#fffdf6", border: "1px solid #d9d3c0", borderRadius: 10, padding: "12px 14px", overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, color: "#3a4a40" }}>
-                  <thead>
-                    <tr style={{ textAlign: "left", color: "#7c8378" }}>
-                      {["Oblast", "Co se hlídá", "Kdy se zobrazí", "Závažnost"].map((h) => <th key={h} style={{ padding: "4px 8px", fontWeight: 600 }}>{h}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {METHOD_ROWS.map((row, i) => (
-                      <tr key={i} style={{ borderTop: "1px solid #ece6d3", verticalAlign: "top" }}>
-                        <td style={{ padding: "5px 8px", fontWeight: 600, color: "#1f3d2e", whiteSpace: "nowrap" }}>{row[0]}</td>
-                        <td style={{ padding: "5px 8px" }}>{row[1]}</td>
-                        <td style={{ padding: "5px 8px" }}>{row[2]}</td>
-                        <td style={{ padding: "5px 8px", whiteSpace: "nowrap" }}>{row[3]}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div style={{ fontSize: 12, color: "#7c8378", marginTop: 8, lineHeight: 1.5 }}>
-                  Odhad dopadu refixace počítá se zvýšením sazby o 2 procentní body z aktuálního zůstatku. Nemovitosti ve správě se do cashflow počítají jen provizí.
-                  Odložené doporučení s termínem se vrátí nejpozději 14 dní před termínem; zahozené se ukáže znovu, když se termín změní.
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       )}
     </div>
