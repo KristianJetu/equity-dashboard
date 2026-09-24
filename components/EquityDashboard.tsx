@@ -3468,8 +3468,9 @@ export default function EquityDashboard() {
       } else if (user.email) {
         setUserInitials(user.email.slice(0, 2).toUpperCase());
       }
-      supabase.from("profiles").select("language, birth_year, income_employment, income_other, dti_projection_enabled, household_costs, assumed_ltv_pct, projection_settings").eq("id", user.id).single().then(({ data: profile }) => {
+      supabase.from("profiles").select("language, birth_year, income_employment, income_other, dti_projection_enabled, household_costs, assumed_ltv_pct, projection_settings, hide_values_default").eq("id", user.id).single().then(({ data: profile }) => {
         if (profile?.language === "en" || profile?.language === "cs") setLanguage(profile.language);
+        if (typeof profile?.hide_values_default === "boolean") setHideValuesDefault(profile.hide_values_default);
         if (profile?.dti_projection_enabled) setDtiEnabled(true);
         if (profile?.birth_year) setBirthYear(String(profile.birth_year));
         if (profile?.income_employment) setIncomeEmployment(String(profile.income_employment));
@@ -3583,17 +3584,30 @@ export default function EquityDashboard() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [showDebtsBalance, setShowDebtsBalance] = useState(false);
   const [hideValues, setHideValues] = useState(true);
+  const [hideValuesDefault, setHideValuesDefault] = useState(true);
+  const [savingHideValuesDefault, setSavingHideValuesDefault] = useState(false);
   useEffect(() => {
     if (!userId) return;
     const stored = localStorage.getItem(`eq-hide-values-${userId}`);
-    setHideValues(stored !== null ? stored === "1" : true);
-  }, [userId]);
+    setHideValues(stored !== null ? stored === "1" : hideValuesDefault);
+  }, [userId, hideValuesDefault]);
   const toggleHideValues = () => {
     setHideValues(v => {
       if (userId) localStorage.setItem(`eq-hide-values-${userId}`, v ? "0" : "1");
       return !v;
     });
   };
+  async function saveHideValuesDefault(next: boolean) {
+    setHideValuesDefault(next);
+    setSavingHideValuesDefault(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("profiles").upsert({ id: user.id, hide_values_default: next });
+      localStorage.removeItem(`eq-hide-values-${user.id}`);
+      setHideValues(next);
+    }
+    setSavingHideValuesDefault(false);
+  }
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -4034,6 +4048,23 @@ export default function EquityDashboard() {
                 <button onClick={() => saveLanguage("en")} disabled={savingLanguage}
                   style={{ padding: "6px 16px", borderRadius: 18, border: "none", background: language === "en" ? "#1f3d2e" : "transparent", color: language === "en" ? "#f5f1e6" : "#5c6359", fontSize: 13, fontWeight: 600, cursor: savingLanguage ? "default" : "pointer" }}>
                   {t("anglictina")}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ background: "#f5f1e6", borderRadius: 10, padding: "18px 20px", marginTop: 14 }}>
+              <div className="flex items-center justify-between">
+                <div style={{ flex: 1, paddingRight: 12 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: "#1c2b22" }}>{language === "cs" ? "Skrývání částek při otevření" : "Hide amounts on open"}</div>
+                  <div style={{ fontSize: 12, color: "#7c8378", marginTop: 4 }}>
+                    {language === "cs"
+                      ? "Jestli se majetek, hodnota portfolia a dluh mají při otevření aplikace defaultně schovat za tečky (jako v bankovní appce), dokud je sám neodkryješ kliknutím na ikonku oka. Platí pro tento účet, na všech zařízeních."
+                      : "Whether equity, portfolio value and debt should default to hidden behind dots when you open the app (like a banking app), until you reveal them yourself via the eye icon. Applies to this account, on every device."}
+                  </div>
+                </div>
+                <button onClick={() => saveHideValuesDefault(!hideValuesDefault)} disabled={savingHideValuesDefault}
+                  style={{ flexShrink: 0, width: 40, height: 22, borderRadius: 12, border: "none", background: hideValuesDefault ? "#1f3d2e" : "#d2cab4", position: "relative", cursor: savingHideValuesDefault ? "default" : "pointer" }}>
+                  <span style={{ position: "absolute", top: 2, left: hideValuesDefault ? 20 : 2, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
                 </button>
               </div>
             </div>
