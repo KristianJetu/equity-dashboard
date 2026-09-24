@@ -5,6 +5,7 @@ import { createClient } from "@/lib/auth";
 import Recommendations from "@/components/Recommendations";
 import type { Recommendation, RecommendationInput } from "@/lib/recommendations/types";
 import type { RecState } from "@/lib/recommendations/state";
+import Listings, { type Listing } from "@/components/Listings";
 
 type Property = {
   id: string;
@@ -289,6 +290,10 @@ const NAV_ITEMS = [
   {
     id: "doporuceni", title: "Doporučení",
     icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z" /></svg>,
+  },
+  {
+    id: "inzeraty", title: "Inzeráty",
+    icon: <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>,
   },
   {
     id: "nemovitosti", title: "Nemovitosti",
@@ -3410,7 +3415,7 @@ function TodoistSection() {
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function EquityDashboard() {
-  const SECTION_IDS = ["dashboard", "doporuceni", "nemovitosti", "platby", "najemnici", "komunikace", "asistent", "dluhy", "nastaveni"];
+  const SECTION_IDS = ["dashboard", "doporuceni", "inzeraty", "nemovitosti", "platby", "najemnici", "komunikace", "asistent", "dluhy", "nastaveni"];
 
   const supabase = createClient();
   const [properties, setProperties] = useState<Property[]>([]);
@@ -3429,6 +3434,7 @@ export default function EquityDashboard() {
   const [propertyModalTab, setPropertyModalTab] = useState<"details" | "files" | "valuations">("details");
   const [activeSection, setActiveSection] = useState("dashboard");
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState("··");
   const [language, setLanguage] = useState<"cs" | "en">("cs");
   const [dtiEnabled, setDtiEnabled] = useState(false);
@@ -3451,6 +3457,7 @@ export default function EquityDashboard() {
       const user = data.user;
       if (!user) return;
       setUserEmail(user.email ?? null);
+      setUserId(user.id);
       const fullName = user.user_metadata?.full_name as string | undefined;
       if (fullName) {
         const parts = fullName.trim().split(/\s+/);
@@ -3577,18 +3584,24 @@ export default function EquityDashboard() {
   const [showDebtsBalance, setShowDebtsBalance] = useState(false);
   const [hideValues, setHideValues] = useState(true);
   useEffect(() => {
-    const stored = localStorage.getItem("eq-hide-values");
-    if (stored !== null) setHideValues(stored === "1");
-  }, []);
+    if (!userId) return;
+    const stored = localStorage.getItem(`eq-hide-values-${userId}`);
+    setHideValues(stored !== null ? stored === "1" : true);
+  }, [userId]);
   const toggleHideValues = () => {
     setHideValues(v => {
-      localStorage.setItem("eq-hide-values", v ? "0" : "1");
+      if (userId) localStorage.setItem(`eq-hide-values-${userId}`, v ? "0" : "1");
       return !v;
     });
   };
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [debts, setDebts] = useState<Debt[]>([]);
+  const [listings, setListings] = useState<Listing[]>([]);
+  async function loadListings() {
+    const { data } = await supabase.from("listings").select("*").order("created_at", { ascending: false });
+    setListings((data ?? []) as Listing[]);
+  }
   const recommendationInput = useMemo<RecommendationInput>(() => {
     const num = (v: string) => (v.trim() !== "" && !Number.isNaN(Number(v)) ? Number(v) : null);
     return {
@@ -3706,6 +3719,7 @@ export default function EquityDashboard() {
       setProjectionPlans(plans ?? []);
       const { data: recStateRows } = await supabase.from("recommendation_state").select("rec_id, state, snoozed_until, fingerprint");
       setRecStates((recStateRows ?? []) as RecState[]);
+      await loadListings();
       const allFiles = files ?? [];
       setPropertyFiles(allFiles);
       // Generuj signed URLs pro obrázky (pro miniatury na kartách)
@@ -4284,6 +4298,11 @@ export default function EquityDashboard() {
         <section id="doporuceni" style={{ marginTop: 38, scrollMarginTop: 28 }}>
           <Recommendations input={recommendationInput} propertyName={(id) => properties.find(p => p.id === id)?.name ?? null}
             states={recStates} onSetState={setRecommendationState} onRestore={restoreRecommendation} />
+        </section>
+
+        {/* INZERÁTY */}
+        <section id="inzeraty" style={{ marginTop: 38, scrollMarginTop: 28 }}>
+          <Listings listings={listings} onChanged={loadListings} />
         </section>
 
         {/* NEMOVITOSTI */}
