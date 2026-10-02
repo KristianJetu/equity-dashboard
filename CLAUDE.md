@@ -54,7 +54,6 @@ Aplikace pro správu portfolia nemovitostí. Majitel vidí přehled nemovitostí
 - `docs/platby.md` — email parsing detailně, ruční evidence plateb, kalendář, RLS na `payments`, bezpečnostní incident 2026-09-09/16, oprava 2026-09-21, sekce Nájemníci
 - `docs/pujcky-cashflow.md` — sekce Půjčky (`debts`), cashflow přepínače
 - `docs/doporuceni.md` — modul Doporučení: pravidla a prahy (`lib/recommendations/`), odložit/zahodit/obnovit, `recommendation_state`
-- `docs/asistent.md` — hlasový asistent `/asistent` (diktování, odpovědi nahlas, Todoist nástroje, denní přehled)
 - `docs/zaloha-a-provoz.md` — záloha DB, přidání uživatele, Supabase nastavení (Site URL, redirecty)
 
 ## Klíčové soubory
@@ -64,6 +63,5 @@ Aplikace pro správu portfolia nemovitostí. Majitel vidí přehled nemovitostí
 - `app/login/page.tsx`, `app/set-password/page.tsx`, `app/auth/callback/route.ts` — přihlášení a pozvánky
 - `app/api/parse-email/route.ts` — aktivní endpoint pro Google Apps Script
 - `app/api/inbound-email/route.ts` — starý Resend webhook (nepoužívá se)
-- `app/asistent/page.tsx` + `app/api/assistant/route.ts` + `lib/assistant/todoist.ts` — hlasový asistent
 - `app/api/suggest-reply/route.ts` — AI návrh odpovědi nájemníkovi
 - `middleware.ts` — ochrana rout; `lib/auth.ts` (browser klient), `lib/auth-server.ts` (server klient)

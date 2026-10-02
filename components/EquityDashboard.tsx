@@ -4167,16 +4167,6 @@ export default function EquityDashboard() {
             );
           })}
         </div>
-        {/* Hlasový asistent */}
-        <a href="/asistent" title="Asistent" className="flex items-center justify-center rounded-[12px]" style={{ width: 46, height: 46, marginTop: 8, textDecoration: "none" }}>
-          <span style={{ color: "#86a191", display: "flex" }}>
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="3" width="6" height="11" rx="3" />
-              <path d="M5 11a7 7 0 0 0 14 0" />
-              <line x1="12" y1="18" x2="12" y2="21" />
-            </svg>
-          </span>
-        </a>
         {/* Badge na nespárované */}
         {unmatchedPayments.length > 0 && (
           <a href="#platby" className="eq-sidebar-badge" style={{ marginTop: 8, textDecoration: "none" }}>
@@ -5425,17 +5415,6 @@ export default function EquityDashboard() {
                 </button>
               </div>
             </div>
-
-            {/* Hlasový asistent */}
-            <a href="/asistent"
-              style={{ width: "100%", padding: "16px 20px", borderBottom: "1px solid #e8e0d0", display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1f3d2e" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="9" y="3" width="6" height="11" rx="3" />
-                <path d="M5 11a7 7 0 0 0 14 0" />
-                <line x1="12" y1="18" x2="12" y2="21" />
-              </svg>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#1c2b22" }}>Hlasový asistent</span>
-            </a>
 
             {/* Odhlásit */}
             <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
