@@ -1,5 +1,6 @@
 // Zálohovací skript — exportuje všechny tabulky ze Supabase (přes service_role
-// klíč, obchází RLS) do jednoho JSON souboru v backups/. Spouští se ručně nebo
+// klíč, obchází RLS) do jednoho JSON souboru v backups/ a stáhne soubory ze
+// Storage. Spouští se ručně nebo
 // přes naplánovanou úlohu (viz README v backups/).
 import fs from "node:fs";
 import path from "node:path";
@@ -34,29 +35,44 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
-const TABLES = [
-  "properties",
-  "mortgages",
-  "payments",
-  "tenants",
-  "debts",
-  "messages",
-  "profiles",
-  "consumer_loans",
-  "income_profile",
-];
+const AUTH_HEADERS = {
+  apikey: SERVICE_ROLE_KEY,
+  Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+};
 
-async function fetchTable(table) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
-    headers: {
-      apikey: SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-    },
+// Seznam tabulek se zjišťuje z OpenAPI schématu PostgRESTu, aby se nová
+// tabulka do zálohy dostala automaticky (dřív pevný seznam a nové tabulky
+// jako property_valuations nebo projection_plans v záloze chyběly).
+const STORAGE_BUCKETS = ["property-files"];
+const PAGE_SIZE = 1000; // PostgREST vrací max. 1000 řádků na dotaz
+
+async function listTables() {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+    headers: { ...AUTH_HEADERS, Accept: "application/openapi+json" },
   });
   if (!res.ok) {
-    throw new Error(`${table}: HTTP ${res.status} — ${await res.text()}`);
+    throw new Error(`Seznam tabulek: HTTP ${res.status} — ${await res.text()}`);
   }
-  const rows = await res.json();
+  const spec = await res.json();
+  return Object.keys(spec.definitions ?? {}).sort();
+}
+
+async function fetchTable(table) {
+  const rows = [];
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
+      headers: {
+        ...AUTH_HEADERS,
+        Range: `${offset}-${offset + PAGE_SIZE - 1}`,
+      },
+    });
+    if (!res.ok) {
+      throw new Error(`${table}: HTTP ${res.status} — ${await res.text()}`);
+    }
+    const page = await res.json();
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
   if (table === "payments") {
     // raw_email_text (plný text mBank emailu) je jen diagnostický údaj, ne
     // potřebný pro obnovu dat, a výrazně nafukuje velikost zálohy.
@@ -65,7 +81,46 @@ async function fetchTable(table) {
   return rows;
 }
 
+// Rekurzivně vypíše všechny objekty v bucketu (Storage list vrací složky jako
+// položky bez id).
+async function listBucket(bucket, prefix = "") {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${bucket}`, {
+    method: "POST",
+    headers: { ...AUTH_HEADERS, "Content-Type": "application/json" },
+    body: JSON.stringify({ prefix, limit: 10000, offset: 0 }),
+  });
+  if (!res.ok) {
+    throw new Error(`Storage ${bucket}: HTTP ${res.status} — ${await res.text()}`);
+  }
+  const items = await res.json();
+  const files = [];
+  for (const item of items) {
+    const fullPath = prefix ? `${prefix}/${item.name}` : item.name;
+    if (item.id) files.push(fullPath);
+    else files.push(...(await listBucket(bucket, fullPath)));
+  }
+  return files;
+}
+
+async function backupBucket(bucket, targetDir) {
+  const files = await listBucket(bucket);
+  for (const file of files) {
+    const res = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/${bucket}/${file.split("/").map(encodeURIComponent).join("/")}`,
+      { headers: AUTH_HEADERS }
+    );
+    if (!res.ok) {
+      throw new Error(`Storage ${bucket}/${file}: HTTP ${res.status}`);
+    }
+    const outFile = path.join(targetDir, bucket, ...file.split("/"));
+    fs.mkdirSync(path.dirname(outFile), { recursive: true });
+    fs.writeFileSync(outFile, Buffer.from(await res.arrayBuffer()));
+  }
+  return files.length;
+}
+
 async function main() {
+  const TABLES = await listTables();
   const dump = { exported_at: new Date().toISOString(), tables: {} };
   for (const table of TABLES) {
     process.stdout.write(`Exportuji ${table}... `);
@@ -93,8 +148,16 @@ async function main() {
     );
   }
 
+  // Soubory ze Storage (smlouvy, fotky…) — jen lokálně, na Disk se nenahrávají.
+  const storageDir = path.join(perTableDir, "storage");
+  for (const bucket of STORAGE_BUCKETS) {
+    process.stdout.write(`Stahuji Storage ${bucket}... `);
+    console.log(`${await backupBucket(bucket, storageDir)} souborů`);
+  }
+
   console.log(`\nHotovo: ${outPath}`);
   console.log(`Po tabulkách: ${perTableDir}`);
+  console.log(`Storage: ${storageDir}`);
 }
 
 main().catch(err => {

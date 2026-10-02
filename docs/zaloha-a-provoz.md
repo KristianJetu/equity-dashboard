@@ -3,7 +3,9 @@
 > Načítá se jen na požádání (není součástí CLAUDE.md). Stručný přehled a odkazy: CLAUDE.md.
 
 ## Záloha databáze (nastaveno 2026-08-29)
-- **Skript:** `scripts/backup-database.mjs` — exportuje všech 9 tabulek přes `SUPABASE_SERVICE_ROLE_KEY` (obchází RLS), uloží kombinovaný soubor do `backups/backup-<datum>.json` a rozdělený po tabulkách do `backups/<datum>/*.json`. `raw_email_text` u plateb se vynechává (velké, jen diagnostické).
+- **Skript:** `scripts/backup-database.mjs` — exportuje přes `SUPABASE_SERVICE_ROLE_KEY` (obchází RLS) **všechny tabulky**, jejichž seznam si zjistí z OpenAPI schématu PostgRESTu (`GET /rest/v1/`), takže nová tabulka se do zálohy dostane automaticky. Stránkuje po 1000 řádcích. Uloží kombinovaný soubor do `backups/backup-<datum>.json` a rozdělený po tabulkách do `backups/<datum>/*.json`. `raw_email_text` u plateb se vynechává (velké, jen diagnostické).
+- **Storage:** skript stahuje i soubory z bucketu `property-files` do `backups/<datum>/storage/` (jen lokálně, na Disk ne — desítky MB).
+- **Oprava 2026-10-02:** do té doby měl skript pevný seznam 9 tabulek a v záloze chyběly `property_files`, `property_valuations`, `projection_plans`, `recommendation_state` i soubory ve Storage.
 - **`SUPABASE_SERVICE_ROLE_KEY`** je v `.env.local` (a měl by být i ve Vercelu, pokud se má používat i odjinud) — nikdy ho nedávat do gitu ani ho nevypisovat.
 - **`backups/`** je v `.gitignore` — zálohy (obsahují citlivá finanční data) nepatří do gitu.
 - **Google Disk:** složka "Equity Dashboard zálohy" (folder ID `1ib_iRfk0JnmpNa4OURAbrKFQzKl8GPy0`) na účtu krislasek65@gmail.com — soubory po tabulkách, pojmenované `<datum>_<tabulka>.json`.
