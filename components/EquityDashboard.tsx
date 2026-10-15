@@ -3901,7 +3901,7 @@ export default function EquityDashboard() {
     }
     if (p.insurance_to) {
       const d = Math.round((new Date(p.insurance_to).getTime() - today) / 86400000);
-      if (d <= 60) alerts.push({ type: d <= 14 ? "danger" : "warning", label: t("konecPojistky"), property: p.name, daysLeft: d, insuranceFor: p });
+      if (d <= 10) alerts.push({ type: d <= 3 ? "danger" : "warning", label: t("konecPojistky"), property: p.name, daysLeft: d, insuranceFor: p });
     }
     if (p.lease_end) {
       const d = Math.round((new Date(p.lease_end).getTime() - today) / 86400000);
@@ -4451,8 +4451,8 @@ export default function EquityDashboard() {
                         })()}
                         {p.insurance_to && (() => {
                           const days = daysUntil(p.insurance_to);
-                          if (days > 60 || days < 0) return null;
-                          const urgent = days <= 14;
+                          if (days > 10 || days < 0) return null;
+                          const urgent = days <= 3;
                           return (
                             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6, padding: "4px 10px", borderRadius: 20, background: urgent ? "#fde8e8" : "#efe3c6", color: urgent ? "#c0392b" : "#a07b2f", fontSize: 12, fontWeight: 700 }}>
                               🛡 Pojistka vyprší za {days} dní ({p.insurance_to})
