@@ -3890,7 +3890,7 @@ export default function EquityDashboard() {
     .sort((a, b) => b.month.localeCompare(a.month));
   const activeProperty = properties.find((p) => p.id === activeFilter);
 
-  type Alert = { type: "danger" | "warning" | "info"; label: string; property: string; daysLeft: number };
+  type Alert = { type: "danger" | "warning" | "info"; label: string; property: string; daysLeft: number; insuranceFor?: Property };
   const alerts: Alert[] = [];
   const today = Date.now();
   for (const p of properties) {
@@ -3901,7 +3901,7 @@ export default function EquityDashboard() {
     }
     if (p.insurance_to) {
       const d = Math.round((new Date(p.insurance_to).getTime() - today) / 86400000);
-      if (d <= 60) alerts.push({ type: d <= 14 ? "danger" : "warning", label: t("konecPojistky"), property: p.name, daysLeft: d });
+      if (d <= 60) alerts.push({ type: d <= 14 ? "danger" : "warning", label: t("konecPojistky"), property: p.name, daysLeft: d, insuranceFor: p });
     }
     if (p.lease_end) {
       const d = Math.round((new Date(p.lease_end).getTime() - today) / 86400000);
@@ -3909,6 +3909,19 @@ export default function EquityDashboard() {
     }
   }
   alerts.sort((a, b) => a.daysLeft - b.daysLeft);
+
+  // Roční pojistka zaplacena: posune platnost o rok (navazuje na konec stávající, jinak od dneška)
+  async function markInsurancePaid(p: Property) {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const graceStart = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
+    const base = p.insurance_to && p.insurance_to >= graceStart ? p.insurance_to : todayStr;
+    const next = new Date(base);
+    next.setFullYear(next.getFullYear() + 1);
+    const patch = { insurance_from: base, insurance_to: next.toISOString().slice(0, 10) };
+    const { error } = await supabase.from("properties").update(patch).eq("id", p.id);
+    if (error) { alert("Uložení se nepovedlo: " + error.message); return; }
+    setProperties(prev => prev.map(x => x.id === p.id ? { ...x, ...patch } : x));
+  }
 
   async function handleDrop(fromIndex: number, toIndex: number, list: Property[]) {
     if (fromIndex === toIndex) return;
@@ -4310,7 +4323,15 @@ export default function EquityDashboard() {
                         <span style={{ fontSize: 13, color: "#5c6359" }}> · {a.property}</span>
                       </div>
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color, whiteSpace: "nowrap" }}>{daysText}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color, whiteSpace: "nowrap" }}>{daysText}</span>
+                      {a.insuranceFor && (
+                        <button onClick={() => markInsurancePaid(a.insuranceFor!)}
+                          style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 12, border: "none", background: color, color: "#fff", cursor: "pointer" }}>
+                          ✓ Zaplaceno
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
